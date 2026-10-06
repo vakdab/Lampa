@@ -34,6 +34,13 @@
                 sy: 1.80
             },
             {
+                value: 'a219',
+                title: 'Формат 21:9',
+                subtitle: 'Відобразити відео у форматі 21:9',
+                aspectWidth: 21,
+                aspectHeight: 9
+            },
+            {
                 value: 'v170',
                 title: 'По вертикалі 170%',
                 subtitle: 'Збільшити відео по вертикалі на 170%',
@@ -69,9 +76,45 @@
             }
         }
 
+        function clearAspectMode(video) {
+            video.style.position = '';
+            video.style.left = '';
+            video.style.top = '';
+            video.style.width = '';
+            video.style.height = '';
+            video.style.objectFit = '';
+            video.style.transformOrigin = '';
+            video.style.transform = '';
+        }
+
         function applyMode(mode) {
             var video = getVideo();
             if (!video || !mode) return;
+
+            if (mode.aspectWidth && mode.aspectHeight) {
+                var screenWidth = window.innerWidth;
+                var screenHeight = window.innerHeight;
+                var ratio = mode.aspectWidth / mode.aspectHeight;
+                var width = Math.min(screenWidth, screenHeight * ratio);
+                var height = width / ratio;
+
+                video.style.position = 'absolute';
+                video.style.left = '50%';
+                video.style.top = '50%';
+                video.style.width = Math.round(width) + 'px';
+                video.style.height = Math.round(height) + 'px';
+                video.style.objectFit = 'contain';
+                video.style.transformOrigin = 'center center';
+                video.style.transform = 'translate(-50%, -50%)';
+
+                if (Lampa.Storage && Lampa.Storage.set) {
+                    Lampa.Storage.set(storageKey, mode.value);
+                }
+
+                return;
+            }
+
+            clearAspectMode(video);
 
             video.style.width = '100vw';
             video.style.height = '100vh';
@@ -140,6 +183,8 @@
                 }
 
                 if (typeof originalOnSelect === 'function') {
+                    var video = getVideo();
+                    if (video) clearAspectMode(video);
                     originalOnSelect(item);
                 }
             };
