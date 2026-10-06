@@ -35,10 +35,11 @@
             },
             {
                 value: 'a219',
-                title: 'Формат 21:9',
-                subtitle: 'Кінематографічний кадр 21:9',
+                title: 'Розтягнути 21:9',
+                subtitle: 'Повний кадр без обрізання',
                 aspectWidth: 21,
-                aspectHeight: 9
+                aspectHeight: 9,
+                sideGap: 8
             },
             {
                 value: 'v170',
@@ -95,7 +96,8 @@
                 var screenWidth = window.innerWidth;
                 var screenHeight = window.innerHeight;
                 var ratio = mode.aspectWidth / mode.aspectHeight;
-                var width = Math.min(screenWidth, screenHeight * ratio);
+                var gap = mode.sideGap || 0;
+                var width = Math.min(screenWidth - gap * 2, screenHeight * ratio);
                 var height = width / ratio;
 
                 video.style.position = 'absolute';
@@ -103,9 +105,9 @@
                 video.style.top = '50%';
                 video.style.width = Math.round(width) + 'px';
                 video.style.height = Math.round(height) + 'px';
-                // Заповнюємо весь кадр 21:9. Для джерела 16:9
-                // зайва частина зверху і знизу обрізається.
-                video.style.objectFit = 'cover';
+                // Розтягуємо весь кадр до 21:9 без обрізання.
+                // Це навмисно може трохи змінювати пропорції відео.
+                video.style.objectFit = 'fill';
                 video.style.transformOrigin = 'center center';
                 video.style.transform = 'translate(-50%, -50%)';
 
