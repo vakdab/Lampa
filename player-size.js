@@ -35,11 +35,9 @@
             },
             {
                 value: 'a219',
-                title: 'Розтягнути 21:9',
-                subtitle: 'Повний кадр без обрізання',
-                aspectWidth: 21,
-                aspectHeight: 9,
-                sideGap: 8
+                title: 'Розтягнути по горизонталі',
+                subtitle: 'Як «Заповнити», але трохи ширше',
+                horizontalScale: 1.04
             },
             {
                 value: 'v170',
@@ -91,6 +89,22 @@
         function applyMode(mode) {
             var video = getVideo();
             if (!video || !mode) return;
+
+            if (mode.horizontalScale) {
+                clearAspectMode(video);
+
+                video.style.width = '100vw';
+                video.style.height = '100vh';
+                video.style.objectFit = 'fill';
+                video.style.transformOrigin = 'center center';
+                video.style.transform = 'scaleX(' + mode.horizontalScale + ')';
+
+                if (Lampa.Storage && Lampa.Storage.set) {
+                    Lampa.Storage.set(storageKey, mode.value);
+                }
+
+                return;
+            }
 
             if (mode.aspectWidth && mode.aspectHeight) {
                 var screenWidth = window.innerWidth;
