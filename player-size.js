@@ -40,6 +40,13 @@
                 horizontalScale: 1.04
             },
             {
+                value: 'cinema219',
+                title: 'Формат 21:9',
+                subtitle: 'Кінематографічний кадр 21:9',
+                aspectWidth: 21,
+                aspectHeight: 9
+            },
+            {
                 value: 'v170',
                 title: 'По вертикалі 170%',
                 subtitle: 'Збільшити відео по вертикалі на 170%',
@@ -119,9 +126,9 @@
                 video.style.top = '50%';
                 video.style.width = Math.round(width) + 'px';
                 video.style.height = Math.round(height) + 'px';
-                // Розтягуємо весь кадр до 21:9 без обрізання.
-                // Це навмисно може трохи змінювати пропорції відео.
-                video.style.objectFit = 'fill';
+                // Заповнюємо кадр 21:9. Для джерела 16:9
+                // зайва частина зверху і знизу обрізається.
+                video.style.objectFit = 'cover';
                 video.style.transformOrigin = 'center center';
                 video.style.transform = 'translate(-50%, -50%)';
 
