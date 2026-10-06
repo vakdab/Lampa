@@ -35,9 +35,9 @@
             },
             {
                 value: 'a219',
-                title: 'Розтягнути по горизонталі',
-                subtitle: 'Як «Заповнити», але трохи ширше',
-                horizontalScale: 1.04
+                title: '21:9 без обрізання',
+                subtitle: 'Як «Заповнити», з розтягуванням по горизонталі',
+                horizontalFill: true
             },
             {
                 value: 'cinema219',
@@ -96,14 +96,16 @@
             var video = getVideo();
             if (!video || !mode) return;
 
-            if (mode.horizontalScale) {
+            if (mode.horizontalFill) {
                 clearAspectMode(video);
 
                 video.style.width = '100vw';
                 video.style.height = '100vh';
                 video.style.objectFit = 'fill';
                 video.style.transformOrigin = 'center center';
-                video.style.transform = 'scaleX(' + mode.horizontalScale + ')';
+                // Повний кадр залишається в межах екрана: без scaleX,
+                // бо масштаб понад 100% обрізає лівий і правий краї.
+                video.style.transform = 'none';
 
                 if (Lampa.Storage && Lampa.Storage.set) {
                     Lampa.Storage.set(storageKey, mode.value);
