@@ -22,7 +22,7 @@
 і вставте URL:
 
 ```text
-https://raw.githubusercontent.com/vakdab/Lampa/main/player-size.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/player-size.js
 ```
 
 Після завантаження відкрийте плеєр і перейдіть у меню:
