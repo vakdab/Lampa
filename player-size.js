@@ -43,8 +43,7 @@
                 value: 'cinema219',
                 title: 'Формат 21:9',
                 subtitle: 'Кінематографічний кадр 21:9',
-                aspectWidth: 21,
-                aspectHeight: 9
+                fullFrame: true
             },
             {
                 value: 'v170',
@@ -105,6 +104,24 @@
                 video.style.objectFit = 'fill';
                 video.style.transformOrigin = 'center center';
                 video.style.transform = 'scaleX(' + mode.horizontalScale + ')';
+
+                if (Lampa.Storage && Lampa.Storage.set) {
+                    Lampa.Storage.set(storageKey, mode.value);
+                }
+
+                return;
+            }
+
+            if (mode.fullFrame) {
+                clearAspectMode(video);
+
+                // Відео заповнює весь екран без бічних чорних смуг.
+                // Це відповідає широкому 21:9 режиму на телевізорах і телефонах.
+                video.style.width = '100vw';
+                video.style.height = '100vh';
+                video.style.objectFit = 'fill';
+                video.style.transformOrigin = 'center center';
+                video.style.transform = 'none';
 
                 if (Lampa.Storage && Lampa.Storage.set) {
                     Lampa.Storage.set(storageKey, mode.value);
