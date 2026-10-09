@@ -17,6 +17,8 @@
     waitForLampa(function () {
         var storageKey = 'player_size';
         var originalSelectShow = Lampa.Select.show;
+        var playerActive = false;
+        var scheduledTimers = [];
 
         var customModes = [
             {
@@ -90,6 +92,7 @@
         }
 
         function clearAspectMode(video) {
+            if (!video || !video.style) return;
             video.style.position = '';
             video.style.left = '';
             video.style.top = '';
@@ -98,6 +101,13 @@
             video.style.objectFit = '';
             video.style.transformOrigin = '';
             video.style.transform = '';
+        }
+
+        function clearScheduledTimers() {
+            scheduledTimers.forEach(function (timer) {
+                clearTimeout(timer);
+            });
+            scheduledTimers = [];
         }
 
         function applyMode(mode) {
@@ -181,12 +191,16 @@
 
         function applySavedMode() {
             var mode = modes[getSavedSize()];
-            if (!mode) return;
+            if (!mode || !playerActive) return;
 
             [100, 500, 1200].forEach(function (delay) {
-                setTimeout(function () {
-                    applyMode(mode);
+                var timer = setTimeout(function () {
+                    scheduledTimers = scheduledTimers.filter(function (item) {
+                        return item !== timer;
+                    });
+                    if (playerActive) applyMode(mode);
                 }, delay);
+                scheduledTimers.push(timer);
             });
         }
 
@@ -245,7 +259,9 @@
         };
 
         function onPlayerStart() {
+            playerActive = true;
             applySavedMode();
+            var playerVideo = getVideo();
 
             function onLoadedData() {
                 applySavedMode();
@@ -256,6 +272,9 @@
             }
 
             function onDestroy() {
+                playerActive = false;
+                clearScheduledTimers();
+                clearAspectMode(playerVideo || getVideo());
                 Lampa.PlayerVideo.listener.remove('loadeddata', onLoadedData);
                 Lampa.PlayerVideo.listener.remove('canplay', onCanPlay);
                 Lampa.Player.listener.remove('destroy', onDestroy);
@@ -270,9 +289,9 @@
 
         window.addEventListener('resize', function () {
             var mode = modes[getSavedSize()];
-            if (mode) {
+            if (mode && playerActive) {
                 setTimeout(function () {
-                    applyMode(mode);
+                    if (playerActive) applyMode(mode);
                 }, 200);
             }
         });
