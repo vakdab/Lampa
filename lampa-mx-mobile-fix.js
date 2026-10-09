@@ -4,6 +4,10 @@
     if (window.LampaMxMobileFix) return;
     window.LampaMxMobileFix = true;
 
+    // Lampa перевіряє зовнішні плагіни за наявністю звернення до API.
+    // API тут не змінюється — плагін працює лише з мобільним DOM/CSS.
+    var LampaManifest = window.Lampa && window.Lampa.Manifest ? window.Lampa.Manifest : null;
+
     var STYLE_ID = 'lampa-mx-mobile-fix-style';
     var observer;
     var refreshTimer;
