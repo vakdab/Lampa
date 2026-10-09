@@ -22,6 +22,13 @@
 
         var customModes = [
             {
+                // Перехоплюємо штатний пункт Lampa «Заповнити».
+                value: 'fill',
+                title: 'Заповнити',
+                subtitle: 'На весь екран із чорними полями приблизно по 2 мм з боків',
+                horizontalFill: true
+            },
+            {
                 // Перехоплюємо штатний пункт Lampa «Розширити».
                 // Новий пункт у меню для нього не створюється.
                 value: 'cover',
@@ -117,13 +124,15 @@
             if (mode.horizontalFill) {
                 clearAspectMode(video);
 
-                video.style.width = '100vw';
+                // Залишаємо приблизно по 2 мм чорного поля з кожного боку.
+                video.style.position = 'absolute';
+                video.style.left = '50%';
+                video.style.top = '50%';
+                video.style.width = 'calc(100vw - 4mm)';
                 video.style.height = '100vh';
                 video.style.objectFit = 'fill';
                 video.style.transformOrigin = 'center center';
-                // Повний кадр залишається в межах екрана: без scaleX,
-                // бо масштаб понад 100% обрізає лівий і правий краї.
-                video.style.transform = 'none';
+                video.style.transform = 'translate(-50%, -50%)';
 
                 if (Lampa.Storage && Lampa.Storage.set) {
                     Lampa.Storage.set(storageKey, mode.value);
