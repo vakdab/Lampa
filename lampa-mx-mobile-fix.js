@@ -38,6 +38,14 @@
             document.head.appendChild(statusBar);
         }
         statusBar.content = 'black';
+
+        var capable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+        if (!capable) {
+            capable = document.createElement('meta');
+            capable.name = 'apple-mobile-web-app-capable';
+            document.head.appendChild(capable);
+        }
+        capable.content = 'yes';
     }
 
     function installStyles() {
@@ -83,8 +91,7 @@
             }
 
             body.lampa-mx-video-fullscreen .head,
-            body.lampa-mx-video-fullscreen .navigation-bar,
-            body.lampa-mx-video-fullscreen #app {
+            body.lampa-mx-video-fullscreen .navigation-bar {
                 visibility: hidden !important;
             }
 
