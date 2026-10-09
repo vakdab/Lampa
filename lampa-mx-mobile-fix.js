@@ -82,6 +82,12 @@
                 -webkit-overflow-scrolling: touch;
             }
 
+            body.lampa-mx-video-fullscreen .head,
+            body.lampa-mx-video-fullscreen .navigation-bar,
+            body.lampa-mx-video-fullscreen #app {
+                visibility: hidden !important;
+            }
+
         `;
 
         document.head.appendChild(style);
@@ -103,12 +109,50 @@
         });
     }
 
+    function enterVideoFullscreen(video) {
+        if (!video || video.dataset.lampaMxFullscreenBound === '1') return;
+
+        video.dataset.lampaMxFullscreenBound = '1';
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+
+        video.addEventListener('play', function () {
+            document.body.classList.add('lampa-mx-video-fullscreen');
+
+            try {
+                if (typeof video.webkitEnterFullscreen === 'function') {
+                    video.webkitEnterFullscreen();
+                    return;
+                }
+
+                if (typeof video.requestFullscreen === 'function') {
+                    var request = video.requestFullscreen();
+                    if (request && request.catch) request.catch(function () {});
+                }
+            } catch (error) {}
+        }, { passive: true });
+
+        ['pause', 'ended', 'webkitendfullscreen'].forEach(function (eventName) {
+            video.addEventListener(eventName, function () {
+                if (eventName !== 'pause' || !video.webkitDisplayingFullscreen) {
+                    document.body.classList.remove('lampa-mx-video-fullscreen');
+                }
+            }, { passive: true });
+        });
+    }
+
+    function patchVideos(root) {
+        if (!root || !root.querySelectorAll) return;
+        Array.prototype.forEach.call(root.querySelectorAll('video'), enterVideoFullscreen);
+    }
+
     function refresh() {
         clearTimeout(refreshTimer);
         refreshTimer = setTimeout(function () {
             installViewportFix();
             installStyles();
             patchScrollContainers(document);
+            patchVideos(document);
         }, 0);
     }
 
