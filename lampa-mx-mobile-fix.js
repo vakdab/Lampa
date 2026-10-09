@@ -95,6 +95,16 @@
                 visibility: hidden !important;
             }
 
+            /* Легке покращення картинки без важкої AI-обробки кадрів */
+            body.lampa-mx-video-enhanced video {
+                filter: contrast(1.06) saturate(1.06) brightness(1.015);
+                -webkit-transform: translateZ(0);
+                transform: translateZ(0);
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+                will-change: transform;
+            }
+
         `;
 
         document.head.appendChild(style);
@@ -120,6 +130,11 @@
         if (!video || video.dataset.lampaMxFullscreenBound === '1') return;
 
         video.dataset.lampaMxFullscreenBound = '1';
+        video.dataset.lampaMxVideoEnhanced = '1';
+        video.preload = 'auto';
+        video.style.webkitTransform = 'translateZ(0)';
+        video.style.transform = 'translateZ(0)';
+        document.body.classList.add('lampa-mx-video-enhanced');
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
 
