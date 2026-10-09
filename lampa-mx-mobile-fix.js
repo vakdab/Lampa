@@ -22,6 +22,22 @@
         if (viewport && viewport.content.indexOf('viewport-fit=cover') === -1) {
             viewport.content += ', viewport-fit=cover';
         }
+
+        var theme = document.querySelector('meta[name="theme-color"]');
+        if (!theme) {
+            theme = document.createElement('meta');
+            theme.name = 'theme-color';
+            document.head.appendChild(theme);
+        }
+        theme.content = '#000000';
+
+        var statusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        if (!statusBar) {
+            statusBar = document.createElement('meta');
+            statusBar.name = 'apple-mobile-web-app-status-bar-style';
+            document.head.appendChild(statusBar);
+        }
+        statusBar.content = 'black';
     }
 
     function installStyles() {
@@ -34,6 +50,7 @@
             html.lampa-mx-mobile-fix,
             body.lampa-mx-mobile-fix {
                 min-height: 100%;
+                background-color: #000 !important;
                 overscroll-behavior: none;
             }
 
