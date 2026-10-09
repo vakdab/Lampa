@@ -139,19 +139,8 @@
         video.setAttribute('webkit-playsinline', 'true');
 
         video.addEventListener('play', function () {
-            document.body.classList.add('lampa-mx-video-fullscreen');
-
-            try {
-                if (typeof video.webkitEnterFullscreen === 'function') {
-                    video.webkitEnterFullscreen();
-                    return;
-                }
-
-                if (typeof video.requestFullscreen === 'function') {
-                    var request = video.requestFullscreen();
-                    if (request && request.catch) request.catch(function () {});
-                }
-            } catch (error) {}
+            // Не викликаємо webkitEnterFullscreen(): це примусово перемикає
+            // навіть вибраний користувачем «Вбудований плеєр» на iOS-плеєр.
         }, { passive: true });
 
         ['pause', 'ended', 'webkitendfullscreen'].forEach(function (eventName) {
