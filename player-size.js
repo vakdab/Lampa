@@ -16,7 +16,10 @@
 
     waitForLampa(function () {
         var storageKey = 'player_size';
+        var enhancementStorageKey = 'video_enhancement';
+        var qualityEnhancementValue = 'lampa_quality_enhance';
         var originalSelectShow = Lampa.Select.show;
+        var qualityPanel = null;
         var playerActive = false;
         var scheduledTimers = [];
 
@@ -117,6 +120,69 @@
                 return null;
             }
         }
+
+        function getEnhancement() {
+            var value = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get(enhancementStorageKey, 0) : 0;
+            value = parseInt(value, 10);
+            return isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+        }
+
+        function applyEnhancement(video, value) {
+            if (!video || !video.style) return;
+            value = Math.max(0, Math.min(100, parseInt(value, 10) || 0));
+
+            if (!value) {
+                video.style.removeProperty('filter');
+                return;
+            }
+
+            // Це легке покращення відображення, а не AI-апскейлінг Flux Fidelity.
+            // Воно працює без моделей і сумісне з вбудованим web-плеєром Lampa.
+            var contrast = (1 + value * 0.004).toFixed(3);
+            var saturation = (1 + value * 0.003).toFixed(3);
+            var brightness = (1 + value * 0.001).toFixed(3);
+            video.style.setProperty('filter', 'contrast(' + contrast + ') saturate(' + saturation + ') brightness(' + brightness + ')', 'important');
+        }
+
+        function applySavedEnhancement() {
+            applyEnhancement(getVideo(), getEnhancement());
+        }
+
+        function closeQualityPanel() {
+            if (qualityPanel && qualityPanel.parentNode) qualityPanel.parentNode.removeChild(qualityPanel);
+            qualityPanel = null;
+        }
+
+        function showQualityPanel() {
+            closeQualityPanel();
+            var current = getEnhancement();
+            var panel = document.createElement('div');
+            panel.className = 'lampa-quality-panel';
+            panel.innerHTML = '<div class="lampa-quality-panel__title">Покращення якості відео</div>' +
+                '<div class="lampa-quality-panel__descr">Контраст, насиченість і яскравість</div>' +
+                '<input class="lampa-quality-panel__range" type="range" min="0" max="100" step="1" value="' + current + '" aria-label="Покращення якості відео">' +
+                '<div class="lampa-quality-panel__value">' + current + '%</div>' +
+                '<button class="lampa-quality-panel__close">Готово</button>';
+            document.body.appendChild(panel);
+            qualityPanel = panel;
+
+            var range = panel.querySelector('.lampa-quality-panel__range');
+            var valueLabel = panel.querySelector('.lampa-quality-panel__value');
+            range.addEventListener('input', function () {
+                var value = parseInt(range.value, 10) || 0;
+                valueLabel.textContent = value + '%';
+                if (Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set(enhancementStorageKey, value);
+                applyEnhancement(getVideo(), value);
+            });
+            panel.querySelector('.lampa-quality-panel__close').addEventListener('click', closeQualityPanel);
+            range.focus();
+        }
+
+        var qualityStyle = document.createElement('style');
+        qualityStyle.id = 'lampa-quality-enhancement-style';
+        qualityStyle.textContent = '.lampa-quality-panel{position:fixed;left:50%;bottom:8%;transform:translateX(-50%);z-index:1000000;width:min(78vw,520px);padding:18px 22px;border-radius:14px;background:rgba(20,20,20,.96);color:#fff;text-align:center;font-family:inherit;box-shadow:0 4px 24px rgba(0,0,0,.5)}' +
+            '.lampa-quality-panel__title{font-size:20px;font-weight:600}.lampa-quality-panel__descr{margin:6px 0 14px;font-size:14px;opacity:.72}.lampa-quality-panel__range{width:100%;accent-color:#63e6be}.lampa-quality-panel__value{margin:8px 0;font-size:16px}.lampa-quality-panel__close{border:0;border-radius:8px;padding:8px 18px;background:#63e6be;color:#10231d;font-size:15px}';
+        if (!document.getElementById(qualityStyle.id)) document.head.appendChild(qualityStyle);
 
         function clearAspectMode(video) {
             if (!video || !video.style) return;
@@ -244,6 +310,14 @@
             });
         }
 
+        function isQualityMenu(options) {
+            if (!options || !Array.isArray(options.items)) return false;
+            var qualityCount = options.items.filter(function (item) {
+                return item && /^(240|360|480|576|720|1080|1440|2160)$/.test(String(item.value));
+            }).length;
+            return qualityCount >= 2;
+        }
+
         function isVideoSizeMenu(options) {
             if (!options || !Array.isArray(options.items)) return false;
 
@@ -256,7 +330,8 @@
         }
 
         Lampa.Select.show = function (options) {
-            if (!isVideoSizeMenu(options)) {
+            var qualityMenu = isQualityMenu(options);
+            if (!isVideoSizeMenu(options) && !qualityMenu) {
                 return originalSelectShow.apply(this, arguments);
             }
 
@@ -267,7 +342,12 @@
                 return item && item.value;
             });
 
-            var extraItems = customModes
+            var extraItems = qualityMenu ? [{
+                title: 'Покращення якості відео',
+                subtitle: 'Повзунок для покращення зображення',
+                value: qualityEnhancementValue,
+                selected: false
+            }] : customModes
                 .filter(function (mode) {
                     return existingValues.indexOf(mode.value) === -1;
                 })
@@ -282,6 +362,12 @@
 
             patchedOptions.items = options.items.concat(extraItems);
             patchedOptions.onSelect = function (item) {
+                if (item && item.value === qualityEnhancementValue) {
+                    if (Lampa.Select.close) Lampa.Select.close();
+                    showQualityPanel();
+                    return;
+                }
+
                 if (item && modes[item.value]) {
                     applyMode(modes[item.value]);
                     if (Lampa.Select.close) Lampa.Select.close();
@@ -302,20 +388,24 @@
         function onPlayerStart() {
             playerActive = true;
             applySavedMode();
+            applySavedEnhancement();
             var playerVideo = getVideo();
 
             function onLoadedData() {
                 applySavedMode();
+                applySavedEnhancement();
             }
 
             function onCanPlay() {
                 applySavedMode();
+                applySavedEnhancement();
             }
 
             function onDestroy() {
                 playerActive = false;
                 clearScheduledTimers();
                 setSideBars(false);
+                closeQualityPanel();
                 clearAspectMode(playerVideo || getVideo());
                 Lampa.PlayerVideo.listener.remove('loadeddata', onLoadedData);
                 Lampa.PlayerVideo.listener.remove('canplay', onCanPlay);
