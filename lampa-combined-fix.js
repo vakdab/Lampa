@@ -1,4 +1,4 @@
-/* Lampa combined mobile and player-size fix */
+/* Lampa all-in-one: mobile fix, player size and WebGPU AI enhancer */
 (function () {
     'use strict';
 
@@ -538,4 +538,1625 @@
 
         console.log('[Lampa Player Size] loaded');
     });
+})();
+
+(function () {
+    if (globalThis.WebGPUSR) return;
+    /**
+     * Crisp - in-page WebGPU super-resolution engine.
+     *
+     * Runs SPAN-Lite (fused, 2x) entirely as WGSL compute shaders. No ONNX
+     * Runtime, no WASM, no message passing: the video frame is pulled straight
+     * into the GPU (importExternalTexture, zero-copy) and the result is written
+     * to an overlay canvas. Runs inside the content script, so strict page CSPs
+     * (YouTube) don't apply - WebGPU shader creation is not eval.
+     *
+     * Inference dataflow (all at input resolution WxH until PixelShuffle):
+     *   pre:        video -> x (3ch, mean-subtracted)
+     *   conv_first: x -> f0                                    (3x3, 3->32)
+     *   4x SPAB:    c1(+SiLU), c2(+SiLU), c3, att=(sigmoid(c3)-0.5)*(c3+in)
+     *   conv_last:  b4pre -> b4                                (3x3, 32->32)
+     *   conv_cat:   concat[f0,b1_mid,b3_mid,b4] -> cat         (1x1, 128->32)
+     *   upsampler:  cat -> up (3x3, 32->12) then PixelShuffle(2) -> RGB 2Wx2H
+     */
+    
+    const MEAN = [0.4488, 0.4371, 0.4040];
+    
+    // Half precision: ON wherever the GPU reports `shader-f16`.
+    //
+    // Quality was verified on real codec-degraded video rather than a test pattern:
+    // 24 frames over 6 clips spanning busyness 0.005-0.68, PSNR measured against
+    // ground truth, mean delta **+0.0007 dB**, worst clip -0.0008 dB, worst pixel
+    // 2/255, deltas in both directions (RESEARCH.md 10). Precision is not the
+    // variable that decides output quality here.
+    //
+    // Speed does vary by GPU -- 1.379-1.393x measured on an Apple M4 Pro, no gain
+    // on Turing, which is why this used to default off. But "no gain" is the worst
+    // case, not a regression: f16 also halves every feature buffer, which is pure
+    // benefit on memory-tight GPUs, and a device without the feature falls back to
+    // f32 automatically below. So the downside of enabling it broadly is that some
+    // GPUs see no speedup, which is where they already were.
+    //
+    // Set to a vendor-substring list (e.g. ['apple']) to narrow it again.
+    const F16_VENDORS = true;
+    
+    // A page may override for benchmarking. Nothing in the extension sets this.
+    const F16_OVERRIDE = (typeof globalThis !== "undefined"
+                          && globalThis.__WEBVSR_FORCE_F16 !== undefined)
+                         ? !!globalThis.__WEBVSR_FORCE_F16
+                         : null;
+    
+    // With F16_VENDORS === true this needs no adapter.info, which several browsers
+    // do not populate; the `shader-f16` feature check at the call site is the gate.
+    const f16WantedFor = (adapter) => {
+      if (F16_OVERRIDE !== null) return F16_OVERRIDE;
+      if (F16_VENDORS === true) return true;
+      const vendor = ((adapter.info && adapter.info.vendor) || '').toLowerCase();
+      return F16_VENDORS.some((v) => vendor.includes(v));
+    };
+    
+    // Fuse each SPAB block's third convolution with the attention that consumes it.
+    // The attention is element-wise on that conv's own output and the block input,
+    // so it can be applied at write time instead of in a pass of its own. That
+    // removes, per block, one full C-channel buffer write and one read -- 17% of
+    // all intermediate traffic (RESEARCH.md 2a) -- and 4 of 22 dispatches, at
+    // 32-71us each on Metal (RESEARCH.md 2b). Numerically identical: same
+    // arithmetic, same order, one less round-trip through DRAM.
+    // Fold conv_last into conv_cat. conv_cat is a 1x1 over the concat of four
+    // buffers and conv_last is the 3x3 that produces the fourth, so the pair
+    // composes exactly: K[o,i] = sum_m W3[o,m] * L[m,i] gives one 3x3 kernel, and
+    // the bias picks up W3 @ bl. Verified max|ref - fused| = 6e-7 (float32 rounding).
+    // That removes a whole conv pass -- one full C-channel write and the read that
+    // followed it -- for the cost of C*9 extra MACs per output pixel, which is the
+    // bandwidth-for-arithmetic trade this engine wants (RESEARCH.md 2a).
+    // Composed at load time from the existing tensors, so every already-exported
+    // .bin keeps working unchanged.
+    // MEASURED: OFF. The fold is exact and does remove a pass (18 -> 17 dispatches,
+    // output max_abs_diff 1/255 = float rounding), but it is SLOWER on an M4 Pro --
+    // 21.2ms unfolded against 23.1ms folded at 720p, and 30.2ms before the shader
+    // was rewritten to amortise 8 output channels per thread.
+    //
+    // Why: buildConv is tuned hard. It computes a 2x2 pixel block per thread and
+    // loads a 4x4 input patch once per input channel, reusing it across all 9 taps
+    // and all 4 pixels. The fused shader's 3x3 half does none of that, so it loses
+    // more on redundant loads than the removed buffer write and read save. Winning
+    // here needs the same blocking ported into the fused kernel, which is a real
+    // rewrite with an uncertain payoff -- the saving being chased is one pass in 17.
+    //
+    // Kept because the algebra is verified and the flag makes it a one-line
+    // experiment if the fused kernel is ever given buildConv's treatment.
+    const FOLD_CONV_LAST = (typeof globalThis !== "undefined"
+                            && globalThis.__WEBVSR_FORCE_FOLD_LAST !== undefined)
+                           ? !!globalThis.__WEBVSR_FORCE_FOLD_LAST
+                           : false;
+    
+    // Vectorised weights for the 3x3 convs: re-laid out at load time as
+    // [ic][tap][oc] vec4s so each tap reads two vec4 weights instead of eight
+    // scalars, and the 32 accumulators are eight vec4s. Same arithmetic in the
+    // same order. (Idea from websr's Anime4K layers, which keep weights as mat4x4.)
+    const VEC4_WEIGHTS = (typeof globalThis !== "undefined"
+                          && globalThis.__WEBVSR_VEC4 !== undefined)
+                         ? !!globalThis.__WEBVSR_VEC4
+                         : true;
+    
+    // Accumulate the 3x3 convs in f16 wherever storage is already f16. 13-16%
+    // faster on an M4 Pro on top of VEC4_WEIGHTS. Not bit-identical: measured on
+    // the RESEARCH.md 10 real-video set against ground truth, PSNR moved +0.009 dB
+    // (2x) and +0.0003 dB (lite), no clip worse, worst pixel 5/255 (RESEARCH.md 37).
+    const F16_ACC = (typeof globalThis !== "undefined" && globalThis.__WEBVSR_F16ACC !== undefined)
+                    ? !!globalThis.__WEBVSR_F16ACC : true;
+    
+    const FUSE_ATTN = (typeof globalThis !== "undefined"
+                       && globalThis.__WEBVSR_FORCE_FUSE_ATTN !== undefined)
+                      ? !!globalThis.__WEBVSR_FORCE_FUSE_ATTN
+                      : true;
+    
+    // Weight tensors in export order (matches export_webgpu_weights.py), for a
+    // SPAN-Lite with C feature channels. [name, outC, inC, k]
+    function weightSpec(C, scale, exits = []) {
+      const head = (sfx) => [
+        [`conv_cat${sfx}`, C, 4 * C, 1],
+        [`conv_last${sfx}`, C, C, 3],
+        [`upsampler${sfx}`, 3 * scale * scale, C, 3],
+      ];
+      // Early-exit heads trail the full-depth model, matching
+      // export_webgpu_weights.py. A file without them simply ends after the prefix.
+      return [
+        ['conv_first', C, 3, 3],
+        ['b1c1', C, C, 3], ['b1c2', C, C, 3], ['b1c3', C, C, 3],
+        ['b2c1', C, C, 3], ['b2c2', C, C, 3], ['b2c3', C, C, 3],
+        ['b3c1', C, C, 3], ['b3c2', C, C, 3], ['b3c3', C, C, 3],
+        ['b4c1', C, C, 3], ['b4c2', C, C, 3], ['b4c3', C, C, 3],
+        ...head(''),                              // PixelShuffle(scale): 3·scale² channels
+        ...exits.flatMap((d) => head(`_d${d}`)),
+      ];
+    }
+    
+    class WebGPUSR {
+      constructor() {
+        this.device = null;
+        this.w = {};        // weight/bias GPU buffers by name
+        this.buf = {};      // feature GPU buffers
+        this.pipe = {};     // compute pipelines
+        this.bg = {};       // cached bind groups
+        this.params = {};   // uniform buffers
+        this.inW = 0;
+        this.inH = 0;
+        this.ready = false;
+        this.sampler = null;
+        this.outTex = null;
+        this.C = 32;        // feature channels (from the model manifest; 32 by default)
+        this.scale = 2;     // upscale factor (from the model manifest; 2 by default)
+        this.sharpen = 0;   // 0..1 contrast-adaptive sharpen strength (0 = off)
+        this.look = 'natural';   // see LOOKS; 'natural' applies no grade
+      }
+    
+      async init() {
+        if (!navigator.gpu) { console.warn('[Crisp] WebGPU unavailable'); return false; }
+        const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+        if (!adapter) { console.warn('[Crisp] No WebGPU adapter'); return false; }
+        this.hasTS = adapter.features.has('timestamp-query');
+        // f16 wherever the GPU supports it, with an automatic f32 fallback where it
+        // does not. 1.38x on Apple silicon, no measurable quality cost anywhere
+        // tested; GPUs that gain no speed still halve their buffer memory.
+        this.f16 = f16WantedFor(adapter) && adapter.features.has('shader-f16');
+        this.FS = this.f16 ? 2 : 4;                        // bytes per scalar
+        const feats = [];
+        if (this.hasTS) feats.push('timestamp-query');
+        if (this.f16) feats.push('shader-f16');
+        this.device = await adapter.requestDevice({ requiredFeatures: feats });
+        console.log('[Crisp] precision:', this.f16 ? 'f16' : 'f32');
+        this.device.lost.then((info) => {
+          console.error('[Crisp] GPU device lost:', info.message);
+          this.ready = false;
+        });
+        // A rejected submission (out of memory, a buffer over the binding limit, a
+        // validation failure) executes nothing, yet onSubmittedWorkDone still
+        // resolves -- so without this a frame that never rendered looks delivered.
+        this.error = null;
+        this.device.addEventListener('uncapturederror', (e) => {
+          this.error = (e.error && e.error.message) || 'GPU error';
+          console.error('[Crisp] GPU error:', this.error);
+        });
+        this.sampler = this.device.createSampler({
+          magFilter: 'linear', minFilter: 'linear',
+          addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge',
+        });
+        // Accurate GPU timing via timestamp queries (immune to CPU↔GPU sync latency).
+        this.gpuMs = 0;
+        if (this.hasTS) {
+          this.querySet = this.device.createQuerySet({ type: 'timestamp', count: 2 });
+          this.tsResolve = this.device.createBuffer({
+            size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+          });
+          this.tsRead = this.device.createBuffer({
+            size: 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          });
+          this.tsBusy = false;
+        }
+        // Pipelines are built in loadWeights, once the channel count is known.
+        return true;
+      }
+    
+      // Load (or hot-swap) a model. Safe to call again to switch models: disposes
+      // the previous weights and rebuilds pipelines for the new channel/scale.
+      async switchModel(url) {
+        if (url === this._modelUrl) return this;
+        return this.loadWeights(url);
+      }
+    
+      async loadWeights(url) {
+        // Dispose any previous model's weight buffers and reset to defaults so the
+        // manifest fully determines channels/scale (clean hot-swap).
+        for (const k in this.w) { this.w[k].weight?.destroy?.(); this.w[k].bias?.destroy?.(); }
+        this.w = {};
+        this.C = 32; this.scale = 2;
+        this.exits = [];        // early-exit depths this model carries, if any
+        this.anchor = false;    // model adds the nearest-upsampled input (manifest "anchor")
+        this.depth = null;      // null = deepest exit
+        this._modelUrl = url;
+        // Optional sibling manifest (e.g. span_lite_2x.json) sets the channel count.
+        try {
+          const mUrl = url.replace(/\.bin(\?.*)?$/, '.json$1');
+          const mResp = await fetch(mUrl);
+          if (mResp.ok) {
+            const m = await mResp.json();
+            if (m.channels) this.C = m.channels | 0;
+            if (m.scale) this.scale = m.scale | 0;
+            if (Array.isArray(m.exits)) this.exits = m.exits.map((d) => d | 0);
+            this.anchor = m.anchor === true;
+          }
+        } catch (_) { /* no manifest → keep defaults (32ch, 2×) */ }
+        this._buildPipelines();
+    
+        const buffer = await (await fetch(url)).arrayBuffer();
+        const all = new Float32Array(buffer);
+        const FS = this.FS;
+        // In f16 mode, convert each tensor to half-float bytes before upload.
+        const toBytes = (sub) => this.f16 ? f32ArrayToF16(sub) : sub;
+        let off = 0;
+        const cpu = {};
+        for (const [name, outC, inC, k] of weightSpec(this.C, this.scale, this.exits)) {
+          const wLen = outC * inC * k * k;
+          const bLen = outC;
+          const wBuf = this.device.createBuffer({
+            size: wLen * FS, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+          });
+          this.device.queue.writeBuffer(wBuf, 0, toBytes(all.subarray(off, off + wLen)));
+          off += wLen;
+          const bBuf = this.device.createBuffer({
+            size: Math.max(bLen, 4) * FS, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+          });
+          this.device.queue.writeBuffer(bBuf, 0, toBytes(all.subarray(off, off + bLen)));
+          off += bLen;
+          this.w[name] = { weight: wBuf, bias: bBuf };
+          if (VEC4_WEIGHTS && k === 3) {
+            // [oc][ic][tap] -> [ic][tap][OCp], OCp = outC padded to the kernel's
+            // 8-channel group so every thread reads two whole vec4s per tap.
+            const OCp = Math.ceil(outC / 8) * 8;
+            const srcW = all.subarray(off - wLen - bLen, off - bLen);
+            const wv = new Float32Array(inC * 9 * OCp);
+            for (let oc = 0; oc < outC; oc++)
+              for (let ic = 0; ic < inC; ic++)
+                for (let t = 0; t < 9; t++) wv[(ic * 9 + t) * OCp + oc] = srcW[(oc * inC + ic) * 9 + t];
+            const bv = new Float32Array(OCp);
+            bv.set(all.subarray(off - bLen, off));
+            const up = (arr) => {
+              const b = this.device.createBuffer({ size: arr.length * FS, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+              this.device.queue.writeBuffer(b, 0, toBytes(arr));
+              return b;
+            };
+            this.w[name].weightV = up(wv);
+            this.w[name].biasV = up(bv);
+          }
+          if (name === "conv_cat" || name === "conv_last") {
+            // Keep CPU copies: the fold needs the numbers, not the GPU buffers.
+            cpu[name] = {
+              weight: all.slice(off - wLen - bLen, off - bLen),
+              bias: all.slice(off - bLen, off),
+            };
+          }
+        }
+    
+        if (FOLD_CONV_LAST && cpu.conv_cat && cpu.conv_last) {
+          const C = this.C;
+          const W = cpu.conv_cat.weight;      // [C, 4C]
+          const bc = cpu.conv_cat.bias;       // [C]
+          const L = cpu.conv_last.weight;     // [C, C, 3, 3]
+          const bl = cpu.conv_last.bias;      // [C]
+    
+          // 1x1 part: the first 3C input channels, unchanged.
+          const w1 = new Float32Array(C * 3 * C);
+          for (let o = 0; o < C; o++)
+            for (let ic = 0; ic < 3 * C; ic++) w1[o * 3 * C + ic] = W[o * 4 * C + ic];
+    
+          // K[o,i,k] = sum_m W3[o,m] * L[m,i,k]
+          const K = new Float32Array(C * C * 9);
+          for (let o = 0; o < C; o++)
+            for (let m2 = 0; m2 < C; m2++) {
+              const w3 = W[o * 4 * C + 3 * C + m2];
+              if (w3 === 0) continue;
+              for (let i = 0; i < C; i++)
+                for (let k = 0; k < 9; k++)
+                  K[(o * C + i) * 9 + k] += w3 * L[(m2 * C + i) * 9 + k];
+            }
+    
+          // bias picks up W3 @ bl
+          const bF = new Float32Array(C);
+          for (let o = 0; o < C; o++) {
+            let acc = bc[o];
+            for (let m2 = 0; m2 < C; m2++) acc += W[o * 4 * C + 3 * C + m2] * bl[m2];
+            bF[o] = acc;
+          }
+    
+          const upload = (arr) => {
+            const b = this.device.createBuffer({
+              size: Math.max(arr.length, 4) * FS,
+              usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            });
+            this.device.queue.writeBuffer(b, 0, toBytes(arr));
+            return b;
+          };
+          this.w.cat_w1 = { weight: upload(w1), bias: null };
+          this.w.cat_wk = { weight: upload(K), bias: null };
+          this.w.cat_bias = { weight: upload(bF), bias: null };
+        }
+        if (off !== all.length) {
+          console.warn(`[Crisp] weight size mismatch: read ${off} of ${all.length}`);
+        }
+        this.ready = true;
+        return true;
+      }
+    
+      // ── Pipelines (resolution-independent) ──────────────────────────
+      _buildPipelines() {
+        const d = this.device;
+        const mk = (code, entry = 'main') =>
+          d.createComputePipeline({ layout: 'auto', compute: { module: d.createShaderModule({ code }), entryPoint: entry } });
+    
+        const T = this.f16 ? 'f16' : 'f32';
+        const EN = this.f16 ? 'enable f16;\n' : '';
+        this.pipe.pre = mk(EN + buildPre(T));
+        const conv = VEC4_WEIGHTS ? buildConvV4 : buildConv;
+        this.pipe.conv = mk(EN + conv(T));
+        if (FUSE_ATTN) this.pipe.convattn = mk(EN + conv(T, true));
+        this.pipe.attn = mk(EN + buildAttn(T));
+        this.pipe.cat = mk(EN + buildCat(T, this.C));
+        if (FOLD_CONV_LAST) this.pipe.catfused = mk(EN + buildCatFused(T, this.C));
+        this.pipe.shuffle = mk(EN + buildShuffle(T, this.anchor));
+        this.pipe.finish = mk(SHADER_FINISH);     // reads a texture, always f32
+        this.pipe.sharpen = mk(SHADER_SHARPEN);   // contrast-adaptive sharpen
+        this.pipe.basic = mk(SHADER_BASIC);       // no-network tier: bicubic from the video
+      }
+    
+      // ── Allocate buffers + bind groups ──
+      // inW/inH: neural input resolution (governed). dispW/dispH: final display
+      // size (defaults to 2× input). A Catmull-Rom finishing pass resamples the
+      // neural 2× output to the display size when they differ.
+      // opts.neural === false configures the basic tier instead: no network, so no
+      // feature buffers at all -- on the weak GPUs that tier exists for, the
+      // network's buffers alone can be hundreds of MB.
+      configure(canvas, inW, inH, dispW, dispH, opts = {}) {
+        this.error = null;
+        if (opts.neural === false) return this._configureBasic(canvas, dispW, dispH);
+        this.neural = true;
+        this.basicTex?.destroy?.(); this.basicTex = null;
+        const d = this.device;
+        inW &= ~1; inH &= ~1;
+        this.inW = inW; this.inH = inH;
+        const px = inW * inH;
+        const outW = inW * this.scale, outH = inH * this.scale;
+        dispW = Math.max(2, Math.round(dispW || outW));
+        dispH = Math.max(2, Math.round(dispH || outH));
+        this.dispW = dispW; this.dispH = dispH;
+        this.needFinish = (dispW !== outW || dispH !== outH);
+    
+        // Free previous resources if resizing.
+        Object.values(this.buf).forEach((b) => b.destroy?.());
+        this.buf = {};
+        this.outTex?.destroy?.();
+        this.dispTex?.destroy?.();
+    
+        const feat = (ch) => d.createBuffer({ size: ch * px * this.FS, usage: GPUBufferUsage.STORAGE });
+        for (const name of ['x3', 'f0', 'mid1', 'mid3', 'bb4', 'sA', 'sB', 'sC', 'catout']) {
+          this.buf[name] = feat(name === 'x3' ? 3 : this.C);
+        }
+        this.buf.up = feat(3 * this.scale * this.scale);
+    
+        const TEX = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING;
+        this.outTex = d.createTexture({ size: [outW, outH], format: 'rgba8unorm', usage: TEX });
+        if (this.needFinish) {
+          this.dispTex = d.createTexture({ size: [dispW, dispH], format: 'rgba8unorm', usage: TEX });
+        }
+        // Sharpen output (display size) + its strength uniform (updated per frame).
+        this.sharpTex?.destroy?.();
+        this.sharpTex = d.createTexture({ size: [dispW, dispH], format: 'rgba8unorm', usage: TEX });
+        if (!this.sharpParams) {
+          // 32 bytes: 4 x u32 (dims, sharpen strength) then 4 x f32 (look grade)
+          this.sharpParams = d.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        }
+    
+        this.ctx = canvas.getContext('webgpu');
+        canvas.width = dispW; canvas.height = dispH;
+        this.ctx.configure({
+          device: d, format: 'rgba8unorm',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
+          alphaMode: 'opaque',
+        });
+    
+        this._buildBindGroups();
+      }
+    
+      _configureBasic(canvas, dispW, dispH) {
+        const d = this.device;
+        this.neural = false;
+        Object.values(this.buf).forEach((b) => b.destroy?.());
+        this.buf = {};
+        this.outTex?.destroy?.(); this.outTex = null;
+        this.dispTex?.destroy?.(); this.dispTex = null;
+        this.basicTex?.destroy?.();
+        this.sharpTex?.destroy?.();
+        dispW = Math.max(2, Math.round(dispW)); dispH = Math.max(2, Math.round(dispH));
+        this.dispW = dispW; this.dispH = dispH;
+        const TEX = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING;
+        this.basicTex = d.createTexture({ size: [dispW, dispH], format: 'rgba8unorm', usage: TEX });
+        this.sharpTex = d.createTexture({ size: [dispW, dispH], format: 'rgba8unorm', usage: TEX });
+        if (!this.sharpParams) {
+          this.sharpParams = d.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        }
+        this._basicParams = this._u([dispW, dispH]);
+        this.ctx = canvas.getContext('webgpu');
+        canvas.width = dispW; canvas.height = dispH;
+        this.ctx.configure({
+          device: d, format: 'rgba8unorm',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
+          alphaMode: 'opaque',
+        });
+        this.sharpenBG = d.createBindGroup({
+          layout: this.pipe.sharpen.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: this.basicTex.createView() },
+            { binding: 1, resource: this.sharpTex.createView() },
+            { binding: 2, resource: { buffer: this.sharpParams } },
+          ],
+        });
+      }
+    
+      /** Basic tier: bicubic straight from the video to display size, then the
+       *  same sharpen + look pass the network output gets. A few ms even on an
+       *  integrated GPU. Call configure(..., { neural: false }) first. */
+      renderBasic(video) {
+        if (!this.ready || !this.ctx || this.neural !== false) return;
+        const d = this.device;
+        const bg = d.createBindGroup({
+          layout: this.pipe.basic.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: d.importExternalTexture({ source: video }) },
+            { binding: 1, resource: this.basicTex.createView() },
+            { binding: 2, resource: { buffer: this._basicParams } },
+          ],
+        });
+        const enc = d.createCommandEncoder();
+        const sampleTs = this.hasTS && !this.tsBusy;
+        const pass = enc.beginComputePass(sampleTs
+          ? { timestampWrites: { querySet: this.querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 } }
+          : undefined);
+        pass.setPipeline(this.pipe.basic);
+        pass.setBindGroup(0, bg);
+        pass.dispatchWorkgroups(Math.ceil(this.dispW / 16), Math.ceil(this.dispH / 16), 1);
+        pass.end();
+        const canvasTex = this.ctx.getCurrentTexture();
+        if (this.sharpen > 0.001 || this.look !== 'natural') {
+          d.queue.writeBuffer(this.sharpParams, 0, this._sharpenUniform());
+          const sp = enc.beginComputePass();
+          sp.setPipeline(this.pipe.sharpen);
+          sp.setBindGroup(0, this.sharpenBG);
+          sp.dispatchWorkgroups(Math.ceil(this.dispW / 16), Math.ceil(this.dispH / 16), 1);
+          sp.end();
+          enc.copyTextureToTexture({ texture: this.sharpTex }, { texture: canvasTex }, [this.dispW, this.dispH, 1]);
+        } else {
+          enc.copyTextureToTexture({ texture: this.basicTex }, { texture: canvasTex }, [this.dispW, this.dispH, 1]);
+        }
+        if (sampleTs) {
+          enc.resolveQuerySet(this.querySet, 0, 2, this.tsResolve, 0);
+          enc.copyBufferToBuffer(this.tsResolve, 0, this.tsRead, 0, 16);
+        }
+        d.queue.submit([enc.finish()]);
+        if (sampleTs) {
+          this.tsBusy = true;
+          this.tsRead.mapAsync(GPUMapMode.READ).then(() => {
+            const t = new BigInt64Array(this.tsRead.getMappedRange());
+            const ns = Number(t[1] - t[0]);
+            if (ns > 0) this.gpuMs = ns / 1e6;
+            this.tsRead.unmap();
+            this.tsBusy = false;
+          }).catch(() => { this.tsBusy = false; });
+        }
+      }
+    
+      _u(arr) {
+        const b = this.device.createBuffer({
+          size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        const data = new Uint32Array(8);
+        arr.forEach((v, i) => { data[i] = v >>> 0; });
+        this.device.queue.writeBuffer(b, 0, data);
+        return b;
+      }
+    
+      _buildBindGroups() {
+        const d = this.device, B = this.buf, W = this.w;
+        const P = this.pipe;
+        const { inW, inH } = this;
+        const C = this.C;
+    
+        // conv3x3 / conv1x1 bind group: [in, weight, bias, out, params]
+        const conv = (inBuf, name, outBuf, inC, outC, k, act) => {
+          const params = this._u([inW, inH, inC, outC, act, k]);
+          return d.createBindGroup({
+            layout: P.conv.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: { buffer: inBuf } },
+              { binding: 1, resource: { buffer: W[name].weightV || W[name].weight } },
+              { binding: 2, resource: { buffer: W[name].biasV || W[name].bias } },
+              { binding: 3, resource: { buffer: outBuf } },
+              { binding: 4, resource: { buffer: params } },
+            ],
+          });
+        };
+        // Fused conv3x3 + SPAB attention: [in, weight, bias, out, params, xb].
+        // `out` must differ from both `in` and `xb`: the conv reads a 3x3
+        // neighbourhood, so writing into either would be a read-write hazard. The
+        // fused pass list below is buffer-planned for exactly that.
+        const convAttn = (inBuf, name, xbBuf, outBuf, inC, outC, k) => {
+          if (outBuf === inBuf || outBuf === xbBuf) {
+            throw new Error(`convAttn ${name}: output aliases an input`);
+          }
+          const params = this._u([inW, inH, inC, outC, 0, k]);
+          return d.createBindGroup({
+            layout: P.convattn.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: { buffer: inBuf } },
+              { binding: 1, resource: { buffer: W[name].weightV || W[name].weight } },
+              { binding: 2, resource: { buffer: W[name].biasV || W[name].bias } },
+              { binding: 3, resource: { buffer: outBuf } },
+              { binding: 4, resource: { buffer: params } },
+              { binding: 5, resource: { buffer: xbBuf } },
+            ],
+          });
+        };
+        const attn = (t3, xb, out) => {
+          const params = this._u([inW, inH, C, 0]);
+          return d.createBindGroup({
+            layout: P.attn.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: { buffer: t3 } },
+              { binding: 1, resource: { buffer: xb } },
+              { binding: 2, resource: { buffer: out } },
+              { binding: 3, resource: { buffer: params } },
+            ],
+          });
+        };
+    
+        // Ordered pass list: [pipelineKey, bindGroup, dispatchZ (= output channels)]
+        //
+        // Fusing c3 with the attention changes which scratch buffer each block
+        // lands in, so the whole chain is re-planned rather than patched: a naive
+        // fusion of block 2 would have it read and write sB in one pass. f0, mid1
+        // and mid3 are never reused as scratch -- conv_cat needs them at the end.
+        this.passes = FUSE_ATTN ? [
+          ['conv', conv(B.x3, 'conv_first', B.f0, 3, C, 3, 0), C],
+          // block 1: in f0 -> out sB
+          ['conv', conv(B.f0, 'b1c1', B.mid1, C, C, 3, 1), C],
+          ['conv', conv(B.mid1, 'b1c2', B.sA, C, C, 3, 1), C],
+          ['convattn', convAttn(B.sA, 'b1c3', B.f0, B.sB, C, C, 3), C],
+          // block 2: in sB -> out sA
+          ['conv', conv(B.sB, 'b2c1', B.sA, C, C, 3, 1), C],
+          ['conv', conv(B.sA, 'b2c2', B.sC, C, C, 3, 1), C],
+          ['convattn', convAttn(B.sC, 'b2c3', B.sB, B.sA, C, C, 3), C],
+          // block 3: in sA -> out sC
+          ['conv', conv(B.sA, 'b3c1', B.mid3, C, C, 3, 1), C],
+          ['conv', conv(B.mid3, 'b3c2', B.sB, C, C, 3, 1), C],
+          ['convattn', convAttn(B.sB, 'b3c3', B.sA, B.sC, C, C, 3), C],
+          // block 4: in sC -> out sA
+          ['conv', conv(B.sC, 'b4c1', B.sA, C, C, 3, 1), C],
+          ['conv', conv(B.sA, 'b4c2', B.sB, C, C, 3, 1), C],
+          ['convattn', convAttn(B.sB, 'b4c3', B.sC, B.sA, C, C, 3), C],
+          // tail -- conv_last folded into conv_cat when the weights allow it
+          ...(FOLD_CONV_LAST && this.w.cat_w1
+              ? [['catfused', this._catFusedBG(), C]]
+              : [['conv', conv(B.sA, 'conv_last', B.bb4, C, C, 3, 0), C],
+                 ['cat', this._catBG(), C]]),
+          ['conv', conv(B.catout, 'upsampler', B.up, C, 3 * this.scale * this.scale, 3, 0), 3 * this.scale * this.scale],
+        ] : [
+          ['conv', conv(B.x3, 'conv_first', B.f0, 3, C, 3, 0), C],
+          // block 1 (in f0)
+          ['conv', conv(B.f0, 'b1c1', B.mid1, C, C, 3, 1), C],
+          ['conv', conv(B.mid1, 'b1c2', B.sA, C, C, 3, 1), C],
+          ['conv', conv(B.sA, 'b1c3', B.sB, C, C, 3, 0), C],
+          ['attn', attn(B.sB, B.f0, B.sC), C],
+          // block 2 (in sC)
+          ['conv', conv(B.sC, 'b2c1', B.sA, C, C, 3, 1), C],
+          ['conv', conv(B.sA, 'b2c2', B.sB, C, C, 3, 1), C],
+          ['conv', conv(B.sB, 'b2c3', B.sA, C, C, 3, 0), C],
+          ['attn', attn(B.sA, B.sC, B.sB), C],
+          // block 3 (in sB)
+          ['conv', conv(B.sB, 'b3c1', B.mid3, C, C, 3, 1), C],
+          ['conv', conv(B.mid3, 'b3c2', B.sA, C, C, 3, 1), C],
+          ['conv', conv(B.sA, 'b3c3', B.sC, C, C, 3, 0), C],
+          ['attn', attn(B.sC, B.sB, B.sA), C],
+          // block 4 (in sA)
+          ['conv', conv(B.sA, 'b4c1', B.sB, C, C, 3, 1), C],
+          ['conv', conv(B.sB, 'b4c2', B.sC, C, C, 3, 1), C],
+          ['conv', conv(B.sC, 'b4c3', B.sB, C, C, 3, 0), C],
+          ['attn', attn(B.sB, B.sA, B.sC), C],
+          // tail
+          ['conv', conv(B.sC, 'conv_last', B.bb4, C, C, 3, 0), C],
+          ['cat', this._catBG(), C],
+          ['conv', conv(B.catout, 'upsampler', B.up, C, 3 * this.scale * this.scale, 3, 0), 3 * this.scale * this.scale],
+        ];
+    
+        // Depth-2 exit, when the model carries one. Two blocks instead of four, so
+        // blocks 3 and 4 are never dispatched -- 12 dispatches against 18.
+        //
+        // Buffer plan differs from the full path: the depth-2 head concatenates
+        // block 2's MID output, which the full path overwrites, so it is parked in
+        // mid3 (unused at this depth) rather than in a scratch buffer.
+        this.passes2 = null;
+        if (this.exits.includes(2) && FUSE_ATTN && this.w.conv_cat_d2) {
+          this.passes2 = [
+            ['conv', conv(B.x3, 'conv_first', B.f0, 3, C, 3, 0), C],
+            // block 1: in f0 -> out sB
+            ['conv', conv(B.f0, 'b1c1', B.mid1, C, C, 3, 1), C],
+            ['conv', conv(B.mid1, 'b1c2', B.sA, C, C, 3, 1), C],
+            ['convattn', convAttn(B.sA, 'b1c3', B.f0, B.sB, C, C, 3), C],
+            // block 2: in sB -> out sC, with its mid kept in mid3 for the head
+            ['conv', conv(B.sB, 'b2c1', B.mid3, C, C, 3, 1), C],
+            ['conv', conv(B.mid3, 'b2c2', B.sA, C, C, 3, 1), C],
+            ['convattn', convAttn(B.sA, 'b2c3', B.sB, B.sC, C, C, 3), C],
+            // depth-2 head
+            ['conv', conv(B.sC, 'conv_last_d2', B.bb4, C, C, 3, 0), C],
+            ['cat', this._catBG('_d2'), C],
+            ['conv', conv(B.catout, 'upsampler_d2', B.up, C, 3 * this.scale * this.scale, 3, 0), 3 * this.scale * this.scale],
+          ];
+        }
+    
+        // PixelShuffle -> neural output texture
+        this.shuffleBG = d.createBindGroup({
+          layout: P.shuffle.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: B.up } },
+            { binding: 1, resource: this.outTex.createView() },
+            { binding: 2, resource: { buffer: this._u([inW, inH, this.scale, 3]) } },
+            // anchored models: the preprocessed input, added back at nearest
+            ...(this.anchor ? [{ binding: 3, resource: { buffer: B.x3 } }] : []),
+          ],
+        });
+    
+        // Finishing: Catmull-Rom resample neural output (2in) -> display size.
+        if (this.needFinish) {
+          this.finishBG = d.createBindGroup({
+            layout: P.finish.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: this.outTex.createView() },
+              { binding: 1, resource: this.dispTex.createView() },
+              { binding: 2, resource: { buffer: this._u([inW * this.scale, inH * this.scale, this.dispW, this.dispH]) } },
+            ],
+          });
+        }
+    
+        // Sharpen: reads the final image (dispTex when finishing, else outTex) -> sharpTex.
+        this.sharpenBG = d.createBindGroup({
+          layout: P.sharpen.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: (this.needFinish ? this.dispTex : this.outTex).createView() },
+            { binding: 1, resource: this.sharpTex.createView() },
+            { binding: 2, resource: { buffer: this.sharpParams } },
+          ],
+        });
+      }
+    
+      /** Choose which exit to run. null (or an unavailable depth) = deepest.
+       *  Returns the depth actually in effect. */
+      setDepth(depth) {
+        this.depth = (depth === 2 && this.passes2) ? 2 : null;
+        return this.depth ?? 4;
+      }
+    
+      /** Depths this model can run. Answerable right after loadWeights, before
+       *  configure() has built the pass lists -- callers decide what to offer
+       *  before they have a resolution. */
+      availableDepths() {
+        const ok = FUSE_ATTN && this.exits.includes(2) && !!this.w.conv_cat_d2;
+        return ok ? [2, 4] : [4];
+      }
+    
+      _catFusedBG() {
+        const d = this.device, B = this.buf, W = this.w;
+        return d.createBindGroup({
+          layout: this.pipe.catfused.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: B.f0 } },
+            { binding: 1, resource: { buffer: B.mid1 } },
+            { binding: 2, resource: { buffer: B.mid3 } },
+            // the fourth input is now block 4's output directly: conv_last is gone
+            { binding: 3, resource: { buffer: B.sA } },
+            { binding: 4, resource: { buffer: W.cat_w1.weight } },
+            { binding: 5, resource: { buffer: W.cat_wk.weight } },
+            { binding: 6, resource: { buffer: W.cat_bias.weight } },
+            { binding: 7, resource: { buffer: B.catout } },
+            { binding: 8, resource: { buffer: this._u([this.inW, this.inH, 4 * this.C, this.C]) } },
+          ],
+        });
+      }
+    
+      _catBG(sfx = '') {
+        const d = this.device, B = this.buf, W = this.w;
+        return d.createBindGroup({
+          layout: this.pipe.cat.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: B.f0 } },
+            { binding: 1, resource: { buffer: B.mid1 } },
+            { binding: 2, resource: { buffer: B.mid3 } },
+            { binding: 3, resource: { buffer: B.bb4 } },
+            { binding: 4, resource: { buffer: W[`conv_cat${sfx}`].weight } },
+            { binding: 5, resource: { buffer: W[`conv_cat${sfx}`].bias } },
+            { binding: 6, resource: { buffer: B.catout } },
+            { binding: 7, resource: { buffer: this._u([this.inW, this.inH, 4 * this.C, this.C]) } },
+          ],
+        });
+      }
+    
+      // ── Run one frame: video -> canvas ──────────────────────────────
+    
+      /** Uniform block for the sharpen+grade pass: 4 x u32 then 4 x f32. */
+      _sharpenUniform() {
+        const buf = new ArrayBuffer(32);
+        new Uint32Array(buf, 0, 4).set([this.dispW, this.dispH,
+                                        Math.round(this.sharpen * 4096), 0]);
+        const g = LOOKS[this.look] || LOOKS.natural;
+        new Float32Array(buf, 16, 4).set([g.exposure, g.contrast, g.saturation, g.temp]);
+        return buf;
+      }
+    
+      /** Pick a look. Unknown names fall back to 'natural' rather than throwing,
+       *  so a stale setting from an older version cannot break playback. */
+      setLook(name) {
+        this.look = LOOKS[name] ? name : 'natural';
+        return this.look;
+      }
+    
+      static looks() { return LOOK_NAMES.slice(); }
+    
+      render(video) {
+        if (!this.ready || !this.ctx || this.neural === false) return;
+        const d = this.device;
+        const { inW, inH } = this;
+        const gx16 = Math.ceil(inW / 16), gy16 = Math.ceil(inH / 16);
+        const gx8 = Math.ceil(inW / 8), gy8 = Math.ceil(inH / 8);
+    
+        // Preprocess bind group must be rebuilt each frame (external texture).
+        const extTex = d.importExternalTexture({ source: video });
+        const preBG = d.createBindGroup({
+          layout: this.pipe.pre.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: extTex },
+            { binding: 1, resource: this.sampler },
+            { binding: 2, resource: { buffer: this.buf.x3 } },
+            { binding: 3, resource: { buffer: this._preParams } },
+          ],
+        });
+    
+        const enc = d.createCommandEncoder();
+        // Timestamp: mark start on pass 1; end goes on pass 1 (no finish) or pass 2.
+        const pass1ts = this.hasTS
+          ? { timestampWrites: { querySet: this.querySet, beginningOfPassWriteIndex: 0,
+              ...(this.needFinish ? {} : { endOfPassWriteIndex: 1 }) } }
+          : undefined;
+        const pass = enc.beginComputePass(pass1ts);
+    
+        pass.setPipeline(this.pipe.pre);
+        pass.setBindGroup(0, preBG);
+        pass.dispatchWorkgroups(gx16, gy16, 1);
+    
+        const passes = (this.depth === 2 && this.passes2) ? this.passes2 : this.passes;
+        for (const [key, bg, oc] of passes) {
+          pass.setPipeline(this.pipe[key]);
+          pass.setBindGroup(0, bg);
+          if (key === 'attn') pass.dispatchWorkgroups(gx16, gy16, oc);        // per-channel (oc = C)
+          else if (key === 'convattn') pass.dispatchWorkgroups(gx16, gy16, Math.ceil(oc / 8)); // same geometry as conv
+          else if (key === 'cat') pass.dispatchWorkgroups(gx8, gy8, Math.ceil(oc / 8)); // 8 ch/thread
+          else if (key === 'catfused') pass.dispatchWorkgroups(gx8, gy8, Math.ceil(oc / 8)); // 8 ch/thread
+          else pass.dispatchWorkgroups(gx16, gy16, Math.ceil(oc / 8));        // conv: 2×2px×8ch/thread
+        }
+    
+        // PixelShuffle at neural output resolution.
+        pass.setPipeline(this.pipe.shuffle);
+        pass.setBindGroup(0, this.shuffleBG);
+        pass.dispatchWorkgroups(Math.ceil(inW * this.scale / 16), Math.ceil(inH * this.scale / 16), 1);
+        pass.end();
+    
+        if (this.needFinish) {
+          // Separate pass: read the freshly-written outTex as a sampled texture.
+          const finTs = this.hasTS
+            ? { timestampWrites: { querySet: this.querySet, endOfPassWriteIndex: 1 } }
+            : undefined;
+          const fin = enc.beginComputePass(finTs);
+          fin.setPipeline(this.pipe.finish);
+          fin.setBindGroup(0, this.finishBG);
+          fin.dispatchWorkgroups(Math.ceil(this.dispW / 16), Math.ceil(this.dispH / 16), 1);
+          fin.end();
+        }
+    
+        // Optional contrast-adaptive sharpen + look grade, then present to canvas.
+        // The grade rides in this pass, so the pass has to run when a look is set
+        // even at zero sharpening -- otherwise picking a look with the sharpness
+        // slider at 0 would silently do nothing.
+        const canvasTex = this.ctx.getCurrentTexture();
+        if (this.sharpen > 0.001 || this.look !== 'natural') {
+          d.queue.writeBuffer(this.sharpParams, 0,
+            this._sharpenUniform());
+          const sp = enc.beginComputePass();
+          sp.setPipeline(this.pipe.sharpen);
+          sp.setBindGroup(0, this.sharpenBG);
+          sp.dispatchWorkgroups(Math.ceil(this.dispW / 16), Math.ceil(this.dispH / 16), 1);
+          sp.end();
+          enc.copyTextureToTexture({ texture: this.sharpTex }, { texture: canvasTex }, [this.dispW, this.dispH, 1]);
+        } else {
+          const srcTex = this.needFinish ? this.dispTex : this.outTex;
+          const cw = this.needFinish ? this.dispW : inW * this.scale;
+          const ch = this.needFinish ? this.dispH : inH * this.scale;
+          enc.copyTextureToTexture({ texture: srcTex }, { texture: canvasTex }, [cw, ch, 1]);
+        }
+    
+        // Resolve GPU timestamps and read back asynchronously (never blocks render).
+        const sampleTs = this.hasTS && !this.tsBusy;
+        if (sampleTs) {
+          enc.resolveQuerySet(this.querySet, 0, 2, this.tsResolve, 0);
+          enc.copyBufferToBuffer(this.tsResolve, 0, this.tsRead, 0, 16);
+        }
+        d.queue.submit([enc.finish()]);
+    
+        if (sampleTs) {
+          this.tsBusy = true;
+          this.tsRead.mapAsync(GPUMapMode.READ).then(() => {
+            const t = new BigInt64Array(this.tsRead.getMappedRange());
+            const ns = Number(t[1] - t[0]);
+            if (ns > 0) this.gpuMs = ns / 1e6;
+            this.tsRead.unmap();
+            this.tsBusy = false;
+          }).catch(() => { this.tsBusy = false; });
+        }
+      }
+    
+      // Cache preprocess params buffer (created lazily in configure via getter).
+      get _preParams() {
+        if (!this.__pre || this.__preW !== this.inW || this.__preH !== this.inH) {
+          this.__pre = this._u([this.inW, this.inH, 0, 0]);
+          this.__preW = this.inW; this.__preH = this.inH;
+        }
+        return this.__pre;
+      }
+    
+      async waitIdle() { await this.device.queue.onSubmittedWorkDone(); }
+    
+      dispose() {
+        Object.values(this.buf).forEach((b) => b.destroy?.());
+        this.outTex?.destroy?.();
+        this.ready = false;
+      }
+    }
+    
+    // ── WGSL shaders ──────────────────────────────────────────────────
+    // Storage buffers use the scalar type T (f16 when available, else f32); all
+    // arithmetic is done in f32 (values cast on load/store) so half precision never
+    // costs accuracy - the win is halved weight/feature memory traffic, which is the
+    // measured bottleneck. The f32 path makes every T(...) cast a no-op.
+    
+    // f32 -> IEEE-754 half-float bits, for uploading weights in f16 mode.
+    const _f16buf = new ArrayBuffer(4);
+    const _f16f32 = new Float32Array(_f16buf);
+    const _f16u32 = new Uint32Array(_f16buf);
+    function f32ToHalf(val) {
+      _f16f32[0] = val;
+      const x = _f16u32[0];
+      const sign = (x >>> 16) & 0x8000;
+      const exp = (x >>> 23) & 0xff;
+      let mant = x & 0x7fffff;
+      if (exp === 0xff) return sign | 0x7c00 | (mant ? 0x200 : 0);   // inf/nan
+      const e = exp - 112;                                            // 127 - 15
+      if (e >= 0x1f) return sign | 0x7c00;                           // overflow -> inf
+      if (e <= 0) {
+        if (e < -10) return sign;                                     // underflow -> 0
+        mant |= 0x800000;
+        const shift = 14 - e;
+        let half = mant >> shift;
+        if ((mant >> (shift - 1)) & 1) half += 1;                     // round
+        return sign | half;
+      }
+      let half = (e << 10) | (mant >> 13);
+      if (mant & 0x1000) half += 1;                                   // round
+      return sign | half;
+    }
+    function f32ArrayToF16(arr) {
+      const out = new Uint16Array(arr.length);
+      for (let i = 0; i < arr.length; i++) out[i] = f32ToHalf(arr[i]);
+      return out;
+    }
+    
+    const buildPre = (T) => /* wgsl */`
+    @group(0) @binding(0) var inTex: texture_external;
+    @group(0) @binding(1) var samp: sampler;
+    @group(0) @binding(2) var<storage, read_write> outp: array<${T}>;
+    struct P { W: u32, H: u32, a: u32, b: u32 };
+    @group(0) @binding(3) var<uniform> p: P;
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      if (gid.x >= p.W || gid.y >= p.H) { return; }
+      let uv = (vec2f(f32(gid.x), f32(gid.y)) + 0.5) / vec2f(f32(p.W), f32(p.H));
+      let c = textureSampleBaseClampToEdge(inTex, samp, uv);
+      let idx = gid.y * p.W + gid.x;
+      let px = p.W * p.H;
+      outp[idx]           = ${T}(c.r - ${MEAN[0]});
+      outp[px + idx]      = ${T}(c.g - ${MEAN[1]});
+      outp[2u * px + idx] = ${T}(c.b - ${MEAN[2]});
+    }`;
+    
+    // Each thread computes a 2x2 output block for a group of 8 output channels =
+    // 32 register accumulators (statically named → no spill). A 4x4 input patch is
+    // loaded once per input channel and reused across all 9 taps × 4 pixels, and
+    // every weight fetch is reused across all 4 pixels - maximizing arithmetic
+    // intensity (the measured bottleneck). Grid: ceil(W/2) × ceil(H/2) threads.
+    const buildConv = (T, fuseAttn = false) => {
+      const L = [];
+      L.push(`
+    @group(0) @binding(0) var<storage, read> inp: array<${T}>;
+    @group(0) @binding(1) var<storage, read> wgt: array<${T}>;
+    @group(0) @binding(2) var<storage, read> bia: array<${T}>;
+    @group(0) @binding(3) var<storage, read_write> outp: array<${T}>;
+    struct P { W:u32, H:u32, inC:u32, outC:u32, act:u32, k:u32 };
+    @group(0) @binding(4) var<uniform> pp: P;
+    ${fuseAttn ? `@group(0) @binding(5) var<storage, read> xb: array<${T}>;` : ''}
+    fn silu(v: f32) -> f32 { return v / (1.0 + exp(-v)); }
+    @compute @workgroup_size(8, 8, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let bx = gid.x * 2u; let by = gid.y * 2u;
+      if (bx >= pp.W || by >= pp.H) { return; }
+      let W = pp.W; let H = pp.H; let IC = pp.inC; let OC = pp.outC; let px = W * H;
+      let o = gid.z * 8u; let stride = IC * 9u;
+      let vx1 = (bx + 1u) < W; let vy1 = (by + 1u) < H;`);
+      const acc = [];
+      for (let pI = 0; pI < 4; pI++) for (let k = 0; k < 8; k++) acc.push(`a${pI}_${k}`);
+      L.push('  ' + acc.map((a) => 'var ' + a + ' = 0.0;').join(' '));
+      for (let k = 0; k < 8; k++)
+        L.push(`  if (o+${k}u<OC) { let bv=f32(bia[o+${k}u]); a0_${k}=bv; a1_${k}=bv; a2_${k}=bv; a3_${k}=bv; }`);
+      L.push('  for (var ic = 0u; ic < IC; ic++) {');
+      L.push('    let cb = ic * px;');
+      for (let c = 0; c < 4; c++)
+        L.push(`    let cx${c}=i32(bx)+${c - 1}; let cok${c}=cx${c}>=0 && cx${c}<i32(W); let cc${c}=u32(clamp(cx${c},0,i32(W)-1));`);
+      for (let r = 0; r < 4; r++)
+        L.push(`    let ry${r}=i32(by)+${r - 1}; let rok${r}=ry${r}>=0 && ry${r}<i32(H); let rr${r}=cb+u32(clamp(ry${r},0,i32(H)-1))*W;`);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++)
+        L.push(`    let p${r}_${c}=select(0.0, f32(inp[rr${r}+cc${c}]), rok${r} && cok${c});`);
+      for (let ky = 0; ky < 3; ky++) for (let kx = 0; kx < 3; kx++) {
+        L.push(`    { let wc = ic*9u + ${ky * 3 + kx}u;`);
+        for (let k = 0; k < 8; k++) L.push(`      let w${k}=f32(wgt[(o+${k}u)*stride+wc]);`);
+        const s = [`p${ky}_${kx}`, `p${ky}_${kx + 1}`, `p${ky + 1}_${kx}`, `p${ky + 1}_${kx + 1}`];
+        for (let k = 0; k < 8; k++)
+          L.push(`      a0_${k}+=${s[0]}*w${k}; a1_${k}+=${s[1]}*w${k}; a2_${k}+=${s[2]}*w${k}; a3_${k}+=${s[3]}*w${k};`);
+        L.push('    }');
+      }
+      L.push('  }');
+      L.push('  let doAct = pp.act == 1u;');
+      for (let k = 0; k < 8; k++) {
+        L.push(`  if (o+${k}u<OC) {`);
+        L.push(`    var v0=a0_${k}; var v1=a1_${k}; var v2=a2_${k}; var v3=a3_${k};`);
+        L.push('    if (doAct) { v0=silu(v0); v1=silu(v1); v2=silu(v2); v3=silu(v3); }');
+        L.push(`    let oc=(o+${k}u)*px;`);
+        if (fuseAttn) {
+          // att = sigmoid(v) - 0.5 ; out = (v + xb) * att   -- exactly buildAttn,
+          // evaluated here while v is still in a register.
+          L.push('    let i0=oc+by*W+bx; let i1=i0+1u;');
+          L.push('    let i2=oc+(by+1u)*W+bx; let i3=i2+1u;');
+          for (let q = 0; q < 4; q++)
+            L.push(`    v${q}=(v${q}+f32(xb[i${q}]))*(1.0/(1.0+exp(-v${q}))-0.5);`);
+          L.push(`    outp[i0]=${T}(v0);`);
+          L.push(`    if (vx1) { outp[i1]=${T}(v1); }`);
+          L.push(`    if (vy1) { outp[i2]=${T}(v2); }`);
+          L.push(`    if (vx1 && vy1) { outp[i3]=${T}(v3); }`);
+        } else {
+        L.push(`    outp[oc+by*W+bx]=${T}(v0);`);
+        L.push(`    if (vx1) { outp[oc+by*W+bx+1u]=${T}(v1); }`);
+        L.push(`    if (vy1) { outp[oc+(by+1u)*W+bx]=${T}(v2); }`);
+        L.push(`    if (vx1 && vy1) { outp[oc+(by+1u)*W+bx+1u]=${T}(v3); }`);
+        }
+        L.push('  }');
+      }
+      L.push('}');
+      return L.join('\n');
+    };
+    
+    // buildConv with vec4 weights and accumulators: a{pixel}l holds output
+    // channels o..o+3, a{pixel}h holds o+4..o+7. The 4x4 input patch is loaded
+    // exactly as in buildConv.
+    const buildConvV4 = (T, fuseAttn = false) => {
+      const L = [];
+      const V = `vec4<${T}>`;
+      // f16 accumulators when storage is f16 and F16_ACC is on; else f32.
+      const hacc = F16_ACC && T === 'f16';
+      const A = hacc ? 'vec4<f16>' : 'vec4f', S = hacc ? 'f16' : 'f32';
+      L.push(`
+    @group(0) @binding(0) var<storage, read> inp: array<${T}>;
+    @group(0) @binding(1) var<storage, read> wgt: array<${V}>;
+    @group(0) @binding(2) var<storage, read> bia: array<${V}>;
+    @group(0) @binding(3) var<storage, read_write> outp: array<${T}>;
+    struct P { W:u32, H:u32, inC:u32, outC:u32, act:u32, k:u32 };
+    @group(0) @binding(4) var<uniform> pp: P;
+    ${fuseAttn ? `@group(0) @binding(5) var<storage, read> xb: array<${T}>;` : ''}
+    fn silu(v: f32) -> f32 { return v / (1.0 + exp(-v)); }
+    @compute @workgroup_size(8, 8, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let bx = gid.x * 2u; let by = gid.y * 2u;
+      if (bx >= pp.W || by >= pp.H) { return; }
+      let W = pp.W; let H = pp.H; let IC = pp.inC; let OC = pp.outC; let px = W * H;
+      let o = gid.z * 8u; let og = gid.z * 2u; let OC4 = ((OC + 7u) / 8u) * 2u;
+      let vx1 = (bx + 1u) < W; let vy1 = (by + 1u) < H;
+      let bl = ${A}(bia[og]); let bh = ${A}(bia[og + 1u]);
+      var a0l = bl; var a0h = bh; var a1l = bl; var a1h = bh;
+      var a2l = bl; var a2h = bh; var a3l = bl; var a3h = bh;
+      for (var ic = 0u; ic < IC; ic++) {
+        let cb = ic * px;`);
+      for (let c = 0; c < 4; c++)
+        L.push(`    let cx${c}=i32(bx)+${c - 1}; let cok${c}=cx${c}>=0 && cx${c}<i32(W); let cc${c}=u32(clamp(cx${c},0,i32(W)-1));`);
+      for (let r = 0; r < 4; r++)
+        L.push(`    let ry${r}=i32(by)+${r - 1}; let rok${r}=ry${r}>=0 && ry${r}<i32(H); let rr${r}=cb+u32(clamp(ry${r},0,i32(H)-1))*W;`);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++)
+        L.push(`    let p${r}_${c}=select(${S}(0.0), ${S}(inp[rr${r}+cc${c}]), rok${r} && cok${c});`);
+      for (let ky = 0; ky < 3; ky++) for (let kx = 0; kx < 3; kx++) {
+        L.push(`    { let wb = (ic*9u + ${ky * 3 + kx}u) * OC4 + og; let wl = ${A}(wgt[wb]); let wh = ${A}(wgt[wb + 1u]);`);
+        const s = [`p${ky}_${kx}`, `p${ky}_${kx + 1}`, `p${ky + 1}_${kx}`, `p${ky + 1}_${kx + 1}`];
+        for (let q = 0; q < 4; q++) L.push(`      a${q}l += ${s[q]}*wl; a${q}h += ${s[q]}*wh;`);
+        L.push('    }');
+      }
+      L.push('  }');
+      L.push('  let doAct = pp.act == 1u;');
+      const comp = ['x', 'y', 'z', 'w'];
+      for (let k = 0; k < 8; k++) {
+        const half = k < 4 ? 'l' : 'h', c = comp[k % 4];
+        L.push(`  if (o+${k}u<OC) {`);
+        L.push(`    var v0=f32(a0${half}.${c}); var v1=f32(a1${half}.${c}); var v2=f32(a2${half}.${c}); var v3=f32(a3${half}.${c});`);
+        L.push('    if (doAct) { v0=silu(v0); v1=silu(v1); v2=silu(v2); v3=silu(v3); }');
+        L.push(`    let oc=(o+${k}u)*px;`);
+        if (fuseAttn) {
+          L.push('    let i0=oc+by*W+bx; let i1=i0+1u;');
+          L.push('    let i2=oc+(by+1u)*W+bx; let i3=i2+1u;');
+          for (let q = 0; q < 4; q++)
+            L.push(`    v${q}=(v${q}+f32(xb[i${q}]))*(1.0/(1.0+exp(-v${q}))-0.5);`);
+          L.push(`    outp[i0]=${T}(v0);`);
+          L.push(`    if (vx1) { outp[i1]=${T}(v1); }`);
+          L.push(`    if (vy1) { outp[i2]=${T}(v2); }`);
+          L.push(`    if (vx1 && vy1) { outp[i3]=${T}(v3); }`);
+        } else {
+          L.push(`    outp[oc+by*W+bx]=${T}(v0);`);
+          L.push(`    if (vx1) { outp[oc+by*W+bx+1u]=${T}(v1); }`);
+          L.push(`    if (vy1) { outp[oc+(by+1u)*W+bx]=${T}(v2); }`);
+          L.push(`    if (vx1 && vy1) { outp[oc+(by+1u)*W+bx+1u]=${T}(v3); }`);
+        }
+        L.push('  }');
+      }
+      L.push('}');
+      return L.join('\n');
+    };
+    
+    const buildAttn = (T) => /* wgsl */`
+    @group(0) @binding(0) var<storage, read> t3: array<${T}>;
+    @group(0) @binding(1) var<storage, read> xb: array<${T}>;
+    @group(0) @binding(2) var<storage, read_write> outp: array<${T}>;
+    struct P { W: u32, H: u32, C: u32, a: u32 };
+    @group(0) @binding(3) var<uniform> p: P;
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let x = gid.x; let y = gid.y; let c = gid.z;
+      if (x >= p.W || y >= p.H || c >= p.C) { return; }
+      let idx = c * p.W * p.H + y * p.W + x;
+      let v = f32(t3[idx]);
+      let att = 1.0 / (1.0 + exp(-v)) - 0.5;
+      outp[idx] = ${T}((v + f32(xb[idx])) * att);
+    }`;
+    
+    // conv_cat with conv_last folded in: 1x1 over the first three buffers, 3x3 over
+    // the fourth. Same output as running conv_last then conv_cat, one pass fewer.
+    const buildCatFused = (T, C) => {
+      const IN3 = 3 * C;
+      // 8 output channels per thread. The first version used one thread per output
+      // channel and was 42% SLOWER than not folding at all: every thread re-read the
+      // same 3x3 neighbourhood of in3, so C-fold redundant loads swamped the one
+      // buffer write the fold saves. Amortising the loads across 8 accumulators is
+      // what makes the trade actually pay.
+      let macs1 = '', macsK = '';
+      for (let k = 0; k < 8; k++) macs1 += `      a${k} += pix * f32(w1[(o + ${k}u) * ${IN3}u + ic]);\n`;
+      for (let k = 0; k < 8; k++) macsK += `        a${k} += v * f32(wk[(((o + ${k}u) * ${C}u + i) * 9u) + tap]);\n`;
+      return `
+    @group(0) @binding(0) var<storage, read> in0: array<${T}>;
+    @group(0) @binding(1) var<storage, read> in1: array<${T}>;
+    @group(0) @binding(2) var<storage, read> in2: array<${T}>;
+    @group(0) @binding(3) var<storage, read> in3: array<${T}>;
+    @group(0) @binding(4) var<storage, read> w1: array<${T}>;
+    @group(0) @binding(5) var<storage, read> wk: array<${T}>;
+    @group(0) @binding(6) var<storage, read> bia: array<${T}>;
+    @group(0) @binding(7) var<storage, read_write> outp: array<${T}>;
+    struct P { W: u32, H: u32, inC: u32, outC: u32 };
+    @group(0) @binding(8) var<uniform> p: P;
+    
+    @compute @workgroup_size(8, 8, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let x = gid.x; let y = gid.y;
+      if (x >= p.W || y >= p.H) { return; }
+      let px = p.W * p.H;
+      let idx = y * p.W + x;
+      let o = gid.z * 8u;
+    
+      var a0 = 0.0; var a1 = 0.0; var a2 = 0.0; var a3 = 0.0;
+      var a4 = 0.0; var a5 = 0.0; var a6 = 0.0; var a7 = 0.0;
+      if (o + 0u < p.outC) { a0 = f32(bia[o + 0u]); }
+      if (o + 1u < p.outC) { a1 = f32(bia[o + 1u]); }
+      if (o + 2u < p.outC) { a2 = f32(bia[o + 2u]); }
+      if (o + 3u < p.outC) { a3 = f32(bia[o + 3u]); }
+      if (o + 4u < p.outC) { a4 = f32(bia[o + 4u]); }
+      if (o + 5u < p.outC) { a5 = f32(bia[o + 5u]); }
+      if (o + 6u < p.outC) { a6 = f32(bia[o + 6u]); }
+      if (o + 7u < p.outC) { a7 = f32(bia[o + 7u]); }
+    
+      for (var ic = 0u; ic < ${IN3}u; ic++) {
+        var pix: f32;
+        if (ic < ${C}u) { pix = f32(in0[ic * px + idx]); }
+        else if (ic < ${2 * C}u) { pix = f32(in1[(ic - ${C}u) * px + idx]); }
+        else { pix = f32(in2[(ic - ${2 * C}u) * px + idx]); }
+    ${macs1}  }
+    
+      for (var i = 0u; i < ${C}u; i++) {
+        let cb = i * px;
+        for (var t = 0u; t < 9u; t++) {
+          let ky = t / 3u; let kx = t % 3u;
+          let sx = i32(x) + i32(kx) - 1; let sy = i32(y) + i32(ky) - 1;
+          let inb = sx >= 0 && sx < i32(p.W) && sy >= 0 && sy < i32(p.H);
+          let v = select(0.0, f32(in3[cb + u32(clamp(sy,0,i32(p.H)-1)) * p.W + u32(clamp(sx,0,i32(p.W)-1))]), inb);
+          let tap = t;
+    ${macsK}    }
+      }
+    
+      if (o + 0u < p.outC) { outp[(o + 0u) * px + idx] = ${T}(a0); }
+      if (o + 1u < p.outC) { outp[(o + 1u) * px + idx] = ${T}(a1); }
+      if (o + 2u < p.outC) { outp[(o + 2u) * px + idx] = ${T}(a2); }
+      if (o + 3u < p.outC) { outp[(o + 3u) * px + idx] = ${T}(a3); }
+      if (o + 4u < p.outC) { outp[(o + 4u) * px + idx] = ${T}(a4); }
+      if (o + 5u < p.outC) { outp[(o + 5u) * px + idx] = ${T}(a5); }
+      if (o + 6u < p.outC) { outp[(o + 6u) * px + idx] = ${T}(a6); }
+      if (o + 7u < p.outC) { outp[(o + 7u) * px + idx] = ${T}(a7); }
+    }`;
+    };
+    
+    // conv_cat: 1×1 over the concat of 4 C-channel buffers (4C inputs → C outputs).
+    // Channel boundaries are baked from C. 8 output channels per thread.
+    const buildCat = (T, C) => {
+      const IN = 4 * C;
+      const pick = `if (ic < ${C}u) { pix = f32(in0[ic * px + idx]); }
+        else if (ic < ${2 * C}u) { pix = f32(in1[(ic - ${C}u) * px + idx]); }
+        else if (ic < ${3 * C}u) { pix = f32(in2[(ic - ${2 * C}u) * px + idx]); }
+        else { pix = f32(in3[(ic - ${3 * C}u) * px + idx]); }`;
+      let macs = '';
+      for (let k = 0; k < 8; k++) macs += `    a${k} += pix * f32(wgt[(o + ${k}u) * ${IN}u + ic]);\n`;
+      return `
+    @group(0) @binding(0) var<storage, read> in0: array<${T}>;
+    @group(0) @binding(1) var<storage, read> in1: array<${T}>;
+    @group(0) @binding(2) var<storage, read> in2: array<${T}>;
+    @group(0) @binding(3) var<storage, read> in3: array<${T}>;
+    @group(0) @binding(4) var<storage, read> wgt: array<${T}>;
+    @group(0) @binding(5) var<storage, read> bia: array<${T}>;
+    @group(0) @binding(6) var<storage, read_write> outp: array<${T}>;
+    struct P { W: u32, H: u32, inC: u32, outC: u32 };
+    @group(0) @binding(7) var<uniform> p: P;
+    
+    @compute @workgroup_size(8, 8, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let x = gid.x; let y = gid.y;
+      if (x >= p.W || y >= p.H) { return; }
+      let px = p.W * p.H; let idx = y * p.W + x; let OC = p.outC;
+      let o = gid.z * 8u;
+      var a0=0.0; var a1=0.0; var a2=0.0; var a3=0.0; var a4=0.0; var a5=0.0; var a6=0.0; var a7=0.0;
+      if (o+0u<OC){a0=f32(bia[o+0u]);} if (o+1u<OC){a1=f32(bia[o+1u]);}
+      if (o+2u<OC){a2=f32(bia[o+2u]);} if (o+3u<OC){a3=f32(bia[o+3u]);}
+      if (o+4u<OC){a4=f32(bia[o+4u]);} if (o+5u<OC){a5=f32(bia[o+5u]);}
+      if (o+6u<OC){a6=f32(bia[o+6u]);} if (o+7u<OC){a7=f32(bia[o+7u]);}
+      for (var ic = 0u; ic < ${IN}u; ic++) {
+        var pix: f32;
+        ${pick}
+    ${macs}  }
+      if (o+0u<OC){ outp[(o+0u)*px+idx]=${T}(a0); } if (o+1u<OC){ outp[(o+1u)*px+idx]=${T}(a1); }
+      if (o+2u<OC){ outp[(o+2u)*px+idx]=${T}(a2); } if (o+3u<OC){ outp[(o+3u)*px+idx]=${T}(a3); }
+      if (o+4u<OC){ outp[(o+4u)*px+idx]=${T}(a4); } if (o+5u<OC){ outp[(o+5u)*px+idx]=${T}(a5); }
+      if (o+6u<OC){ outp[(o+6u)*px+idx]=${T}(a6); } if (o+7u<OC){ outp[(o+7u)*px+idx]=${T}(a7); }
+    }`;
+    };
+    
+    // anchor: add the LR input back at nearest (every sub-pixel of an output pixel
+    // reads its own LR pixel), matching SPANLite(anchor=True)'s repeat_interleave
+    // before PixelShuffle. x3 holds the input mean-subtracted, so MEAN goes back on.
+    const buildShuffle = (T, anchor = false) => /* wgsl */`
+    @group(0) @binding(0) var<storage, read> inp: array<${T}>;
+    @group(0) @binding(1) var outTex: texture_storage_2d<rgba8unorm, write>;
+    struct P { W: u32, H: u32, scale: u32, ch: u32 };
+    @group(0) @binding(2) var<uniform> p: P;
+    ${anchor ? `@group(0) @binding(3) var<storage, read> x3: array<${T}>;` : ''}
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      let X = gid.x; let Y = gid.y;
+      let outW = p.W * p.scale; let outH = p.H * p.scale;
+      if (X >= outW || Y >= outH) { return; }
+      let ix = X / p.scale; let iy = Y / p.scale;
+      let sx = X % p.scale; let sy = Y % p.scale;
+      let s2 = p.scale * p.scale;
+      let base = sy * p.scale + sx;
+      let px = p.W * p.H;
+      let idx = iy * p.W + ix;
+      var rr = f32(inp[(0u * s2 + base) * px + idx]);
+      var gg = f32(inp[(1u * s2 + base) * px + idx]);
+      var bb = f32(inp[(2u * s2 + base) * px + idx]);
+      ${anchor ? `rr += f32(x3[idx]) + ${MEAN[0]};
+      gg += f32(x3[px + idx]) + ${MEAN[1]};
+      bb += f32(x3[2u * px + idx]) + ${MEAN[2]};` : ''}
+      let r = clamp(rr, 0.0, 1.0);
+      let g = clamp(gg, 0.0, 1.0);
+      let b = clamp(bb, 0.0, 1.0);
+      textureStore(outTex, vec2u(X, Y), vec4f(r, g, b, 1.0));
+    }`;
+    
+    // Catmull-Rom bicubic resample from the neural output to the display size -
+    // a cheap, sharp spatial finish (in the spirit of FSR's EASU) so a
+    // governed-down internal resolution still fills the screen crisply.
+    const SHADER_FINISH = /* wgsl */`
+    @group(0) @binding(0) var src: texture_2d<f32>;
+    @group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
+    struct P { srcW: u32, srcH: u32, dstW: u32, dstH: u32 };
+    @group(0) @binding(2) var<uniform> p: P;
+    
+    fn crw(t: f32) -> vec4<f32> {
+      let t2 = t * t; let t3 = t2 * t;
+      return vec4<f32>(
+        -0.5 * t3 + t2 - 0.5 * t,
+         1.5 * t3 - 2.5 * t2 + 1.0,
+        -1.5 * t3 + 2.0 * t2 + 0.5 * t,
+         0.5 * t3 - 0.5 * t2,
+      );
+    }
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      if (gid.x >= p.dstW || gid.y >= p.dstH) { return; }
+      let W = i32(p.srcW); let H = i32(p.srcH);
+      let sx = (f32(gid.x) + 0.5) * f32(p.srcW) / f32(p.dstW) - 0.5;
+      let sy = (f32(gid.y) + 0.5) * f32(p.srcH) / f32(p.dstH) - 0.5;
+      let ix = i32(floor(sx)); let iy = i32(floor(sy));
+      let wx = crw(sx - f32(ix)); let wy = crw(sy - f32(iy));
+    
+      var col = vec3<f32>(0.0);
+      for (var m = 0; m < 4; m++) {
+        let yy = clamp(iy - 1 + m, 0, H - 1);
+        var row = vec3<f32>(0.0);
+        for (var n = 0; n < 4; n++) {
+          let xx = clamp(ix - 1 + n, 0, W - 1);
+          row += wx[n] * textureLoad(src, vec2i(xx, yy), 0).rgb;
+        }
+        col += wy[m] * row;
+      }
+      textureStore(dst, vec2u(gid.x, gid.y), vec4f(clamp(col, vec3(0.0), vec3(1.0)), 1.0));
+    }`;
+    
+    // Basic tier: Catmull-Rom straight from the video's external texture to the
+    // display size. Same kernel as SHADER_FINISH, but reading the decoded frame
+    // directly, so there is no network, no preprocess pass and no feature buffer.
+    const SHADER_BASIC = /* wgsl */`
+    @group(0) @binding(0) var src: texture_external;
+    @group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
+    struct P { dstW: u32, dstH: u32, a: u32, b: u32 };
+    @group(0) @binding(2) var<uniform> p: P;
+    
+    fn crw(t: f32) -> vec4<f32> {
+      let t2 = t * t; let t3 = t2 * t;
+      return vec4<f32>(
+        -0.5 * t3 + t2 - 0.5 * t,
+         1.5 * t3 - 2.5 * t2 + 1.0,
+        -1.5 * t3 + 2.0 * t2 + 0.5 * t,
+         0.5 * t3 - 0.5 * t2,
+      );
+    }
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      if (gid.x >= p.dstW || gid.y >= p.dstH) { return; }
+      let dims = textureDimensions(src);
+      let W = i32(dims.x); let H = i32(dims.y);
+      let sx = (f32(gid.x) + 0.5) * f32(dims.x) / f32(p.dstW) - 0.5;
+      let sy = (f32(gid.y) + 0.5) * f32(dims.y) / f32(p.dstH) - 0.5;
+      let ix = i32(floor(sx)); let iy = i32(floor(sy));
+      let wx = crw(sx - f32(ix)); let wy = crw(sy - f32(iy));
+      var col = vec3<f32>(0.0);
+      for (var m = 0; m < 4; m++) {
+        let yy = clamp(iy - 1 + m, 0, H - 1);
+        var row = vec3<f32>(0.0);
+        for (var n = 0; n < 4; n++) {
+          let xx = clamp(ix - 1 + n, 0, W - 1);
+          row += wx[n] * textureLoad(src, vec2i(xx, yy)).rgb;
+        }
+        col += wy[m] * row;
+      }
+      textureStore(dst, vec2u(gid.x, gid.y), vec4f(clamp(col, vec3(0.0), vec3(1.0)), 1.0));
+    }`;
+    
+    // ── Look presets ────────────────────────────────────────────────
+    // A grade applied in the SAME pass as the sharpen, not a separate dispatch:
+    // this engine is memory-bandwidth bound (~6 GB of intermediate traffic per 1080p
+    // frame), so an extra full-frame read/write would cost far more than the dozen
+    // ALU ops the grade actually needs. Free, in practice.
+    //
+    // Reconstruction is what the network does; the grade is a preference on top of
+    // it, so "natural" is exactly zero and stays the default. Nothing here invents
+    // detail -- it only moves tone and colour.
+    const LOOKS = {
+      natural:   { exposure: 0.00, contrast: 0.00, saturation: 0.00, temp: 0.00 },
+      bright:    { exposure: 0.07, contrast: 0.10, saturation: 0.12, temp: 0.02 },
+      vivid:     { exposure: 0.02, contrast: 0.18, saturation: 0.30, temp: 0.00 },
+      cinematic: { exposure: -0.02, contrast: 0.24, saturation: -0.05, temp: -0.05 },
+    };
+    const LOOK_NAMES = Object.keys(LOOKS);
+    
+    // Contrast-adaptive sharpen (FSR RCAS spirit): unsharp with a 5-tap cross,
+    // clamped to the local min/max so it boosts edge contrast without ringing/halos.
+    const SHADER_SHARPEN = /* wgsl */`
+    @group(0) @binding(0) var src: texture_2d<f32>;
+    @group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
+    struct P { W: u32, H: u32, strq: u32, pad: u32,
+               exposure: f32, contrast: f32, saturation: f32, temp: f32 };
+    @group(0) @binding(2) var<uniform> p: P;
+    
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+      if (gid.x >= p.W || gid.y >= p.H) { return; }
+      let x = i32(gid.x); let y = i32(gid.y);
+      let W = i32(p.W); let H = i32(p.H);
+      let c = textureLoad(src, vec2i(x, y), 0).rgb;
+      let l = textureLoad(src, vec2i(max(x - 1, 0), y), 0).rgb;
+      let r = textureLoad(src, vec2i(min(x + 1, W - 1), y), 0).rgb;
+      let t = textureLoad(src, vec2i(x, max(y - 1, 0)), 0).rgb;
+      let b = textureLoad(src, vec2i(x, min(y + 1, H - 1)), 0).rgb;
+      let strength = f32(p.strq) / 4096.0;
+      let sharp = c + strength * (4.0 * c - l - r - t - b);
+      let mn = min(c, min(min(l, r), min(t, b)));
+      let mx = max(c, max(max(l, r), max(t, b)));
+      var outc = clamp(sharp, mn, mx);   // no overshoot beyond local neighborhood
+    
+      // ── look grade ────────────────────────────────────────────────
+      // Ordered exposure -> contrast -> saturation -> temperature, which is the
+      // order a colourist works in and the order that keeps each control's effect
+      // predictable when they are combined.
+      outc = outc * (1.0 + p.exposure);
+      // Soft S-curve rather than a gain around 0.5: smoothstep cannot push a value
+      // outside 0..1, so contrast never clips highlights to flat white.
+      outc = mix(outc, smoothstep(vec3f(0.0), vec3f(1.0), outc), p.contrast);
+      let luma = dot(outc, vec3f(0.2126, 0.7152, 0.0722));
+      outc = mix(vec3f(luma), outc, 1.0 + p.saturation);
+      outc = outc + vec3f(p.temp, 0.0, -p.temp);
+      outc = clamp(outc, vec3f(0.0), vec3f(1.0));
+    
+      textureStore(dst, vec2u(gid.x, gid.y), vec4f(outc, 1.0));
+    }`;
+    
+    if (typeof globalThis !== 'undefined') {
+      globalThis.WebGPUSR = WebGPUSR;
+    }
+
+})();
+(function () {
+    'use strict';
+
+    if (window.LampaAiWebGpu) return;
+    window.LampaAiWebGpu = true;
+
+    var MODEL_URL = 'https://cdn.jsdelivr.net/gh/fishy-ops/webvsr@6353cce624875527767416d5d42a06227a24d036/extension/models/span_lite_2x_c8.bin';
+    var MODEL_MANIFEST = 'https://cdn.jsdelivr.net/gh/fishy-ops/webvsr@6353cce624875527767416d5d42a06227a24d036/extension/models/span_lite_2x_c8.json';
+    var engine = null;
+    var enginePromise = null;
+    var attachedVideo = null;
+
+    function getVideo() {
+        try {
+            return window.Lampa && Lampa.PlayerVideo && Lampa.PlayerVideo.video
+                ? Lampa.PlayerVideo.video()
+                : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function isBuiltInVideo(video) {
+        return !!(video && video.tagName === 'VIDEO' &&
+            (video.classList.contains('player-video__video') || video.closest('.player')));
+    }
+
+    function loadEngine() {
+        if (engine) return Promise.resolve(engine);
+        if (enginePromise) return enginePromise;
+
+        enginePromise = (async function () {
+            if (!navigator.gpu || typeof WebGPUSR !== 'function') return null;
+
+            try {
+                var adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+                if (!adapter) return null;
+
+                var instance = new WebGPUSR();
+                if (!await instance.init()) return null;
+                await instance.loadWeights(MODEL_URL);
+                engine = instance;
+                console.log('[Lampa AI] WebGPU engine ready');
+                return engine;
+            } catch (error) {
+                console.warn('[Lampa AI] WebGPU unavailable:', error);
+                enginePromise = null;
+                return null;
+            }
+        })();
+
+        return enginePromise;
+    }
+
+    function hideEnhancement(state) {
+        if (state.canvas) state.canvas.style.display = 'none';
+        state.running = false;
+    }
+
+    function stopEnhancement(state) {
+        state.running = false;
+        state.pending = false;
+        if (state.canvas) state.canvas.remove();
+        if (state.tick && state.video.cancelVideoFrameCallback) {
+            state.video.cancelVideoFrameCallback(state.tick);
+        }
+        state.tick = null;
+    }
+
+    function createState(video) {
+        var parent = video.parentElement;
+        if (!parent) return null;
+
+        if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+
+        var canvas = document.createElement('canvas');
+        canvas.className = 'lampa-ai-webgpu-canvas';
+        canvas.style.cssText = 'position:fixed;display:none;pointer-events:none;z-index:49;object-fit:fill;';
+        document.body.appendChild(canvas);
+
+        return {
+            video: video,
+            canvas: canvas,
+            running: false,
+            pending: false,
+            tick: null,
+            width: 0,
+            height: 0,
+            inputWidth: 0,
+            inputHeight: 0
+        };
+    }
+
+    function syncCanvas(state) {
+        var rect = state.video.getBoundingClientRect();
+        if (!rect.width || !rect.height) return false;
+
+        state.canvas.style.left = Math.round(rect.left) + 'px';
+        state.canvas.style.top = Math.round(rect.top) + 'px';
+        state.canvas.style.width = Math.round(rect.width) + 'px';
+        state.canvas.style.height = Math.round(rect.height) + 'px';
+        return true;
+    }
+
+    function renderFrame(state, now) {
+        state.tick = null;
+        if (!state.running || state.video.paused || state.video.ended) return;
+        if (!syncCanvas(state) || state.pending) {
+            schedule(state);
+            return;
+        }
+
+        var video = state.video;
+        var engineInstance = engine;
+        if (!engineInstance || !engineInstance.ready) {
+            schedule(state);
+            return;
+        }
+
+        var rect = video.getBoundingClientRect();
+        var sourceW = video.videoWidth;
+        var sourceH = video.videoHeight;
+        if (!sourceW || !sourceH) {
+            schedule(state);
+            return;
+        }
+
+        // iPhone-safe limit: keep the neural input at or below 480p.
+        var inputH = Math.min(sourceH, 480);
+        inputH = Math.max(144, inputH) & ~1;
+        var inputW = Math.max(2, Math.round(sourceW * inputH / sourceH)) & ~1;
+        var displayW = Math.max(2, Math.round(rect.width * (window.devicePixelRatio || 1)));
+        var displayH = Math.max(2, Math.round(rect.height * (window.devicePixelRatio || 1)));
+
+        try {
+            if (state.inputWidth !== inputW || state.inputHeight !== inputH ||
+                state.width !== displayW || state.height !== displayH) {
+                engineInstance.configure(state.canvas, inputW, inputH, displayW, displayH);
+                state.inputWidth = inputW;
+                state.inputHeight = inputH;
+                state.width = displayW;
+                state.height = displayH;
+            }
+
+            engineInstance.sharpen = 0.12;
+            state.pending = true;
+            engineInstance.render(video);
+
+            engineInstance.device.queue.onSubmittedWorkDone().then(function () {
+                state.pending = false;
+                if (state.running) {
+                    state.canvas.style.display = '';
+                    schedule(state);
+                }
+            }).catch(function () {
+                state.pending = false;
+                hideEnhancement(state);
+            });
+        } catch (error) {
+            console.warn('[Lampa AI] frame fallback:', error);
+            hideEnhancement(state);
+        }
+    }
+
+    function schedule(state) {
+        if (!state.running || state.tick !== null) return;
+        if (state.video.requestVideoFrameCallback) {
+            state.tick = state.video.requestVideoFrameCallback(function (now) {
+                renderFrame(state, now);
+            });
+        }
+    }
+
+    async function startEnhancement(state) {
+        if (!state || state.running) return;
+        if (!navigator.gpu || !state.video.requestVideoFrameCallback) return;
+
+        var ready = await loadEngine();
+        if (!ready || attachedVideo !== state.video) return;
+
+        state.running = true;
+        state.video.style.visibility = 'hidden';
+        state.canvas.style.display = '';
+        schedule(state);
+    }
+
+    function attach(video) {
+        if (!isBuiltInVideo(video)) return;
+        if (attachedVideo === video && video.__lampaAiState) return;
+
+        if (attachedVideo && attachedVideo.__lampaAiState) stopEnhancement(attachedVideo.__lampaAiState);
+        attachedVideo = video;
+        var state = createState(video);
+        if (!state) return;
+        video.__lampaAiState = state;
+
+        video.addEventListener('play', function () {
+            startEnhancement(state);
+        });
+        video.addEventListener('pause', function () {
+            hideEnhancement(state);
+            video.style.visibility = '';
+        });
+        video.addEventListener('ended', function () {
+            stopEnhancement(state);
+            video.style.visibility = '';
+        });
+        video.addEventListener('emptied', function () {
+            stopEnhancement(state);
+            video.style.visibility = '';
+        });
+
+        if (!video.paused) startEnhancement(state);
+    }
+
+    function scan() {
+        var video = getVideo();
+        if (isBuiltInVideo(video)) attach(video);
+    }
+
+    function start() {
+        if (!window.Lampa || !Lampa.Player || !Lampa.Player.listener) {
+            setTimeout(start, 500);
+            return;
+        }
+
+        scan();
+        Lampa.Player.listener.follow('start', scan);
+        Lampa.PlayerVideo.listener.follow('loadeddata', scan);
+        Lampa.PlayerVideo.listener.follow('canplay', scan);
+        Lampa.Player.listener.follow('destroy', function () {
+            if (attachedVideo && attachedVideo.__lampaAiState) stopEnhancement(attachedVideo.__lampaAiState);
+            if (attachedVideo) attachedVideo.style.visibility = '';
+            attachedVideo = null;
+        });
+
+        console.log('[Lampa AI] WebGPU integration loaded; fallback is automatic');
+    }
+
+    start();
 })();
