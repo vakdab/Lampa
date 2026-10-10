@@ -390,9 +390,24 @@
         var item = state.playItem;
         return cleanTitle(item && (item.animeTitle || item.seriesTitle || item.original_title || item.title));
     }
+    function lampaMovieTitle() {
+        var values = [];
+        try {
+            if (Lampa.Activity && typeof Lampa.Activity.active === 'function') values.push(Lampa.Activity.active());
+            if (Lampa.PlayerVideo && typeof Lampa.PlayerVideo.info === 'function') values.push(Lampa.PlayerVideo.info());
+        } catch (error) {}
+        for (var i = 0; i < values.length; i += 1) {
+            var item = values[i] && (values[i].movie || values[i].card || values[i]);
+            var title = cleanTitle(item && (item.original_title || item.title || item.name));
+            if (title && title.length >= 2 && title.length <= 120) return title;
+        }
+        return '';
+    }
     function findTitle() {
         var fromPlay = playTitle();
-        if (fromPlay && fromPlay.length >= 2) return fromPlay.replace(/\s*(?:S\d+\s*E\d+|\d+\s*(?:сезон|season|серія|серия|episode)\b).*$/i, '').trim();
+        if (fromPlay && fromPlay.length >= 2 && !/^(?:серія|серия|episode|епізод|эпизод|S\d+\s*E\d+)/i.test(fromPlay)) return fromPlay.replace(/\s*(?:S\d+\s*E\d+|\d+\s*(?:сезон|season|серія|серия|episode)\b).*$/i, '').trim();
+        var fromMovie = lampaMovieTitle();
+        if (fromMovie) return fromMovie;
         var selectors = [
             '.player-info .title', '.player__title', '.player-video__title',
             '[class*="player"][class*="title"]', '[class*="movie"][class*="title"]', 'h1'
@@ -407,6 +422,16 @@
     function findEpisode() {
         var candidates = [];
         var item = state.playItem || {};
+        function numericEpisode(value) {
+            if (!value || typeof value !== 'object') return 0;
+            var fields = ['episode', 'episodeNumber', 'episode_num', 'episode_id', 'number'];
+            for (var n = 0; n < fields.length; n += 1) {
+                if (value[fields[n]] != null && /^\d+(?:\.\d+)?$/.test(String(value[fields[n]]))) return Number(value[fields[n]]);
+            }
+            return numericEpisode(value.media) || numericEpisode(value.source) || numericEpisode(value.data);
+        }
+        var nestedEpisode = numericEpisode(item);
+        if (nestedEpisode) candidates.push(nestedEpisode);
         ['episode', 'episodeNumber', 'episode_num', 'episode_id'].forEach(function (name) {
             if (item[name] != null && /^\d+(?:\.\d+)?$/.test(String(item[name]))) candidates.push(item[name]);
         });
@@ -459,6 +484,7 @@
         function wrappedPlay(item) {
             state.playItem = item || null;
             state.loadedKey = '';
+            setTimeout(function () { if (state.video) loadSegments(state.video); }, 0);
             return originalPlay.apply(this, arguments);
         }
         wrappedPlay.__lampaAniSkipPatched = true;
@@ -468,10 +494,15 @@
         return fetch(ANILIST, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: 'query($search:String){Page{media(search:$search,type:ANIME,perPage:1){idMal}}}', variables: { search: title } })
-        }).then(function (response) { return response.json(); }).then(function (json) {
+        }).then(function (response) { if (!response.ok) throw new Error('anilist'); return response.json(); }).then(function (json) {
             var media = json && json.data && json.data.Page && json.data.Page.media && json.data.Page.media[0];
             return media && Number(media.idMal) || 0;
-        }).catch(function () { return 0; });
+        }).catch(function () {
+            return fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(title) + '&limit=1').then(function (response) { return response.json(); }).then(function (json) {
+                var item = json && json.data && json.data[0];
+                return item && Number(item.mal_id) || 0;
+            }).catch(function () { return 0; });
+        });
     }
     function loadSegments(video) {
         if (!video || !isFinite(video.duration) || video.duration < 60) return;
@@ -563,9 +594,17 @@
     }
     function start() {
         state.settings = storageGet();
+        state.settings.enabled = true;
+        state.settings.malId = '';
+        state.settings.episode = '';
+        state.settings.title = '';
         patchPlayerPlay();
-        installUi(); scan();
-        if (window.Lampa && Lampa.Player && Lampa.Player.listener) Lampa.Player.listener.follow('start', scan);
+        scan();
+        if (window.Lampa && Lampa.Player && Lampa.Player.listener) Lampa.Player.listener.follow('start', function (event) {
+            if (event && typeof event === 'object' && (event.title || event.episode || event.movie)) state.playItem = event;
+            scan();
+            setTimeout(scan, 200);
+        });
         if (window.Lampa && Lampa.PlayerVideo && Lampa.PlayerVideo.listener) {
             Lampa.PlayerVideo.listener.follow('loadeddata', scan);
             Lampa.PlayerVideo.listener.follow('canplay', scan);
