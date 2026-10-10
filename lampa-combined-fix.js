@@ -1962,7 +1962,8 @@
 
     function isBuiltInVideo(video) {
         return !!(video && video.tagName === 'VIDEO' &&
-            (video.classList.contains('player-video__video') || video.closest('.player')));
+            (video.classList.contains('player-video__video') || video.closest('.player') ||
+                video.closest('.player-video') || video === getVideo()));
     }
 
     function loadEngine() {
@@ -2180,8 +2181,17 @@
     }
 
     function scan() {
-        var video = getVideo();
-        if (isBuiltInVideo(video)) attach(video);
+        var current = getVideo();
+        if (isBuiltInVideo(current)) attach(current);
+
+        // Different Lampa builds use different video class names. Also scan
+        // visible HTML5 videos so the control still appears when the public
+        // PlayerVideo.video() helper is unavailable.
+        var fallback = Array.prototype.find.call(document.querySelectorAll('video'), function (video) {
+            var rect = video.getBoundingClientRect();
+            return rect.width > 80 && rect.height > 45 && isBuiltInVideo(video);
+        });
+        if (!current && fallback) attach(fallback);
     }
 
     function start() {
@@ -2193,6 +2203,12 @@
         Lampa.Player.listener.follow('start', scan);
         Lampa.PlayerVideo.listener.follow('loadeddata', scan);
         Lampa.PlayerVideo.listener.follow('canplay', scan);
+        if (window.MutationObserver) {
+            var observer = new MutationObserver(function () { scan(); });
+            observer.observe(document.body, { childList: true, subtree: true });
+            window.__lampaAiObserver = observer;
+        }
+        setInterval(scan, 1500);
         Lampa.Player.listener.follow('destroy', function () {
             if (attachedVideo && attachedVideo.__lampaAiState) stopEnhancement(attachedVideo.__lampaAiState);
             if (attachedVideo) attachedVideo.style.visibility = '';
