@@ -7,7 +7,6 @@
     var STYLE_ID = 'lampa-mx-mobile-fix-style';
     var refreshFrame = 0;
     var activeVideo = null;
-    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     function isMobile() {
         return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -71,10 +70,11 @@
         activeVideo = video;
         document.body.classList.add('lampa-video-playing');
     }
-    function tryNativeFullscreen() {
-        if (!activeVideo || !isIOS || typeof activeVideo.webkitEnterFullscreen !== 'function') return;
+    function tryFullscreen() {
+        if (!activeVideo || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
         try {
-            activeVideo.webkitEnterFullscreen();
+            var promise = document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+            if (promise && promise.catch) promise.catch(function () {});
         } catch (error) {}
     }
     function bindVideo(video) {
@@ -84,19 +84,14 @@
         video.setAttribute('webkit-playsinline', 'true');
         video.style.webkitBackfaceVisibility = 'hidden';
         video.style.backfaceVisibility = 'hidden';
-        video.addEventListener('play', function () {
-            enterVideoMode(video);
-            // Спроба без затримки працює, якщо play був ініційований тапом.
-            tryNativeFullscreen();
-        }, { passive: true });
-        ['pause', 'ended', 'emptied', 'webkitendfullscreen'].forEach(function (eventName) {
+        video.addEventListener('play', function () { enterVideoMode(video); }, { passive: true });
+        ['pause', 'ended', 'emptied'].forEach(function (eventName) {
             video.addEventListener(eventName, function () {
                 if (activeVideo === video && (eventName !== 'pause' || !video.webkitDisplayingFullscreen)) leaveVideoMode();
             }, { passive: true });
         });
         video.addEventListener('pointerup', function () {
-            // iOS дозволяє webkitEnterFullscreen переважно лише з жесту користувача.
-            if (activeVideo === video) tryNativeFullscreen();
+            if (activeVideo === video && !document.fullscreenElement) tryFullscreen();
         }, { passive: true });
     }
     function patchVideos(root) {
