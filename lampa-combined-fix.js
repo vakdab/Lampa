@@ -1975,6 +1975,7 @@
 
     function hideEnhancement(state) {
         if (state.canvas) state.canvas.style.display = 'none';
+        if (state.video) state.video.style.visibility = '';
         state.running = false;
     }
 
