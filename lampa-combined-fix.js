@@ -144,7 +144,7 @@
         var resizeFrame = 0;
 
         var customModes = [
-            { value: 'fill', title: 'Заповнити', subtitle: 'На весь екран без спотворення', fit: 'cover' },
+            { value: 'fill', title: 'Заповнити', subtitle: 'Повна висота, чорні поля по 2.5 мм з боків', fit: 'fill' },
             { value: 'contain', title: 'Вмістити', subtitle: 'Показати весь кадр із чорними полями', fit: 'contain' },
             { value: 's150', title: 'Збільшити 150%', subtitle: 'М’яке збільшення без зайвого обрізання', sx: 1.5, sy: 1.5 },
             { value: 's170', title: 'Збільшити 170%', subtitle: 'Збільшення кадру на 170%', sx: 1.7, sy: 1.7 },
@@ -160,7 +160,8 @@
         style.id = 'lampa-smooth-player-style';
         style.textContent = [
             '.lampa-smooth-video{backface-visibility:hidden;-webkit-backface-visibility:hidden;}',
-            'body.lampa-player-cinema video{aspect-ratio:21/9!important;}'
+            'body.lampa-player-cinema video{aspect-ratio:21/9!important;}',
+            'body.lampa-player-fill .player-video__display video,body.lampa-player-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:2.5mm!important;right:auto!important;width:calc(100% - 5mm)!important;height:100%!important;object-fit:fill!important;background:#000;}'
         ].join('');
         if (!document.getElementById(style.id)) document.head.appendChild(style);
 
@@ -175,17 +176,32 @@
         }
         function clearMode(video) {
             if (!video || !video.style) return;
-            ['position','inset','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin'].forEach(function (name) {
+            ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background'].forEach(function (name) {
                 video.style.removeProperty(name);
             });
             video.classList.remove('lampa-smooth-video');
             document.body.classList.remove('lampa-player-cinema');
+            document.body.classList.remove('lampa-player-fill');
         }
         function applyMode(mode) {
             var video = getVideo();
             if (!video || !mode || !video.style) return;
             clearMode(video);
             video.classList.add('lampa-smooth-video');
+            if (mode.value === 'fill') {
+                document.body.classList.add('lampa-player-fill');
+                video.style.setProperty('position', 'absolute', 'important');
+                video.style.setProperty('top', '0', 'important');
+                video.style.setProperty('bottom', '0', 'important');
+                video.style.setProperty('left', '2.5mm', 'important');
+                video.style.setProperty('right', 'auto', 'important');
+                video.style.setProperty('width', 'calc(100% - 5mm)', 'important');
+                video.style.setProperty('height', '100%', 'important');
+                video.style.setProperty('object-fit', 'fill', 'important');
+                video.style.setProperty('background', '#000', 'important');
+                saveSize(mode.value);
+                return;
+            }
             video.style.setProperty('width', '100%', 'important');
             video.style.setProperty('height', '100%', 'important');
             video.style.setProperty('object-fit', mode.fit || 'contain', 'important');
