@@ -25,10 +25,10 @@ https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 
 ## AniSkip для iPhone
 
-AniSkip — **окремий додатковий плагін**: він не замінює і не переписує Smooth Player. Для перевірки поточної iPhone-версії додайте цей URL у Lampa:
+AniSkip — **окремий додатковий плагін**: він не замінює і не переписує Smooth Player. Додайте в Lampa поточну перевірену версію, закріплену за конкретним комітом:
 
 ```text
-https://cdn.jsdelivr.net/gh/vakdab/Lampa@ios-aniskip/lampa-aniskip.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@edadd789dcd87063be02ee740405ca12aaf5f186/lampa-aniskip.js
 ```
 
 Після злиття змін до `main` стабільне посилання буде:
