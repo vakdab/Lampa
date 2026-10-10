@@ -26,7 +26,8 @@
                 value: 'fill',
                 title: 'Заповнити',
                 subtitle: 'На весь екран із чорними полями приблизно по 2 мм з боків',
-                horizontalFill: true
+                horizontalFill: true,
+                sideBars: true
             },
             {
                 // Перехоплюємо штатний пункт Lampa «Розширити».
@@ -83,6 +84,25 @@
             modes[mode.value] = mode;
         });
 
+        var barsStyle = document.createElement('style');
+        barsStyle.id = 'lampa-player-side-bars-style';
+        barsStyle.textContent = `
+            body.lampa-player-side-bars::before,
+            body.lampa-player-side-bars::after {
+                content: '';
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                width: 2mm;
+                background: #000;
+                z-index: 999999;
+                pointer-events: none;
+            }
+            body.lampa-player-side-bars::before { left: 0; }
+            body.lampa-player-side-bars::after { right: 0; }
+        `;
+        if (!document.getElementById(barsStyle.id)) document.head.appendChild(barsStyle);
+
         function getSavedSize() {
             if (Lampa.Storage && Lampa.Storage.get) {
                 return Lampa.Storage.get(storageKey, 'default');
@@ -117,9 +137,17 @@
             scheduledTimers = [];
         }
 
+        function setSideBars(enabled) {
+            if (document.body) {
+                document.body.classList.toggle('lampa-player-side-bars', !!enabled);
+            }
+        }
+
         function applyMode(mode) {
             var video = getVideo();
             if (!video || !mode) return;
+
+            setSideBars(mode.sideBars);
 
             if (mode.horizontalFill) {
                 clearAspectMode(video);
@@ -262,6 +290,7 @@
 
                 if (typeof originalOnSelect === 'function') {
                     var video = getVideo();
+                    setSideBars(false);
                     if (video) clearAspectMode(video);
                     originalOnSelect(item);
                 }
@@ -286,6 +315,7 @@
             function onDestroy() {
                 playerActive = false;
                 clearScheduledTimers();
+                setSideBars(false);
                 clearAspectMode(playerVideo || getVideo());
                 Lampa.PlayerVideo.listener.remove('loadeddata', onLoadedData);
                 Lampa.PlayerVideo.listener.remove('canplay', onCanPlay);
