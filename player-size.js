@@ -67,6 +67,12 @@
                 fullFrame: true
             },
             {
+                value: 'ultrawidify219',
+                title: 'Ultrawidify 21:9',
+                subtitle: 'Прибрати чорні смуги без розтягування',
+                ultrawideCrop: true
+            },
+            {
                 value: 'v170',
                 title: 'По вертикалі 170%',
                 subtitle: 'Збільшити відео по вертикалі на 170%',
@@ -228,6 +234,29 @@
                 video.style.setProperty('width', 'calc(100vw - 4mm)', 'important');
                 video.style.setProperty('height', '100vh', 'important');
                 video.style.setProperty('object-fit', 'fill', 'important');
+                video.style.setProperty('transform-origin', 'center center', 'important');
+                video.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+
+                if (Lampa.Storage && Lampa.Storage.set) {
+                    Lampa.Storage.set(storageKey, mode.value);
+                }
+
+                return;
+            }
+
+            if (mode.ultrawideCrop) {
+                clearAspectMode(video);
+
+                // Інтеграція підходу Ultrawidify: відео масштабується
+                // пропорційно й обрізається до широкого кадру 21:9.
+                // На відміну від fullFrame, цей режим не розтягує обличчя.
+                video.style.setProperty('position', 'fixed', 'important');
+                video.style.setProperty('left', '50%', 'important');
+                video.style.setProperty('top', '50%', 'important');
+                video.style.setProperty('width', '100vw', 'important');
+                video.style.setProperty('height', '100vh', 'important');
+                video.style.setProperty('object-fit', 'cover', 'important');
+                video.style.setProperty('object-position', 'center center', 'important');
                 video.style.setProperty('transform-origin', 'center center', 'important');
                 video.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
 
