@@ -53,7 +53,8 @@
             if (Lampa.PlayerVideo && typeof Lampa.PlayerVideo.info === 'function') values.push(Lampa.PlayerVideo.info());
         } catch (error) {}
         for (var i = 0; i < values.length; i += 1) {
-            var item = values[i] && (values[i].movie || values[i].card || values[i]);
+            var value = values[i] || {};
+            var item = value.movie || value.card || value.object && (value.object.movie || value.object) || value.data && (value.data.movie || value.data) || value;
             var title = cleanTitle(item && (item.original_title || item.title || item.name));
             if (title && title.length >= 2 && title.length <= 120) return title;
         }
@@ -73,6 +74,12 @@
             var text = cleanTitle(node && node.textContent);
             if (text && text.length >= 2 && text.length <= 120) return text.replace(/^\d+\s*:\s*/, '').trim();
         }
+        var video = getVideo();
+        var dataTitle = video && (video.getAttribute('data-title') || video.getAttribute('aria-label'));
+        if (dataTitle) return cleanTitle(dataTitle);
+        var info = document.querySelector('.player-info, .player__info, [class*="player-info"]');
+        var infoText = cleanTitle(info && info.textContent).split(/\d{3,4}p|\d{3,4}x\d{3,4}/i)[0].trim();
+        if (infoText.length >= 2 && infoText.length <= 120) return infoText.replace(/^\d+\s*:\s*/, '').trim();
         return '';
     }
     function findEpisode() {
@@ -112,7 +119,10 @@
             if (match) return Number(match[1]);
             if (i < 4 && /^\d{1,4}$/.test(value.trim())) return Number(value.trim());
         }
-        return 0;
+        var detectedTitle = findTitle();
+        // Lampa часто не передає номер епізоду. OP/ED зазвичай однакові,
+        // тому серія 1 є безпечним fallback для автоматичного пошуку інтервалу.
+        return detectedTitle ? 1 : 0;
     }
     function getTitleAndEpisode() {
         return { title: state.settings.title || findTitle(), episode: Number(state.settings.episode) || findEpisode() };
@@ -129,7 +139,8 @@
             if (Lampa.Activity && typeof Lampa.Activity.active === 'function') candidates.push(Lampa.Activity.active());
         } catch (error) {}
         for (var i = 0; i < candidates.length; i += 1) {
-            var item = candidates[i] && (candidates[i].movie || candidates[i].card || candidates[i]);
+            var value = candidates[i] || {};
+            var item = value.movie || value.card || value.object && (value.object.movie || value.object) || value.data && (value.data.movie || value.data) || value;
             if (item && (item.mal_id || item.malId || item.id_mal)) return Number(item.mal_id || item.malId || item.id_mal);
         }
         return Number(state.settings.malId) || 0;
