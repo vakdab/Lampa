@@ -125,14 +125,17 @@
                 clearAspectMode(video);
 
                 // Залишаємо приблизно по 2 мм чорного поля з кожного боку.
-                video.style.position = 'absolute';
-                video.style.left = '50%';
-                video.style.top = '50%';
-                video.style.width = 'calc(100vw - 4mm)';
-                video.style.height = '100vh';
-                video.style.objectFit = 'fill';
-                video.style.transformOrigin = 'center center';
-                video.style.transform = 'translate(-50%, -50%)';
+                // !important потрібен, бо штатний Lampa ще раз перераховує video.
+                video.style.setProperty('position', 'fixed', 'important');
+                video.style.setProperty('left', '50%', 'important');
+                video.style.setProperty('top', '50%', 'important');
+                video.style.setProperty('right', 'auto', 'important');
+                video.style.setProperty('bottom', 'auto', 'important');
+                video.style.setProperty('width', 'calc(100vw - 4mm)', 'important');
+                video.style.setProperty('height', '100vh', 'important');
+                video.style.setProperty('object-fit', 'fill', 'important');
+                video.style.setProperty('transform-origin', 'center center', 'important');
+                video.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
 
                 if (Lampa.Storage && Lampa.Storage.set) {
                     Lampa.Storage.set(storageKey, mode.value);
