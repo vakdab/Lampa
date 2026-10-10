@@ -273,11 +273,76 @@
         if (!current && fallback) attach(fallback);
     }
 
+    function showQualityModal() {
+        var state = attachedVideo && attachedVideo.__lampaAiState;
+        var current = state ? state.quality : readQuality();
+        if (!window.Lampa || !Lampa.Modal || typeof Lampa.Modal.open !== 'function') return;
+
+        var html = $('<div style="padding:18px 8px 10px;font-size:16px">' +
+            '<div style="margin-bottom:12px;font-weight:600">Покращення якості відео</div>' +
+            '<div style="margin-bottom:14px;color:#999;font-size:13px">Повзунок підвищує деталізацію та різкість відео. Вище значення потребує більше потужності.</div>' +
+            '<input class="lampa-ai-quality-range" type="range" min="0" max="100" step="5" value="' + current + '" style="width:100%;accent-color:#fff">' +
+            '<div class="lampa-ai-quality-value" style="text-align:center;margin-top:10px;color:#aaa">' + current + '%</div>' +
+            '</div>');
+
+        html.find('.lampa-ai-quality-range').on('input', function () {
+            var value = Number(this.value);
+            saveQuality(value);
+            html.find('.lampa-ai-quality-value').text(value + '%');
+            if (state) {
+                state.quality = value;
+                state.inputWidth = 0;
+                state.inputHeight = 0;
+                if (value === 0) hideEnhancement(state);
+                else if (!state.running) startEnhancement(state);
+            }
+        });
+
+        Lampa.Modal.open({
+            title: 'Покращення якості відео',
+            html: html,
+            size: 'small',
+            onBack: function () { Lampa.Modal.close(); }
+        });
+    }
+
+    function patchPlayerSizeMenu() {
+        if (!window.Lampa || !Lampa.Select || typeof Lampa.Select.show !== 'function') return false;
+        if (Lampa.Select.show.__lampaAiQualityPatched) return true;
+
+        var original = Lampa.Select.show;
+        function wrapped(options) {
+            var items = options && Array.isArray(options.items) ? options.items : [];
+            var isSizeMenu = items.some(function (item) {
+                return item && (item.value === 'default' || item.value === 'cover' || item.value === 'fill');
+            });
+            if (!isSizeMenu || items.some(function (item) { return item && item.value === 'lampa_ai_quality'; })) {
+                return original.call(this, options);
+            }
+
+            var copy = Object.assign({}, options);
+            copy.items = items.concat([{
+                title: 'Покращення якості відео',
+                subtitle: 'Повзунок покращує деталізацію та різкість',
+                value: 'lampa_ai_quality'
+            }]);
+            copy.onSelect = function (item) {
+                if (item && item.value === 'lampa_ai_quality') showQualityModal();
+                else if (options.onSelect) options.onSelect(item);
+            };
+            return original.call(this, copy);
+        }
+        wrapped.__lampaAiQualityPatched = true;
+        Lampa.Select.show = wrapped;
+        return true;
+    }
+
     function start() {
         if (!window.Lampa || !Lampa.Player || !Lampa.Player.listener) {
             setTimeout(start, 500);
             return;
         }
+        patchPlayerSizeMenu();
         scan();
         Lampa.Player.listener.follow('start', scan);
         Lampa.PlayerVideo.listener.follow('loadeddata', scan);
