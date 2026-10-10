@@ -51,8 +51,46 @@
         function getVideo() {
             try { return Lampa.PlayerVideo.video(); } catch (error) { return null; }
         }
+        function playerRoot(video) {
+            return video && (video.closest('.player-video') || video.closest('.player') || video.parentElement);
+        }
+        function clearHudFit(root) {
+            if (!root) return;
+            Array.prototype.forEach.call(root.querySelectorAll('[data-lampa-hud-fit="1"]'), function (element) {
+                ['left', 'right', 'width', 'max-width'].forEach(function (name) { element.style.removeProperty(name); });
+                element.removeAttribute('data-lampa-hud-fit');
+            });
+        }
+        function fitHudToVideo() {
+            var video = getVideo();
+            if (!video || !document.body.classList.contains('lampa-player-cinema-fill')) return;
+            var root = playerRoot(video);
+            var videoRect = video.getBoundingClientRect();
+            if (!root || videoRect.width < 100 || videoRect.height < 80) return;
+            var viewportWidth = window.innerWidth;
+            Array.prototype.forEach.call(root.querySelectorAll('*'), function (element) {
+                if (element === video || element.contains(video) || video.contains(element)) return;
+                var computed = window.getComputedStyle(element);
+                if (computed.position !== 'absolute' && computed.position !== 'fixed') return;
+                var rect = element.getBoundingClientRect();
+                if (rect.width < viewportWidth * 0.72 || rect.height < 1 || rect.width <= videoRect.width + 8) return;
+                var containing = computed.position === 'fixed' ? { left: 0, right: viewportWidth } :
+                    (element.offsetParent ? element.offsetParent.getBoundingClientRect() : root.getBoundingClientRect());
+                var left = Math.max(0, videoRect.left - containing.left);
+                var right = Math.max(0, containing.right - videoRect.right);
+                element.style.setProperty('left', Math.round(left) + 'px', 'important');
+                element.style.setProperty('right', Math.round(right) + 'px', 'important');
+                element.style.setProperty('width', 'auto', 'important');
+                element.style.setProperty('max-width', 'none', 'important');
+                element.setAttribute('data-lampa-hud-fit', '1');
+            });
+        }
+        function scheduleHudFit() {
+            requestAnimationFrame(function () { requestAnimationFrame(fitHudToVideo); });
+        }
         function clearMode(video) {
             if (!video || !video.style) return;
+            clearHudFit(playerRoot(video));
             ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background'].forEach(function (name) {
                 video.style.removeProperty(name);
             });
@@ -78,6 +116,7 @@
                 video.style.setProperty('object-fit', 'fill', 'important');
                 video.style.setProperty('background', '#000', 'important');
                 saveSize(mode.value);
+                scheduleHudFit();
                 return;
             }
             if (mode.cinemaFill) {
@@ -92,6 +131,7 @@
                 video.style.setProperty('object-fit', 'fill', 'important');
                 video.style.setProperty('background', '#000', 'important');
                 saveSize(mode.value);
+                scheduleHudFit();
                 return;
             }
             video.style.setProperty('width', '100%', 'important');
@@ -149,7 +189,10 @@
             applySavedMode();
             var video = getVideo();
             if (video) video.setAttribute('playsinline', 'true');
-            function onReady() { applySavedMode(); }
+            function onReady() {
+                applySavedMode();
+                setTimeout(scheduleHudFit, 120);
+            }
             function onDestroy() {
                 playerActive = false;
                 cancelAnimationFrame(applyFrame);
@@ -166,6 +209,7 @@
         window.addEventListener('resize', function () {
             cancelAnimationFrame(resizeFrame);
             resizeFrame = requestAnimationFrame(applySavedMode);
+            scheduleHudFit();
         }, { passive: true });
         console.log('[Lampa Smooth Player] loaded');
     });
