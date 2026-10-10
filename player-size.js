@@ -25,7 +25,7 @@
             { value: 's180', title: 'Збільшити 180%', subtitle: 'Збільшення кадру на 180%', sx: 1.8, sy: 1.8 },
             { value: 'v150', title: 'По вертикалі 150%', subtitle: 'Збільшити кадр лише по вертикалі', sx: 1.01, sy: 1.5 },
             { value: 'v170', title: 'По вертикалі 170%', subtitle: 'Збільшити кадр лише по вертикалі', sx: 1.01, sy: 1.7 },
-            { value: 'cinema219', title: 'Кіно 21:9', subtitle: 'Повна висота, чорні поля по 4.5 мм з боків', cinemaFill: true }
+            { value: 'cinema219', title: 'Кіно 21:9', subtitle: 'Повна висота, чорні поля по 8 мм з боків', cinemaFill: true }
         ];
         var modes = {};
         customModes.forEach(function (mode) { modes[mode.value] = mode; });
@@ -36,7 +36,7 @@
             '.lampa-smooth-video{backface-visibility:hidden;-webkit-backface-visibility:hidden;}',
             'body.lampa-player-cinema video{aspect-ratio:21/9!important;}',
             'body.lampa-player-fill .player-video__display video,body.lampa-player-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:2.5mm!important;right:auto!important;width:calc(100% - 5mm)!important;height:100%!important;object-fit:fill!important;background:#000;}',
-            'body.lampa-player-cinema-fill .player-video__display video,body.lampa-player-cinema-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:4.5mm!important;right:auto!important;width:calc(100% - 9mm)!important;height:100%!important;object-fit:fill!important;background:#000;}'
+            'body.lampa-player-cinema-fill .player-video__display video,body.lampa-player-cinema-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:8mm!important;right:auto!important;width:calc(100% - 16mm)!important;height:100%!important;object-fit:fill!important;background:#000;}'
         ].join('');
         if (!document.getElementById(style.id)) document.head.appendChild(style);
 
@@ -83,9 +83,9 @@
                 video.style.setProperty('position', 'absolute', 'important');
                 video.style.setProperty('top', '0', 'important');
                 video.style.setProperty('bottom', '0', 'important');
-                video.style.setProperty('left', '4.5mm', 'important');
+                video.style.setProperty('left', '8mm', 'important');
                 video.style.setProperty('right', 'auto', 'important');
-                video.style.setProperty('width', 'calc(100% - 9mm)', 'important');
+                video.style.setProperty('width', 'calc(100% - 16mm)', 'important');
                 video.style.setProperty('height', '100%', 'important');
                 video.style.setProperty('object-fit', 'fill', 'important');
                 video.style.setProperty('background', '#000', 'important');
