@@ -8,8 +8,14 @@
     var refreshFrame = 0;
     var activeVideo = null;
 
+    function isAndroidTv() {
+        var ua = (navigator.userAgent || '');
+        if (/Android TV|Google TV|\bTV\b|BRAVIA|AFT|MiBOX|SHIELD|SMART-TV|SmartTV|HbbTV|Leanback/i.test(ua)) return true;
+        return /Android/i.test(ua) && (navigator.maxTouchPoints || 0) === 0 &&
+            Math.max(screen.width || 0, screen.height || 0) >= 1000;
+    }
     function isMobile() {
-        return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        return !isAndroidTv() && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     }
     function installViewportFix() {
         var viewport = document.querySelector('meta[name="viewport"]');
@@ -82,8 +88,6 @@
         video.dataset.lampaSmoothBound = '1';
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
-        video.style.webkitBackfaceVisibility = 'hidden';
-        video.style.backfaceVisibility = 'hidden';
         video.addEventListener('play', function () { enterVideoMode(video); }, { passive: true });
         ['pause', 'ended', 'emptied'].forEach(function (eventName) {
             video.addEventListener(eventName, function () {
@@ -159,7 +163,6 @@
         var style = document.createElement('style');
         style.id = 'lampa-smooth-player-style';
         style.textContent = [
-            '.lampa-smooth-video{backface-visibility:hidden;-webkit-backface-visibility:hidden;}',
             'body.lampa-player-cinema video{aspect-ratio:21/9!important;}',
             'body.lampa-player-fill .player-video__display video,body.lampa-player-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:2.5mm!important;right:auto!important;width:calc(100% - 5mm)!important;height:100%!important;object-fit:fill!important;background:#000;}',
             'body.lampa-player-cinema-fill .player-video__display video,body.lampa-player-cinema-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:8mm!important;right:auto!important;width:calc(100% - 16mm)!important;height:100%!important;object-fit:fill!important;background:#000;}',
@@ -222,7 +225,6 @@
             ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background'].forEach(function (name) {
                 video.style.removeProperty(name);
             });
-            video.classList.remove('lampa-smooth-video');
             document.body.classList.remove('lampa-player-cinema');
             document.body.classList.remove('lampa-player-fill');
             document.body.classList.remove('lampa-player-cinema-fill');
@@ -231,7 +233,6 @@
             var video = getVideo();
             if (!video || !mode || !video.style) return;
             clearMode(video);
-            video.classList.add('lampa-smooth-video');
             if (mode.value === 'fill') {
                 document.body.classList.add('lampa-player-fill');
                 video.style.setProperty('position', 'absolute', 'important');
@@ -316,7 +317,6 @@
             playerActive = true;
             applySavedMode();
             var video = getVideo();
-            if (video) video.setAttribute('playsinline', 'true');
             function onReady() {
                 applySavedMode();
                 setTimeout(scheduleHudFit, 120);

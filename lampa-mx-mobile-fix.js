@@ -8,8 +8,14 @@
     var refreshFrame = 0;
     var activeVideo = null;
 
+    function isAndroidTv() {
+        var ua = (navigator.userAgent || '');
+        if (/Android TV|Google TV|\bTV\b|BRAVIA|AFT|MiBOX|SHIELD|SMART-TV|SmartTV|HbbTV|Leanback/i.test(ua)) return true;
+        return /Android/i.test(ua) && (navigator.maxTouchPoints || 0) === 0 &&
+            Math.max(screen.width || 0, screen.height || 0) >= 1000;
+    }
     function isMobile() {
-        return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        return !isAndroidTv() && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     }
     function installViewportFix() {
         var viewport = document.querySelector('meta[name="viewport"]');
@@ -82,8 +88,6 @@
         video.dataset.lampaSmoothBound = '1';
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
-        video.style.webkitBackfaceVisibility = 'hidden';
-        video.style.backfaceVisibility = 'hidden';
         video.addEventListener('play', function () { enterVideoMode(video); }, { passive: true });
         ['pause', 'ended', 'emptied'].forEach(function (eventName) {
             video.addEventListener(eventName, function () {
