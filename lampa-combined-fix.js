@@ -353,7 +353,6 @@
     var STORAGE_KEY = 'lampa_aniskip_settings';
     var state = {
         video: null, segments: [], loadedKey: '', lastSkip: -1,
-        playItem: null,
         settings: { enabled: true, malId: '', episode: '', title: '' },
         badge: null, panel: null
     };
@@ -386,13 +385,7 @@
     function cleanTitle(value) {
         return String(value || '').replace(/\s+/g, ' ').replace(/\b(\d{3,4}p|WEB[- ]?DL|字幕|субтитри)\b/ig, '').trim();
     }
-    function playTitle() {
-        var item = state.playItem;
-        return cleanTitle(item && (item.animeTitle || item.seriesTitle || item.original_title || item.title));
-    }
     function findTitle() {
-        var fromPlay = playTitle();
-        if (fromPlay && fromPlay.length >= 2) return fromPlay.replace(/\s*(?:S\d+\s*E\d+|\d+\s*(?:сезон|season|серія|серия|episode)\b).*$/i, '').trim();
         var selectors = [
             '.player-info .title', '.player__title', '.player-video__title',
             '[class*="player"][class*="title"]', '[class*="movie"][class*="title"]', 'h1'
@@ -406,12 +399,6 @@
     }
     function findEpisode() {
         var candidates = [];
-        var item = state.playItem || {};
-        ['episode', 'episodeNumber', 'episode_num', 'episode_id'].forEach(function (name) {
-            if (item[name] != null && /^\d+(?:\.\d+)?$/.test(String(item[name]))) candidates.push(item[name]);
-        });
-        if (item.season != null && item.episode != null) candidates.push('S' + item.season + 'E' + item.episode);
-        if (playTitle()) candidates.push(playTitle());
         try {
             if (Lampa.PlayerVideo) {
                 ['episode', 'episodeNumber', 'number'].forEach(function (name) {
@@ -424,12 +411,8 @@
         candidates.push(text);
         candidates.push(location.href);
         for (var i = 0; i < candidates.length; i += 1) {
-            var value = String(candidates[i] || '');
-            var seasonEpisode = value.match(/S\d+\s*[-x]?\s*E\s*(\d{1,4})\b/i);
-            var wordEpisode = value.match(/(?:episode|ep\.?|серія|серия|епізод|эпизод)\s*[-#:]?\s*(\d{1,4})\b/i);
-            var match = seasonEpisode || wordEpisode;
+            var match = String(candidates[i] || '').match(/(?:episode|ep\.?|серія|серия|епізод|эпизод|e)\s*[-#:]?\s*(\d{1,4})\b/i);
             if (match) return Number(match[1]);
-            if (i < 4 && /^\d{1,4}$/.test(value.trim())) return Number(value.trim());
         }
         return 0;
     }
@@ -452,17 +435,6 @@
             if (item && (item.mal_id || item.malId || item.id_mal)) return Number(item.mal_id || item.malId || item.id_mal);
         }
         return Number(state.settings.malId) || 0;
-    }
-    function patchPlayerPlay() {
-        if (!window.Lampa || !Lampa.Player || typeof Lampa.Player.play !== 'function' || Lampa.Player.play.__lampaAniSkipPatched) return;
-        var originalPlay = Lampa.Player.play;
-        function wrappedPlay(item) {
-            state.playItem = item || null;
-            state.loadedKey = '';
-            return originalPlay.apply(this, arguments);
-        }
-        wrappedPlay.__lampaAniSkipPatched = true;
-        Lampa.Player.play = wrappedPlay;
     }
     function anilistMalId(title) {
         return fetch(ANILIST, {
@@ -563,7 +535,6 @@
     }
     function start() {
         state.settings = storageGet();
-        patchPlayerPlay();
         installUi(); scan();
         if (window.Lampa && Lampa.Player && Lampa.Player.listener) Lampa.Player.listener.follow('start', scan);
         if (window.Lampa && Lampa.PlayerVideo && Lampa.PlayerVideo.listener) {
