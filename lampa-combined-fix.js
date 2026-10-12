@@ -427,7 +427,6 @@
     var requestToken = 0;
     var currentVideo = null;
     var currentButton = null;
-    var buttonRootPosition = null;
     var currentSegments = [];
     var currentSegment = null;
     var startEvent = null;
@@ -443,7 +442,7 @@
         var style = document.createElement('style');
         style.id = styleId;
         style.textContent = [
-            '.lampa-aniskip-button{position:absolute!important;z-index:2147483000!important;left:18px!important;bottom:clamp(68px,10vh,96px)!important;display:none;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(18,20,28,.92);color:#fff;font:600 14px/1.2 Arial,sans-serif;letter-spacing:.01em;box-shadow:0 5px 24px rgba(0,0,0,.35);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}',
+            '.lampa-aniskip-button{position:fixed!important;z-index:2147483000!important;left:18px!important;bottom:clamp(68px,10vh,96px)!important;display:none;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(18,20,28,.92);color:#fff;font:600 14px/1.2 Arial,sans-serif;letter-spacing:.01em;box-shadow:0 5px 24px rgba(0,0,0,.35);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}',
             '.lampa-aniskip-button.is-visible{display:inline-flex}',
             '.lampa-aniskip-button:active{transform:scale(.97)}',
             '.lampa-aniskip-button svg{width:16px;height:16px;flex:0 0 16px;fill:currentColor}',
@@ -609,22 +608,11 @@
     function getPlayerRoot(video) {
         return video && (video.closest('.player-video') || video.closest('.player') || video.parentElement);
     }
-    function restoreButtonRoot() {
-        if (buttonRootPosition && buttonRootPosition.root && buttonRootPosition.root.style.position === 'relative') {
-            buttonRootPosition.root.style.position = buttonRootPosition.value;
-        }
-        buttonRootPosition = null;
-    }
     function createButton(video) {
         var root = getPlayerRoot(video);
         if (!root) return null;
         if (currentButton && currentButton.parentNode === root) return currentButton;
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
-        restoreButtonRoot();
-        if (window.getComputedStyle(root).position === 'static') {
-            buttonRootPosition = { root: root, value: root.style.position };
-            root.style.position = 'relative';
-        }
         var button = document.createElement('button');
         button.type = 'button';
         button.className = 'lampa-aniskip-button';
@@ -702,7 +690,6 @@
         currentSegment = null;
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
         currentButton = null;
-        restoreButtonRoot();
     }
     function loadForCurrent(token) {
         if (token !== requestToken) return;
