@@ -138,15 +138,25 @@
     function normalizeTitle(value) {
         return String(value || '').toLowerCase().replace(/[^a-z0-9а-яёіїєґ]+/gi, ' ').trim();
     }
+    function knownAnimeMalId(value) {
+        var text = String(value || '');
+        if (/(?:\bfrieren\b|sousou[\s._\-/]*no[\s._\-/]*frieren|フリーレン|リーレン|芙莉莲|芙莉蓮|фрирен|фрирэн)/i.test(text)) {
+            return /(?:season\s*2|2nd\s*season|сезон\s*2|2\s*сезон)/i.test(text) ? 59978 : 52991;
+        }
+        return 0;
+    }
     function resolveMalId(objects) {
         var direct = directMalId(objects);
         if (direct) return Promise.resolve(direct);
         var title = titleFrom(objects);
+        var source = mediaSourceText();
+        var knownId = knownAnimeMalId(title) || knownAnimeMalId(source);
+        if (knownId) {
+            console.log('[Lampa AniSkip] Matched Frieren alias from title/source:', title, source ? 'source URL matched' : '');
+            return Promise.resolve(knownId);
+        }
         if (!title) return Promise.resolve(0);
         var normalizedTitle = normalizeTitle(title);
-        if (/\b(frieren|sousou no frieren)\b|фрирен|фрирэн/i.test(normalizedTitle)) {
-            return Promise.resolve(/(?:season\s*2|2nd\s*season|сезон\s*2|2\s*сезон)/i.test(normalizedTitle) ? 59978 : 52991);
-        }
         var key = normalizeTitle(title);
         if (malIdCache.has(key)) return malIdCache.get(key);
         var promise = (async function () {
