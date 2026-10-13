@@ -385,6 +385,7 @@
         var style = document.createElement('style');
         style.id = styleId;
         style.textContent = '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}' +
+            '.player .lampa-aniskip-button{right:3em!important}' +
             '.player:not(.player--panel-visible) .lampa-aniskip-button{bottom:calc(5em + env(safe-area-inset-bottom,0px))!important}' +
             '.player.player--panel-visible .lampa-aniskip-button{bottom:calc(12em + env(safe-area-inset-bottom,0px))!important}';
         document.head.appendChild(style);
