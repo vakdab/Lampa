@@ -53,14 +53,14 @@
             }
         } catch (error) {}
         var initial = [
-            playlistItem,
-            playlistItem && playlistItem.movie,
             activity && activity.movie,
             activity && activity.data && activity.data.movie,
             activity && activity.params && activity.params.movie,
             event && event.movie,
             event && event.data && event.data.movie,
             event && event.object && event.object.movie,
+            playlistItem,
+            playlistItem && playlistItem.movie,
             event && event.episode,
             activity && activity.episode,
             activity && activity.data,
@@ -108,15 +108,17 @@
         return 0;
     }
     function titleFrom(objects) {
-        var keys = ['title_orig', 'original_title', 'title_english', 'title_en', 'originalName', 'name', 'title'];
-        for (var i = 0; i < objects.length; i++) {
-            var item = objects[i];
-            if (typeof item === 'string' && item.trim().length > 2) return item.trim();
-            if (!item || typeof item !== 'object') continue;
-            for (var j = 0; j < keys.length; j++) {
+        var keys = ['title_orig', 'original_title', 'title_english', 'title_en', 'originalName', 'title', 'name'];
+        for (var j = 0; j < keys.length; j++) {
+            for (var i = 0; i < objects.length; i++) {
+                var item = objects[i];
+                if (!item || typeof item !== 'object') continue;
                 var value = item[keys[j]];
                 if (typeof value === 'string' && value.trim().length > 2) return value.trim();
             }
+        }
+        for (var k = 0; k < objects.length; k++) {
+            if (typeof objects[k] === 'string' && objects[k].trim().length > 2) return objects[k].trim();
         }
         return '';
     }
@@ -128,6 +130,10 @@
         if (direct) return Promise.resolve(direct);
         var title = titleFrom(objects);
         if (!title) return Promise.resolve(0);
+        var normalizedTitle = normalizeTitle(title);
+        if (/\b(frieren|sousou no frieren)\b|фрирен|фрирэн/i.test(normalizedTitle)) {
+            return Promise.resolve(/(?:season\s*2|2nd\s*season|сезон\s*2|2\s*сезон)/i.test(normalizedTitle) ? 59978 : 52991);
+        }
         var key = normalizeTitle(title);
         if (malIdCache.has(key)) return malIdCache.get(key);
         var promise = (async function () {
@@ -170,16 +176,13 @@
         return 0;
     }
     function episodeFromObjects(objects) {
-        var keys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode', 'episode', 'ep'];
-        for (var i = 0; i < objects.length; i++) {
-            var item = objects[i];
-            if (typeof item === 'number' && Number.isInteger(item) && item > 0) return item;
-            if (typeof item === 'string') {
-                var parsedText = episodeFromString(item);
-                if (parsedText) return parsedText;
-            }
-            if (!item || typeof item !== 'object') continue;
+        var preferredKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode'];
+        var fallbackKeys = ['episode', 'ep'];
+        function readKeys(keys) {
             for (var j = 0; j < keys.length; j++) {
+                for (var i = 0; i < objects.length; i++) {
+                    var item = objects[i];
+                    if (!item || typeof item !== 'object') continue;
                 var value = item[keys[j]];
                 if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
                 if (typeof value === 'string') {
@@ -193,6 +196,21 @@
                     if (Number.isInteger(nested) && nested > 0) return nested;
                 }
             }
+            }
+            return 0;
+        }
+        var explicitEpisode = readKeys(preferredKeys);
+        if (explicitEpisode) return explicitEpisode;
+        var genericEpisode = readKeys(fallbackKeys);
+        if (genericEpisode) return genericEpisode;
+        for (var itemIndex = 0; itemIndex < objects.length; itemIndex++) {
+            var item = objects[itemIndex];
+            if (typeof item === 'number' && Number.isInteger(item) && item > 0) return item;
+            if (typeof item === 'string') {
+                var parsedText = episodeFromString(item);
+                if (parsedText) return parsedText;
+            }
+            if (!item || typeof item !== 'object') continue;
             var labelKeys = ['episode_title', 'episodeName', 'episode_name', 'release_name', 'title_episode', 'name_episode', 'title', 'name'];
             for (var k = 0; k < labelKeys.length; k++) {
                 var found = episodeFromString(item[labelKeys[k]]);
@@ -200,7 +218,10 @@
             }
         }
         var label = document.querySelector('.player-video__title,.player__title,.player-video__info,.player__info,.player-video__subtitle,.player__subtitle');
-        return label ? episodeFromString(label.textContent) : 0;
+        var fromLabel = label ? episodeFromString(label.textContent) : 0;
+        if (fromLabel) return fromLabel;
+        var video = getVideo();
+        return video ? episodeFromString(video.currentSrc || video.src || '') : 0;
     }
     function getVideo() {
         try {
@@ -263,10 +284,16 @@
             try {
                 var url = 'https://api.aniskip.com/v2/skip-times/' + malId + '/' + episode + '?types=op&types=ed&types=recap&episodeLength=0';
                 var response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
-                if (!response.ok) return [];
+                if (!response.ok) {
+                    console.warn('[Lampa AniSkip] API error:', response.status);
+                    return [];
+                }
                 var payload = await response.json();
-                if (!payload || payload.found !== true || !Array.isArray(payload.results)) return [];
-                return payload.results.map(function (item) {
+                if (!payload || payload.found !== true || !Array.isArray(payload.results)) {
+                    console.info('[Lampa AniSkip] No segments for this MAL ID / episode:', malId, episode);
+                    return [];
+                }
+                var segments = payload.results.map(function (item) {
                     var interval = item.interval || item;
                     return {
                         start: Number(interval.startTime !== undefined ? interval.startTime : interval.start_time),
@@ -276,7 +303,10 @@
                 }).filter(function (item) {
                     return ['op', 'opening'].indexOf(item.type) !== -1 && Number.isFinite(item.start) && Number.isFinite(item.end) && item.start >= 0 && item.end > item.start;
                 });
+                console.info('[Lampa AniSkip] Segments:', malId, episode, segments.length);
+                return segments;
             } catch (error) {
+                console.warn('[Lampa AniSkip] Request failed:', error && error.name ? error.name : error);
                 return [];
             } finally {
                 clearTimeout(timer);
@@ -309,13 +339,16 @@
         var malId = directMalId(objects);
         if (!video || !episode || (!title && !malId)) {
             pollCount++;
+            if (pollCount === 1) console.info('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
             if (pollCount < 60) retryTimer = setTimeout(function () { loadForCurrent(token); }, 500);
             return;
         }
+        console.info('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
         currentVideo = video;
         createButton(video);
         Promise.resolve(resolveMalId(objects)).then(function (malId) {
             if (token !== requestToken || currentVideo !== video || !malId) return;
+            console.info('[Lampa AniSkip] Resolved MAL ID:', malId, 'episode:', episode);
             return fetchSegments(malId, episode).then(function (segments) {
                 if (token !== requestToken || currentVideo !== video) return;
                 currentSegments = segments;
@@ -328,6 +361,7 @@
         }).catch(function () {});
     }
     function onPlayerStart(event) {
+        console.info('[Lampa AniSkip] Player start');
         clearCurrent();
         startEvent = event || null;
         var token = requestToken;
