@@ -533,13 +533,28 @@
                 var item = objects[i];
                 if (!item || typeof item !== 'object') continue;
                 var value = item[keys[j]];
-                if (typeof value === 'string' && value.trim().length > 2) return value.trim();
+                if (typeof value === 'string' && value.trim().length > 2 && !isGenericTitle(value)) return value.trim();
             }
         }
         for (var k = 0; k < objects.length; k++) {
-            if (typeof objects[k] === 'string' && objects[k].trim().length > 2) return objects[k].trim();
+            if (typeof objects[k] === 'string' && objects[k].trim().length > 2 && !isGenericTitle(objects[k])) return objects[k].trim();
         }
-        return '';
+        return mediaSourceText();
+    }
+    function isGenericTitle(value) {
+        return /(?:\bsource\b|\bисточник\b|\b\d{3,4}\s*x\s*\d{3,4}\b|\b\d{3,4}p\b|\.m3u8(?:$|[?#])|\.mp4(?:$|[?#]))/i.test(String(value || ''));
+    }
+    function mediaSourceText() {
+        var video = getVideo();
+        var source = video && (video.currentSrc || video.src) || '';
+        for (var i = 0; i < 2; i++) {
+            try {
+                var decoded = decodeURIComponent(source);
+                if (decoded === source) break;
+                source = decoded;
+            } catch (error) { break; }
+        }
+        return String(source || '');
     }
     function normalizeTitle(value) {
         return String(value || '').toLowerCase().replace(/[^a-z0-9а-яёіїєґ]+/gi, ' ').trim();
@@ -584,6 +599,8 @@
     function episodeFromString(value) {
         var text = String(value || '');
         var patterns = [
+            /__0*(\d{1,3})[_]/i,
+            /(?:^|[\/_ .-])(?:episode|ep)[_ .-]?0*(\d{1,3})(?=[\/_ .-]|$)/i,
             /\bS\s*\d{1,2}\s*[:._ -]?\s*E\s*0*(\d{1,3})\b/i,
             /\b(?:episode|ep\.?|сер(?:ія|ии|ия)|еп(?:ізод|изод|\.)?)\s*#?\s*0*(\d{1,3})\b/i,
             /\b0*(\d{1,3})\s*(?:серія|серии|эпизод|episode)\b/i
@@ -620,6 +637,8 @@
         }
         var explicitEpisode = readKeys(preferredKeys);
         if (explicitEpisode) return explicitEpisode;
+        var sourceEpisode = episodeFromString(mediaSourceText());
+        if (sourceEpisode) return sourceEpisode;
         var genericEpisode = readKeys(fallbackKeys);
         if (genericEpisode) return genericEpisode;
         for (var itemIndex = 0; itemIndex < objects.length; itemIndex++) {
