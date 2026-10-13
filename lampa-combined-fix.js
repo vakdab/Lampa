@@ -464,10 +464,14 @@
                     var list = playlistState.playlist || playlistState.list || playlistState.items;
                     var index = Number(playlistState.index !== undefined ? playlistState.index : playlistState.current);
                     if (Array.isArray(list) && Number.isInteger(index) && list[index]) playlistItem = list[index];
+                    else if (Array.isArray(list)) {
+                        var activeItem = list.find(function (item) { return item && (item.selected || item.active || item.current); });
+                        if (activeItem) playlistItem = activeItem;
+                    }
                 }
             }
         } catch (error) {}
-        var values = [
+        var initial = [
             playlistItem,
             playlistItem && playlistItem.movie,
             activity && activity.movie,
@@ -483,8 +487,29 @@
             event && event.object,
             event,
             activity
-        ];
-        return values.filter(function (value) { return value && (typeof value === 'object' || typeof value === 'string' || typeof value === 'number'); });
+        ].filter(function (value) { return value && (typeof value === 'object' || typeof value === 'string' || typeof value === 'number'); });
+        var values = [];
+        var queue = initial.map(function (value) { return { value: value, depth: 0 }; });
+        var seen = [];
+        while (queue.length && values.length < 100) {
+            var entry = queue.shift();
+            var value = entry.value;
+            if (!value || typeof value !== 'object' || seen.indexOf(value) !== -1) continue;
+            seen.push(value);
+            values.push(value);
+            if (entry.depth >= 4) continue;
+            Object.keys(value).forEach(function (key) {
+                var child = value[key];
+                if (child && typeof child === 'object') {
+                    if (Array.isArray(child)) {
+                        child.slice(0, 10).forEach(function (item) {
+                            if (item && typeof item === 'object') queue.push({ value: item, depth: entry.depth + 1 });
+                        });
+                    } else queue.push({ value: child, depth: entry.depth + 1 });
+                }
+            });
+        }
+        return initial.filter(function (value) { return typeof value !== 'object'; }).concat(values);
     }
     function directMalId(objects) {
         var keys = ['mal_id', 'malId', 'malID', 'myanimelist_id', 'myAnimeListId'];
@@ -587,13 +612,13 @@
                     if (Number.isInteger(nested) && nested > 0) return nested;
                 }
             }
-            var labelKeys = ['episode_title', 'episodeName', 'episode_name', 'release_name', 'title_episode', 'name_episode'];
+            var labelKeys = ['episode_title', 'episodeName', 'episode_name', 'release_name', 'title_episode', 'name_episode', 'title', 'name'];
             for (var k = 0; k < labelKeys.length; k++) {
                 var found = episodeFromString(item[labelKeys[k]]);
                 if (found) return found;
             }
         }
-        var label = document.querySelector('.player-video__title,.player__title,.player-video__info,.player__info');
+        var label = document.querySelector('.player-video__title,.player__title,.player-video__info,.player__info,.player-video__subtitle,.player__subtitle');
         return label ? episodeFromString(label.textContent) : 0;
     }
     function getVideo() {
@@ -603,13 +628,16 @@
                 if (video && video.tagName === 'VIDEO') return video;
             }
         } catch (error) {}
-        return null;
-    }
-    function getPlayerRoot(video) {
-        return video && (video.closest('.player-video') || video.closest('.player') || video.parentElement);
+        var candidates = Array.prototype.slice.call(document.querySelectorAll('video'));
+        candidates.sort(function (a, b) {
+            var aScore = (a.paused ? 0 : 1000000) + a.getBoundingClientRect().width * a.getBoundingClientRect().height;
+            var bScore = (b.paused ? 0 : 1000000) + b.getBoundingClientRect().width * b.getBoundingClientRect().height;
+            return bScore - aScore;
+        });
+        return candidates[0] || null;
     }
     function createButton(video) {
-        var root = getPlayerRoot(video);
+        var root = document.body;
         if (!root) return null;
         if (currentButton && currentButton.parentNode === root) return currentButton;
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
@@ -696,15 +724,15 @@
         var video = getVideo();
         var objects = asObjects(startEvent);
         var episode = episodeFromObjects(objects);
-        if (!video || !episode) {
+        var title = titleFrom(objects);
+        var malId = directMalId(objects);
+        if (!video || !episode || (!title && !malId)) {
             pollCount++;
-            if (pollCount < 16) retryTimer = setTimeout(function () { loadForCurrent(token); }, 350);
+            if (pollCount < 60) retryTimer = setTimeout(function () { loadForCurrent(token); }, 500);
             return;
         }
         currentVideo = video;
         createButton(video);
-        var title = titleFrom(objects);
-        if (!title && !(directMalId(objects) > 0)) return;
         Promise.resolve(resolveMalId(objects)).then(function (malId) {
             if (token !== requestToken || currentVideo !== video || !malId) return;
             return fetchSegments(malId, episode).then(function (segments) {
