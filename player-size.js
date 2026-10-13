@@ -12,6 +12,8 @@
 
     waitForLampa(function () {
         var storageKey = 'player_size';
+        var smoothingStorageKey = 'video_smoothing';
+        var defaultSmoothing = 4;
         var originalSelectShow = Lampa.Select.show;
         var playerActive = false;
         var applyFrame = 0;
@@ -49,6 +51,28 @@
         }
         function saveSize(value) {
             if (Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set(storageKey, value);
+        }
+        function getSmoothing() {
+            var value = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get(smoothingStorageKey, defaultSmoothing) : defaultSmoothing;
+            value = parseInt(value, 10);
+            return isFinite(value) ? Math.max(0, Math.min(4, value)) : defaultSmoothing;
+        }
+        function applySmoothing(video) {
+            if (!video || !video.style) return;
+            var value = getSmoothing();
+            if (!value) {
+                video.style.removeProperty('filter');
+                return;
+            }
+            var strength = value / 100;
+            video.style.setProperty('filter', 'contrast(' + (1 + strength).toFixed(3) + ') saturate(' + (1 + strength).toFixed(3) + ') brightness(' + (1 + strength * 0.25).toFixed(3) + ')', 'important');
+        }
+        function prepareVideo(video) {
+            if (!video) return;
+            video.setAttribute('preload', 'metadata');
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            applySmoothing(video);
         }
         function getVideo() {
             try { return Lampa.PlayerVideo.video(); } catch (error) { return null; }
@@ -93,7 +117,7 @@
         function clearMode(video) {
             if (!video || !video.style) return;
             clearHudFit(playerRoot(video));
-            ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background'].forEach(function (name) {
+            ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background','filter'].forEach(function (name) {
                 video.style.removeProperty(name);
             });
             video.classList.remove('lampa-smooth-video');
@@ -105,6 +129,7 @@
             var video = getVideo();
             if (!video || !mode || !video.style) return;
             clearMode(video);
+            prepareVideo(video);
             video.classList.add('lampa-smooth-video');
             if (mode.value === 'fill') {
                 document.body.classList.add('lampa-player-fill');
@@ -190,9 +215,10 @@
             playerActive = true;
             applySavedMode();
             var video = getVideo();
-            if (video) video.setAttribute('playsinline', 'true');
+            prepareVideo(video);
             function onReady() {
                 applySavedMode();
+                prepareVideo(getVideo());
                 setTimeout(scheduleHudFit, 120);
             }
             function onDestroy() {

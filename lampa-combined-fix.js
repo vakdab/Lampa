@@ -125,6 +125,8 @@
 
     waitForLampa(function () {
         var storageKey = 'player_size';
+        var smoothingStorageKey = 'video_smoothing';
+        var defaultSmoothing = 4;
         var originalSelectShow = Lampa.Select.show;
         var playerActive = false;
         var applyFrame = 0;
@@ -162,6 +164,28 @@
         }
         function saveSize(value) {
             if (Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set(storageKey, value);
+        }
+        function getSmoothing() {
+            var value = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get(smoothingStorageKey, defaultSmoothing) : defaultSmoothing;
+            value = parseInt(value, 10);
+            return isFinite(value) ? Math.max(0, Math.min(4, value)) : defaultSmoothing;
+        }
+        function applySmoothing(video) {
+            if (!video || !video.style) return;
+            var value = getSmoothing();
+            if (!value) {
+                video.style.removeProperty('filter');
+                return;
+            }
+            var strength = value / 100;
+            video.style.setProperty('filter', 'contrast(' + (1 + strength).toFixed(3) + ') saturate(' + (1 + strength).toFixed(3) + ') brightness(' + (1 + strength * 0.25).toFixed(3) + ')', 'important');
+        }
+        function prepareVideo(video) {
+            if (!video) return;
+            video.setAttribute('preload', 'metadata');
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            applySmoothing(video);
         }
         function getVideo() {
             try { return Lampa.PlayerVideo.video(); } catch (error) { return null; }
@@ -206,7 +230,7 @@
         function clearMode(video) {
             if (!video || !video.style) return;
             clearHudFit(playerRoot(video));
-            ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background'].forEach(function (name) {
+            ['position','inset','top','right','bottom','left','width','height','object-fit','object-position','aspect-ratio','transform','transform-origin','background','filter'].forEach(function (name) {
                 video.style.removeProperty(name);
             });
             video.classList.remove('lampa-smooth-video');
@@ -218,6 +242,7 @@
             var video = getVideo();
             if (!video || !mode || !video.style) return;
             clearMode(video);
+            prepareVideo(video);
             video.classList.add('lampa-smooth-video');
             if (mode.value === 'fill') {
                 document.body.classList.add('lampa-player-fill');
@@ -266,10 +291,7 @@
         function scheduleApply() {
             cancelAnimationFrame(applyFrame);
             applyFrame = requestAnimationFrame(function () {
-                if (!playerActive) return;
-                var savedMode = modes[getSavedSize()];
-                if (savedMode) applyMode(savedMode);
-                else clearMode(getVideo());
+                if (playerActive) applyMode(modes[getSavedSize()] || modes.contain);
             });
         }
         function applySavedMode() { scheduleApply(); }
@@ -306,9 +328,10 @@
             playerActive = true;
             applySavedMode();
             var video = getVideo();
-            if (video) video.setAttribute('playsinline', 'true');
+            prepareVideo(video);
             function onReady() {
                 applySavedMode();
+                prepareVideo(getVideo());
                 setTimeout(scheduleHudFit, 120);
             }
             function onDestroy() {
@@ -332,10 +355,12 @@
         console.log('[Lampa Smooth Player] loaded');
     });
 })();
+
+
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-3';
+    var pluginVersion = '2026-10-13-all-in-one-4';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -359,15 +384,7 @@
         if (document.getElementById(styleId)) return;
         var style = document.createElement('style');
         style.id = styleId;
-        style.textContent = [
-            '.lampa-aniskip-button{z-index:2147483000!important;display:flex!important;align-items:center;gap:.6em;min-height:44px;padding:.8em 1.2em;border:0;border-radius:2em;background:rgba(255,255,255,.12);color:#fff;font:600 15px/1.2 Arial,sans-serif;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent}',
-            '.lampa-aniskip-button.hide{display:none!important}',
-            '.lampa-aniskip-button:not(.hide){display:flex!important}',
-            '.player .lampa-aniskip-button{position:absolute!important;right:1.5em!important;bottom:1.5em!important}',
-            '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}',
-            '.lampa-aniskip-button:active{transform:scale(.97)}',
-            '.lampa-aniskip-button svg{width:20px;height:20px;flex:0 0 20px;fill:currentColor}'
-        ].join('');
+        style.textContent = '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}';
         document.head.appendChild(style);
     }
     function currentPlaybackData() {
@@ -630,12 +647,13 @@
         Array.prototype.slice.call(document.querySelectorAll('.lampa-aniskip-button')).forEach(function (oldButton) {
             if (oldButton !== currentButton && oldButton.parentNode) oldButton.parentNode.removeChild(oldButton);
         });
-        var button = document.createElement('button');
-        button.type = 'button';
+        var button = document.createElement('div');
         button.className = 'player-skip selector hide lampa-aniskip-button';
+        button.setAttribute('role', 'button');
+        button.setAttribute('tabindex', '0');
         button.setAttribute('aria-hidden', 'true');
         button.setAttribute('aria-label', 'Пропустити опенінг');
-        button.innerHTML = '<span class="player-skip__text">Пропустити опенінг</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16l13-8L5 4z"></path></svg>';
+        button.innerHTML = '<span class="player-skip__text">Пропустити опенінг</span><svg aria-hidden="true"><use xlink:href="#sprite-player-next"></use></svg>';
         if (root === document.body) button.classList.add('lampa-aniskip-fallback');
         button.addEventListener('click', function (event) {
             event.preventDefault();
