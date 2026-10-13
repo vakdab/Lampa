@@ -360,7 +360,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-6';
+    var pluginVersion = '2026-10-13-all-in-one-7';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -574,11 +574,34 @@
                         return names.some(function (candidate) { return normalizeTitle(candidate) === normalizedQuery; });
                     });
                     if (exact && exact.mal_id) return Number(exact.mal_id);
-                    if (results[0] && results[0].mal_id && candidateIndex === 0 && normalizedQuery.length > 5) return Number(results[0].mal_id);
                 } catch (error) {
                     console.warn('[Lampa AniSkip] Title lookup failed:', query, error && error.name ? error.name : error);
                 } finally {
                     clearTimeout(timer);
+                }
+            }
+            for (var aniListIndex = 0; aniListIndex < candidates.length; aniListIndex++) {
+                var aniListQuery = candidates[aniListIndex];
+                var aniListController = new AbortController();
+                var aniListTimer = setTimeout(function () { aniListController.abort(); }, 4500);
+                try {
+                    var aniListResponse = await fetch('https://graphql.anilist.co', {
+                        method: 'POST',
+                        signal: aniListController.signal,
+                        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: 'query($search:String!){Media(search:$search,type:ANIME){idMal title{romaji english native}}}', variables: { search: aniListQuery } })
+                    });
+                    if (!aniListResponse.ok) continue;
+                    var aniListPayload = await aniListResponse.json();
+                    var media = aniListPayload && aniListPayload.data && aniListPayload.data.Media;
+                    if (!media || !media.idMal) continue;
+                    var aniNames = [media.title && media.title.romaji, media.title && media.title.english, media.title && media.title.native];
+                    var aniQuery = normalizeTitle(aniListQuery);
+                    if (aniNames.some(function (name) { return normalizeTitle(name) === aniQuery; }) || aniQuery.length > 5) return Number(media.idMal);
+                } catch (error) {
+                    console.warn('[Lampa AniSkip] AniList title lookup failed:', aniListQuery, error && error.name ? error.name : error);
+                } finally {
+                    clearTimeout(aniListTimer);
                 }
             }
             return 0;
@@ -603,7 +626,7 @@
     }
     function episodeFromObjects(objects) {
         var roots = [startEvent, currentPlaybackData()];
-        var rootKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode', 'episode', 'ep'];
+        var rootKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode', 'episode_index', 'episodeIndex', 'playlist_index', 'playlistIndex', 'episode', 'ep'];
         for (var r = 0; r < roots.length; r++) {
             var root = roots[r];
             if (!root || typeof root !== 'object') continue;
@@ -622,7 +645,7 @@
                 }
             }
         }
-        var preferredKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode'];
+        var preferredKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode', 'episode_index', 'episodeIndex', 'playlist_index', 'playlistIndex'];
         var fallbackKeys = ['episode', 'ep'];
         function readKeys(keys) {
             for (var j = 0; j < keys.length; j++) {
