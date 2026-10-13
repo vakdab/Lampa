@@ -360,7 +360,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-4';
+    var pluginVersion = '2026-10-13-all-in-one-5';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -384,7 +384,9 @@
         if (document.getElementById(styleId)) return;
         var style = document.createElement('style');
         style.id = styleId;
-        style.textContent = '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}';
+        style.textContent = '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}' +
+            '.player:not(.player--panel-visible) .lampa-aniskip-button{bottom:calc(5em + env(safe-area-inset-bottom,0px))!important}' +
+            '.player.player--panel-visible .lampa-aniskip-button{bottom:calc(12em + env(safe-area-inset-bottom,0px))!important}';
         document.head.appendChild(style);
     }
     function currentPlaybackData() {
