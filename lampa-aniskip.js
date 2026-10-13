@@ -1,7 +1,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-7';
+    var pluginVersion = '2026-10-13-all-in-one-8';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -20,6 +20,7 @@
     var boundTimeUpdate = null;
     var boundLoadedMetadata = null;
     var lastVisibilityLog = null;
+    function debugLog() {}
 
     function installStyles() {
         if (document.getElementById(styleId)) return;
@@ -181,69 +182,46 @@
             if (sourceMalId) return Promise.resolve(sourceMalId);
         }
         var title = titleFrom(objects);
-        var source = mediaSourceText();
-        var knownId = knownAnimeMalId(title) || knownAnimeMalId(source);
-        if (knownId) {
-            console.log('[Lampa AniSkip] Matched Frieren alias from title/source:', title, source ? 'source URL matched' : '');
-            return Promise.resolve(knownId);
-        }
+        var knownId = knownAnimeMalId(title) || knownAnimeMalId(mediaSourceText());
+        if (knownId) return Promise.resolve(knownId);
         var candidates = titleCandidates(objects);
         if (title && candidates.indexOf(title) === -1) candidates.unshift(title);
+        candidates = candidates.slice(0, 4);
         if (!candidates.length) return Promise.resolve(0);
         var key = candidates.map(normalizeTitle).join('|');
         if (malIdCache.has(key)) return malIdCache.get(key);
         var promise = (async function () {
-            for (var candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
-                var query = candidates[candidateIndex];
+            var graph = 'query($search:String!){Media(search:$search,type:ANIME){idMal title{romaji english native}}}';
+            for (var i = 0; i < candidates.length; i++) {
+                var query = candidates[i];
                 var controller = new AbortController();
-                var timer = setTimeout(function () { controller.abort(); }, 4500);
+                var timer = setTimeout(function () { controller.abort(); }, 2500);
                 try {
-                    var response = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=10', {
-                        signal: controller.signal,
-                        headers: { Accept: 'application/json' }
-                    });
-                    if (response.status === 429) {
-                        await new Promise(function (resolve) { setTimeout(resolve, 800); });
-                        continue;
-                    }
-                    if (!response.ok) continue;
-                    var payload = await response.json();
-                    var results = Array.isArray(payload && payload.data) ? payload.data : [];
-                    var normalizedQuery = normalizeTitle(query);
-                    var exact = results.find(function (anime) {
-                        var names = [anime.title, anime.title_english, anime.title_japanese].concat((anime.titles || []).map(function (entry) { return entry && entry.title; }));
-                        return names.some(function (candidate) { return normalizeTitle(candidate) === normalizedQuery; });
-                    });
-                    if (exact && exact.mal_id) return Number(exact.mal_id);
-                } catch (error) {
-                    console.warn('[Lampa AniSkip] Title lookup failed:', query, error && error.name ? error.name : error);
-                } finally {
-                    clearTimeout(timer);
-                }
-            }
-            for (var aniListIndex = 0; aniListIndex < candidates.length; aniListIndex++) {
-                var aniListQuery = candidates[aniListIndex];
-                var aniListController = new AbortController();
-                var aniListTimer = setTimeout(function () { aniListController.abort(); }, 4500);
-                try {
-                    var aniListResponse = await fetch('https://graphql.anilist.co', {
-                        method: 'POST',
-                        signal: aniListController.signal,
+                    var response = await fetch('https://graphql.anilist.co', {
+                        method: 'POST', signal: controller.signal,
                         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: 'query($search:String!){Media(search:$search,type:ANIME){idMal title{romaji english native}}}', variables: { search: aniListQuery } })
+                        body: JSON.stringify({ query: graph, variables: { search: query } })
                     });
-                    if (!aniListResponse.ok) continue;
-                    var aniListPayload = await aniListResponse.json();
-                    var media = aniListPayload && aniListPayload.data && aniListPayload.data.Media;
-                    if (!media || !media.idMal) continue;
-                    var aniNames = [media.title && media.title.romaji, media.title && media.title.english, media.title && media.title.native];
-                    var aniQuery = normalizeTitle(aniListQuery);
-                    if (aniNames.some(function (name) { return normalizeTitle(name) === aniQuery; }) || aniQuery.length > 5) return Number(media.idMal);
-                } catch (error) {
-                    console.warn('[Lampa AniSkip] AniList title lookup failed:', aniListQuery, error && error.name ? error.name : error);
-                } finally {
-                    clearTimeout(aniListTimer);
-                }
+                    if (response.ok) {
+                        var payload = await response.json();
+                        var media = payload && payload.data && payload.data.Media;
+                        var names = media && media.title ? [media.title.romaji, media.title.english, media.title.native] : [];
+                        if (media && media.idMal && (names.some(function (name) { return normalizeTitle(name) === normalizeTitle(query); }) || normalizeTitle(query).length > 5)) return Number(media.idMal);
+                    }
+                } catch (error) {} finally { clearTimeout(timer); }
+            }
+            for (var j = 0; j < Math.min(2, candidates.length); j++) {
+                var jikanController = new AbortController();
+                var jikanTimer = setTimeout(function () { jikanController.abort(); }, 2500);
+                try {
+                    var jikanResponse = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(candidates[j]) + '&limit=10', { signal: jikanController.signal, headers: { Accept: 'application/json' } });
+                    if (!jikanResponse.ok) continue;
+                    var jikanPayload = await jikanResponse.json();
+                    var jikanResults = Array.isArray(jikanPayload && jikanPayload.data) ? jikanPayload.data : [];
+                    var normalized = normalizeTitle(candidates[j]);
+                    var exact = jikanResults.find(function (anime) { return [anime.title, anime.title_english, anime.title_japanese].some(function (name) { return normalizeTitle(name) === normalized; }); });
+                    if (exact && exact.mal_id) return Number(exact.mal_id);
+                } catch (error) {} finally { clearTimeout(jikanTimer); }
             }
             return 0;
         })();
@@ -399,7 +377,7 @@
         currentButton.setAttribute('aria-hidden', visible ? 'false' : 'true');
         if (lastVisibilityLog !== visible) {
             lastVisibilityLog = visible;
-            if (visible) console.log('[Lampa AniSkip] Skip button visible:', currentSegment.type, currentSegment.start, '-', currentSegment.end);
+            if (visible) debugLog('[Lampa AniSkip] Skip button visible:', currentSegment.type, currentSegment.start, '-', currentSegment.end);
         }
     }
     function fetchSegments(malId, episode) {
@@ -412,12 +390,12 @@
                 var url = 'https://api.aniskip.com/v2/skip-times/' + malId + '/' + episode + '?types=op&types=ed&types=recap&episodeLength=0';
                 var response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
                 if (!response.ok) {
-                    console.warn('[Lampa AniSkip] API error:', response.status);
+                    debugLog('[Lampa AniSkip] API error:', response.status);
                     return [];
                 }
                 var payload = await response.json();
                 if (!payload || payload.found !== true || !Array.isArray(payload.results)) {
-                    console.log('[Lampa AniSkip] No segments for this MAL ID / episode:', malId, episode);
+                    debugLog('[Lampa AniSkip] No segments for this MAL ID / episode:', malId, episode);
                     return [];
                 }
                 var segments = payload.results.map(function (item) {
@@ -430,10 +408,10 @@
                 }).filter(function (item) {
                     return ['op', 'opening'].indexOf(item.type) !== -1 && Number.isFinite(item.start) && Number.isFinite(item.end) && item.start >= 0 && item.end > item.start;
                 });
-                console.log('[Lampa AniSkip] Segments:', malId, episode, segments.length);
+                debugLog('[Lampa AniSkip] Segments:', malId, episode, segments.length);
                 return segments;
             } catch (error) {
-                console.warn('[Lampa AniSkip] Request failed:', error && error.name ? error.name : error);
+                debugLog('[Lampa AniSkip] Request failed:', error && error.name ? error.name : error);
                 return [];
             } finally {
                 clearTimeout(timer);
@@ -467,21 +445,21 @@
         var malId = directMalId(objects);
         if (!video || !episode || (!title && !malId)) {
             pollCount++;
-            if (pollCount === 1) console.log('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
-            if (pollCount === 60) console.log('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
+            if (pollCount === 1) debugLog('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
+            if (pollCount === 60) debugLog('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
             if (pollCount < 60) retryTimer = setTimeout(function () { loadForCurrent(token); }, 500);
             return;
         }
-        console.log('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
+        debugLog('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
         currentVideo = video;
         createButton(video);
         Promise.resolve(resolveMalId(objects)).then(function (malId) {
             if (token !== requestToken || currentVideo !== video) return;
             if (!malId) {
-                console.log('[Lampa AniSkip] No MAL ID resolved for title:', title);
+                debugLog('[Lampa AniSkip] No MAL ID resolved for title:', title);
                 return;
             }
-            console.log('[Lampa AniSkip] Resolved MAL ID:', malId, 'episode:', episode);
+            debugLog('[Lampa AniSkip] Resolved MAL ID:', malId, 'episode:', episode);
             return fetchSegments(malId, episode).then(function (segments) {
                 if (token !== requestToken || currentVideo !== video) return;
                 currentSegments = segments;
@@ -494,7 +472,7 @@
         }).catch(function () {});
     }
     function onPlayerStart(event) {
-        console.log('[Lampa AniSkip] Player start');
+        debugLog('[Lampa AniSkip] Player start');
         clearCurrent();
         startEvent = event || null;
         var token = requestToken;
@@ -513,7 +491,7 @@
         installStyles();
         Lampa.Player.listener.follow('start', onPlayerStart);
         Lampa.Player.listener.follow('destroy', onPlayerDestroy);
-        console.log('[Lampa AniSkip] loaded');
+        debugLog('[Lampa AniSkip] loaded');
     }
     if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();

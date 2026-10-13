@@ -38,7 +38,7 @@
             '.lampa-smooth-video{backface-visibility:hidden;-webkit-backface-visibility:hidden;}',
             'body.lampa-player-cinema video{aspect-ratio:21/9!important;}',
             'body.lampa-player-fill .player-video__display video,body.lampa-player-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:2.5mm!important;right:auto!important;width:calc(100% - 5mm)!important;height:100%!important;object-fit:fill!important;background:#000;}',
-            'body.lampa-player-cinema-fill .player-video__display video,body.lampa-player-cinema-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:8mm!important;right:auto!important;width:calc(100% - 16mm)!important;height:100%!important;object-fit:fill!important;background:#000;}',
+            'body.lampa-player-cinema-fill .player-video__display video,body.lampa-player-cinema-fill .player-video video{position:absolute!important;top:0!important;bottom:0!important;left:8mm!important;right:auto!important;width:calc(100% - 16mm)!important;height:100%!important;object-fit:contain!important;background:#000;}',
             'body.lampa-player-cinema-fill{--player-gap:8mm;}',
             'body.lampa-player-cinema-fill .player-info,body.lampa-player-cinema-fill .player-panel{left:var(--player-gap)!important;right:var(--player-gap)!important;width:auto!important;}',
             'body.lampa-player-cinema-fill .player-video__info,body.lampa-player-cinema-fill .player-video__controls,body.lampa-player-cinema-fill .player-video__progress,body.lampa-player-cinema-fill .player-video__timeline,body.lampa-player-cinema-fill .player__info,body.lampa-player-cinema-fill .player__controls,body.lampa-player-cinema-fill .player__progress,body.lampa-player-cinema-fill .player__timeline{left:8mm!important;right:8mm!important;width:auto!important;max-width:none!important;}',
@@ -155,7 +155,7 @@
                 video.style.setProperty('right', 'auto', 'important');
                 video.style.setProperty('width', 'calc(100% - 16mm)', 'important');
                 video.style.setProperty('height', '100%', 'important');
-                video.style.setProperty('object-fit', 'fill', 'important');
+                video.style.setProperty('object-fit', 'contain', 'important');
                 video.style.setProperty('background', '#000', 'important');
                 saveSize(mode.value);
                 scheduleHudFit();
@@ -234,11 +234,20 @@
             Lampa.Player.listener.follow('destroy', onDestroy);
         }
         Lampa.Player.listener.follow('start', onStart);
+        function reflowAfterOrientation() {
+            if (!playerActive) return;
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = requestAnimationFrame(function () {
+                applySavedMode();
+                setTimeout(applySavedMode, 180);
+            });
+        }
         window.addEventListener('resize', function () {
             cancelAnimationFrame(resizeFrame);
             resizeFrame = requestAnimationFrame(applySavedMode);
             scheduleHudFit();
         }, { passive: true });
-        console.log('[Lampa Smooth Player] loaded');
+        window.addEventListener('orientationchange', reflowAfterOrientation, { passive: true });
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', reflowAfterOrientation, { passive: true });
     });
 })();

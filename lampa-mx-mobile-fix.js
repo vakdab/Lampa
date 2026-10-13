@@ -106,7 +106,6 @@
             document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
             document.addEventListener('touchcancel', function () { touchStart = null; }, { passive: true, capture: true });
         }
-        console.log('[Lampa MX Mobile Fix] touch-only mode loaded; video playback is untouched');
     }
     if (document.body) start();
     else document.addEventListener('DOMContentLoaded', start, { once: true });
