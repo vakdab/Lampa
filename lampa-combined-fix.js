@@ -404,10 +404,13 @@
         } catch (error) {}
         var initial = [
             playData && playData.card,
+            playData && playData.movie,
             activity && activity.movie,
             activity && activity.data && activity.data.movie,
             activity && activity.params && activity.params.movie,
             event && event.movie,
+            event && event.card,
+            event && event.data && event.data.card,
             event && event.data && event.data.movie,
             event && event.object && event.object.movie,
             playData,
@@ -419,6 +422,13 @@
             event,
             activity
         ].filter(function (value) { return value && (typeof value === 'object' || typeof value === 'string' || typeof value === 'number'); });
+        initial.slice().forEach(function (value) {
+            if (typeof value !== 'string' || value.length < 2 || !/^[\[{]/.test(value.trim())) return;
+            try {
+                var parsed = JSON.parse(value);
+                if (parsed && typeof parsed === 'object') initial.unshift(parsed);
+            } catch (error) {}
+        });
         var values = [];
         var queue = initial.map(function (value) { return { value: value, depth: 0 }; });
         var seen = [];
@@ -493,7 +503,7 @@
         for (var k = 0; k < objects.length; k++) {
             if (typeof objects[k] === 'string' && objects[k].trim().length > 2 && !isGenericTitle(objects[k])) return objects[k].trim();
         }
-        return mediaSourceText();
+        return '';
     }
     function isGenericTitle(value) {
         return /(?:\bsource\b|\bисточник\b|\b\d{3,4}\s*x\s*\d{3,4}\b|\b\d{3,4}p\b|\.m3u8(?:$|[?#])|\.mp4(?:$|[?#]))/i.test(String(value || ''));
