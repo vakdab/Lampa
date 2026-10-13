@@ -19,6 +19,7 @@
     var segmentCache = new Map();
     var boundTimeUpdate = null;
     var boundLoadedMetadata = null;
+    var lastVisibilityLog = null;
 
     function installStyles() {
         if (document.getElementById(styleId)) return;
@@ -320,6 +321,10 @@
         var visible = !!currentSegment;
         currentButton.classList.toggle('hide', !visible);
         currentButton.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        if (lastVisibilityLog !== visible) {
+            lastVisibilityLog = visible;
+            if (visible) console.log('[Lampa AniSkip] Skip button visible:', currentSegment.type, currentSegment.start, '-', currentSegment.end);
+        }
     }
     function fetchSegments(malId, episode) {
         var cacheKey = malId + ':' + episode;
@@ -336,7 +341,7 @@
                 }
                 var payload = await response.json();
                 if (!payload || payload.found !== true || !Array.isArray(payload.results)) {
-                    console.info('[Lampa AniSkip] No segments for this MAL ID / episode:', malId, episode);
+                    console.log('[Lampa AniSkip] No segments for this MAL ID / episode:', malId, episode);
                     return [];
                 }
                 var segments = payload.results.map(function (item) {
@@ -349,7 +354,7 @@
                 }).filter(function (item) {
                     return ['op', 'opening'].indexOf(item.type) !== -1 && Number.isFinite(item.start) && Number.isFinite(item.end) && item.start >= 0 && item.end > item.start;
                 });
-                console.info('[Lampa AniSkip] Segments:', malId, episode, segments.length);
+                console.log('[Lampa AniSkip] Segments:', malId, episode, segments.length);
                 return segments;
             } catch (error) {
                 console.warn('[Lampa AniSkip] Request failed:', error && error.name ? error.name : error);
@@ -373,6 +378,7 @@
         boundLoadedMetadata = null;
         currentSegments = [];
         currentSegment = null;
+        lastVisibilityLog = null;
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
         currentButton = null;
     }
@@ -385,16 +391,21 @@
         var malId = directMalId(objects);
         if (!video || !episode || (!title && !malId)) {
             pollCount++;
-            if (pollCount === 1) console.info('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
+            if (pollCount === 1) console.log('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
+            if (pollCount === 60) console.log('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
             if (pollCount < 60) retryTimer = setTimeout(function () { loadForCurrent(token); }, 500);
             return;
         }
-        console.info('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
+        console.log('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
         currentVideo = video;
         createButton(video);
         Promise.resolve(resolveMalId(objects)).then(function (malId) {
-            if (token !== requestToken || currentVideo !== video || !malId) return;
-            console.info('[Lampa AniSkip] Resolved MAL ID:', malId, 'episode:', episode);
+            if (token !== requestToken || currentVideo !== video) return;
+            if (!malId) {
+                console.log('[Lampa AniSkip] No MAL ID resolved for title:', title);
+                return;
+            }
+            console.log('[Lampa AniSkip] Resolved MAL ID:', malId, 'episode:', episode);
             return fetchSegments(malId, episode).then(function (segments) {
                 if (token !== requestToken || currentVideo !== video) return;
                 currentSegments = segments;
@@ -407,7 +418,7 @@
         }).catch(function () {});
     }
     function onPlayerStart(event) {
-        console.info('[Lampa AniSkip] Player start');
+        console.log('[Lampa AniSkip] Player start');
         clearCurrent();
         startEvent = event || null;
         var token = requestToken;
