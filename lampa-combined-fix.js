@@ -450,36 +450,27 @@
         ].join('');
         document.head.appendChild(style);
     }
+    function currentPlaybackData() {
+        try {
+            if (window.Lampa && Lampa.Player && typeof Lampa.Player.playdata === 'function') return Lampa.Player.playdata() || null;
+        } catch (error) {}
+        return null;
+    }
     function asObjects(event) {
         var activity = null;
-        var playlistItem = null;
+        var playData = currentPlaybackData();
         try {
             if (window.Lampa && Lampa.Activity && typeof Lampa.Activity.active === 'function') activity = Lampa.Activity.active();
         } catch (error) {}
-        try {
-            if (window.Lampa && Lampa.Player && typeof Lampa.Player.playlist === 'function') {
-                var playlistState = Lampa.Player.playlist();
-                if (Array.isArray(playlistState) && playlistState.length === 1) playlistItem = playlistState[0];
-                else if (playlistState && typeof playlistState === 'object') {
-                    var list = playlistState.playlist || playlistState.list || playlistState.items;
-                    var index = Number(playlistState.index !== undefined ? playlistState.index : playlistState.current);
-                    if (Array.isArray(list) && Number.isInteger(index) && list[index]) playlistItem = list[index];
-                    else if (Array.isArray(list)) {
-                        var activeItem = list.find(function (item) { return item && (item.selected || item.active || item.current); });
-                        if (activeItem) playlistItem = activeItem;
-                    }
-                }
-            }
-        } catch (error) {}
         var initial = [
+            playData && playData.card,
             activity && activity.movie,
             activity && activity.data && activity.data.movie,
             activity && activity.params && activity.params.movie,
             event && event.movie,
             event && event.data && event.data.movie,
             event && event.object && event.object.movie,
-            playlistItem,
-            playlistItem && playlistItem.movie,
+            playData,
             event && event.episode,
             activity && activity.episode,
             activity && activity.data,
@@ -545,8 +536,10 @@
         return /(?:\bsource\b|\bисточник\b|\b\d{3,4}\s*x\s*\d{3,4}\b|\b\d{3,4}p\b|\.m3u8(?:$|[?#])|\.mp4(?:$|[?#]))/i.test(String(value || ''));
     }
     function mediaSourceText() {
+        var data = currentPlaybackData();
+        var source = data && (data.url || data.file || data.src) || '';
         var video = getVideo();
-        var source = video && (video.currentSrc || video.src) || '';
+        source = source || (video && (video.currentSrc || video.src)) || '';
         for (var i = 0; i < 2; i++) {
             try {
                 var decoded = decodeURIComponent(source);
@@ -612,6 +605,26 @@
         return 0;
     }
     function episodeFromObjects(objects) {
+        var roots = [startEvent, currentPlaybackData()];
+        var rootKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode', 'episode', 'ep'];
+        for (var r = 0; r < roots.length; r++) {
+            var root = roots[r];
+            if (!root || typeof root !== 'object') continue;
+            for (var rk = 0; rk < rootKeys.length; rk++) {
+                var rootValue = root[rootKeys[rk]];
+                if (typeof rootValue === 'number' && Number.isInteger(rootValue) && rootValue > 0) return rootValue;
+                if (typeof rootValue === 'string') {
+                    var rootNumber = Number(rootValue);
+                    if (Number.isInteger(rootNumber) && rootNumber > 0) return rootNumber;
+                    rootNumber = episodeFromString(rootValue);
+                    if (rootNumber) return rootNumber;
+                }
+                if (rootValue && typeof rootValue === 'object') {
+                    var nestedRoot = Number(rootValue.number || rootValue.episode_number || rootValue.episodeNumber || rootValue.num);
+                    if (Number.isInteger(nestedRoot) && nestedRoot > 0) return nestedRoot;
+                }
+            }
+        }
         var preferredKeys = ['episode_number', 'episodeNumber', 'episode_num', 'episodeNum', 'current_episode', 'currentEpisode'];
         var fallbackKeys = ['episode', 'ep'];
         function readKeys(keys) {
