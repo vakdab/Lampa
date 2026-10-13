@@ -1,12 +1,12 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-2';
+    var pluginVersion = '2026-10-13-all-in-one-3';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
 
-    var styleId = 'lampa-aniskip-style';
+    var styleId = 'lampa-aniskip-style-' + pluginVersion;
     var requestToken = 0;
     var currentVideo = null;
     var currentButton = null;
@@ -260,12 +260,8 @@
         return video ? episodeFromString(video.currentSrc || video.src || '') : 0;
     }
     function getVideo() {
-        try {
-            if (window.Lampa && Lampa.PlayerVideo && typeof Lampa.PlayerVideo.video === 'function') {
-                var video = Lampa.PlayerVideo.video();
-                if (video && video.tagName === 'VIDEO') return video;
-            }
-        } catch (error) {}
+        var lampaVideo = document.querySelector('.player-video__video');
+        if (lampaVideo && lampaVideo.tagName === 'VIDEO') return lampaVideo;
         var candidates = Array.prototype.slice.call(document.querySelectorAll('video'));
         candidates.sort(function (a, b) {
             var aScore = (a.paused ? 0 : 1000000) + a.getBoundingClientRect().width * a.getBoundingClientRect().height;
