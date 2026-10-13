@@ -360,7 +360,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-5';
+    var pluginVersion = '2026-10-13-all-in-one-6';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -443,19 +443,42 @@
         return initial.filter(function (value) { return typeof value !== 'object'; }).concat(values);
     }
     function directMalId(objects) {
-        var keys = ['mal_id', 'malId', 'malID', 'myanimelist_id', 'myAnimeListId'];
+        var keys = ['mal_id', 'malId', 'malID', 'myanimelist_id', 'myAnimeListId', 'myanimelist', 'mal'];
         for (var i = 0; i < objects.length; i++) {
             var item = objects[i];
             if (!item || typeof item !== 'object') continue;
             var id = 0;
             keys.some(function (key) {
-                var value = Number(item[key] || (item.externalIds && item.externalIds[key]) || (item.external_ids && item.external_ids[key]));
+                var value = Number(item[key] || (item.ids && item.ids[key]) || (item.externalIds && item.externalIds[key]) || (item.external_ids && item.external_ids[key]));
                 if (Number.isInteger(value) && value > 0) { id = value; return true; }
                 return false;
             });
             if (id) return id;
         }
         return 0;
+    }
+    function malIdFromText(value) {
+        var text = String(value || '');
+        var match = text.match(/(?:myanimelist\.net\/anime\/|mal[_ -]?id[=:/_-]?)(\d{2,8})/i);
+        return match ? Number(match[1]) || 0 : 0;
+    }
+    function titleCandidates(objects) {
+        var keys = ['title_orig', 'original_title', 'original_name', 'title_english', 'title_en', 'title_ru', 'title_uk', 'originalName', 'title', 'name', 'romaji', 'english', 'native'];
+        var result = [];
+        function add(value) {
+            if (typeof value !== 'string' || value.trim().length < 3 || isGenericTitle(value)) return;
+            var clean = value.trim();
+            if (result.indexOf(clean) === -1) result.push(clean);
+        }
+        objects.forEach(function (item) {
+            if (!item || typeof item !== 'object') return;
+            keys.forEach(function (key) { add(item[key]); });
+            if (item.titles && Array.isArray(item.titles)) item.titles.forEach(function (entry) {
+                add(entry && (entry.title || entry.name || entry.value));
+            });
+        });
+        objects.forEach(function (item) { if (typeof item === 'string') add(item); });
+        return result.slice(0, 8);
     }
     function titleFrom(objects) {
         var keys = ['title_orig', 'original_title', 'title_english', 'title_en', 'originalName', 'title', 'name'];
@@ -502,6 +525,10 @@
     function resolveMalId(objects) {
         var direct = directMalId(objects);
         if (direct) return Promise.resolve(direct);
+        for (var sourceIndex = 0; sourceIndex < objects.length; sourceIndex++) {
+            var sourceMalId = malIdFromText(objects[sourceIndex]);
+            if (sourceMalId) return Promise.resolve(sourceMalId);
+        }
         var title = titleFrom(objects);
         var source = mediaSourceText();
         var knownId = knownAnimeMalId(title) || knownAnimeMalId(source);
@@ -509,32 +536,42 @@
             console.log('[Lampa AniSkip] Matched Frieren alias from title/source:', title, source ? 'source URL matched' : '');
             return Promise.resolve(knownId);
         }
-        if (!title) return Promise.resolve(0);
-        var normalizedTitle = normalizeTitle(title);
-        var key = normalizeTitle(title);
+        var candidates = titleCandidates(objects);
+        if (title && candidates.indexOf(title) === -1) candidates.unshift(title);
+        if (!candidates.length) return Promise.resolve(0);
+        var key = candidates.map(normalizeTitle).join('|');
         if (malIdCache.has(key)) return malIdCache.get(key);
         var promise = (async function () {
-            var controller = new AbortController();
-            var timer = setTimeout(function () { controller.abort(); }, 5000);
-            try {
-                var response = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(title) + '&limit=5', {
-                    signal: controller.signal,
-                    headers: { Accept: 'application/json' }
-                });
-                if (!response.ok) return 0;
-                var payload = await response.json();
-                var results = Array.isArray(payload && payload.data) ? payload.data : [];
-                var exact = results.find(function (anime) {
-                    return [anime.title, anime.title_english, anime.title_japanese].some(function (candidate) {
-                        return normalizeTitle(candidate) === key;
+            for (var candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+                var query = candidates[candidateIndex];
+                var controller = new AbortController();
+                var timer = setTimeout(function () { controller.abort(); }, 4500);
+                try {
+                    var response = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=10', {
+                        signal: controller.signal,
+                        headers: { Accept: 'application/json' }
                     });
-                });
-                return Number((exact || results[0] || {}).mal_id) || 0;
-            } catch (error) {
-                return 0;
-            } finally {
-                clearTimeout(timer);
+                    if (response.status === 429) {
+                        await new Promise(function (resolve) { setTimeout(resolve, 800); });
+                        continue;
+                    }
+                    if (!response.ok) continue;
+                    var payload = await response.json();
+                    var results = Array.isArray(payload && payload.data) ? payload.data : [];
+                    var normalizedQuery = normalizeTitle(query);
+                    var exact = results.find(function (anime) {
+                        var names = [anime.title, anime.title_english, anime.title_japanese].concat((anime.titles || []).map(function (entry) { return entry && entry.title; }));
+                        return names.some(function (candidate) { return normalizeTitle(candidate) === normalizedQuery; });
+                    });
+                    if (exact && exact.mal_id) return Number(exact.mal_id);
+                    if (results[0] && results[0].mal_id && candidateIndex === 0 && normalizedQuery.length > 5) return Number(results[0].mal_id);
+                } catch (error) {
+                    console.warn('[Lampa AniSkip] Title lookup failed:', query, error && error.name ? error.name : error);
+                } finally {
+                    clearTimeout(timer);
+                }
             }
+            return 0;
         })();
         malIdCache.set(key, promise);
         return promise;
