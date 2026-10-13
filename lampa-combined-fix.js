@@ -420,7 +420,9 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    if (window.LampaAniSkipPlugin) return;
+    var pluginVersion = '2026-10-13-all-in-one-2';
+    if (window.LampaAniSkipPluginVersion === pluginVersion) return;
+    window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
 
     var styleId = 'lampa-aniskip-style';
@@ -442,11 +444,13 @@
         var style = document.createElement('style');
         style.id = styleId;
         style.textContent = [
-            '.lampa-aniskip-button{position:fixed!important;z-index:2147483000!important;left:18px!important;bottom:clamp(68px,10vh,96px)!important;display:none;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(18,20,28,.92);color:#fff;font:600 14px/1.2 Arial,sans-serif;letter-spacing:.01em;box-shadow:0 5px 24px rgba(0,0,0,.35);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}',
-            '.lampa-aniskip-button.is-visible{display:inline-flex}',
+            '.lampa-aniskip-button{z-index:2147483000!important;display:flex!important;align-items:center;gap:.6em;min-height:44px;padding:.8em 1.2em;border:0;border-radius:2em;background:rgba(255,255,255,.12);color:#fff;font:600 15px/1.2 Arial,sans-serif;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent}',
+            '.lampa-aniskip-button.hide{display:none!important}',
+            '.lampa-aniskip-button:not(.hide){display:flex!important}',
+            '.player .lampa-aniskip-button{position:absolute!important;right:1.5em!important;bottom:1.5em!important}',
+            '.lampa-aniskip-fallback{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important}',
             '.lampa-aniskip-button:active{transform:scale(.97)}',
-            '.lampa-aniskip-button svg{width:16px;height:16px;flex:0 0 16px;fill:currentColor}',
-            '@media(max-width:600px){.lampa-aniskip-button{left:12px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 82px)!important;min-height:48px;padding:0 15px;font-size:14px}}'
+            '.lampa-aniskip-button svg{width:20px;height:20px;flex:0 0 20px;fill:currentColor}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -690,16 +694,27 @@
         return candidates[0] || null;
     }
     function createButton(video) {
-        var root = document.body;
+        var root = document.querySelector('.player');
+        if (!root && window.Lampa && Lampa.Player && typeof Lampa.Player.render === 'function') {
+            try {
+                var rendered = Lampa.Player.render();
+                root = rendered && (rendered.nodeType === 1 ? rendered : rendered[0]) || null;
+            } catch (error) {}
+        }
+        root = root || document.body;
         if (!root) return null;
         if (currentButton && currentButton.parentNode === root) return currentButton;
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
+        Array.prototype.slice.call(document.querySelectorAll('.lampa-aniskip-button')).forEach(function (oldButton) {
+            if (oldButton !== currentButton && oldButton.parentNode) oldButton.parentNode.removeChild(oldButton);
+        });
         var button = document.createElement('button');
         button.type = 'button';
-        button.className = 'lampa-aniskip-button';
+        button.className = 'player-skip selector hide lampa-aniskip-button';
         button.setAttribute('aria-hidden', 'true');
         button.setAttribute('aria-label', 'Пропустити опенінг');
-        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16l13-8L5 4z"></path></svg><span>Пропустити опенінг</span>';
+        button.innerHTML = '<span class="player-skip__text">Пропустити опенінг</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16l13-8L5 4z"></path></svg>';
+        if (root === document.body) button.classList.add('lampa-aniskip-fallback');
         button.addEventListener('click', function (event) {
             event.preventDefault();
             event.stopPropagation();
@@ -715,6 +730,9 @@
             } catch (error) {}
         });
         root.appendChild(button);
+        if (window.$ && typeof window.$ === 'function') {
+            try { window.$(button).on('hover:enter', function () { button.click(); }); } catch (error) {}
+        }
         currentButton = button;
         return button;
     }
@@ -723,7 +741,7 @@
         var now = Number(currentVideo.currentTime);
         currentSegment = currentSegments.find(function (segment) { return now >= segment.start && now < segment.end; }) || null;
         var visible = !!currentSegment;
-        currentButton.classList.toggle('is-visible', visible);
+        currentButton.classList.toggle('hide', !visible);
         currentButton.setAttribute('aria-hidden', visible ? 'false' : 'true');
     }
     function fetchSegments(malId, episode) {
