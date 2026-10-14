@@ -181,7 +181,6 @@
         }
         function prepareVideo(video) {
             if (!video) return;
-            video.setAttribute('preload', 'metadata');
             video.setAttribute('playsinline', 'true');
             video.setAttribute('webkit-playsinline', 'true');
             applySmoothing(video);
@@ -224,7 +223,7 @@
             });
         }
         function scheduleHudFit() {
-            requestAnimationFrame(function () { requestAnimationFrame(fitHudToVideo); });
+            return;
         }
         function clearMode(video) {
             if (!video || !video.style) return;
@@ -356,8 +355,10 @@
         }
         window.addEventListener('resize', function () {
             cancelAnimationFrame(resizeFrame);
-            resizeFrame = requestAnimationFrame(applySavedMode);
-            scheduleHudFit();
+            resizeFrame = requestAnimationFrame(function () {
+                applySavedMode();
+                setTimeout(applySavedMode, 220);
+            });
         }, { passive: true });
         window.addEventListener('orientationchange', reflowAfterOrientation, { passive: true });
         if (window.visualViewport) window.visualViewport.addEventListener('resize', reflowAfterOrientation, { passive: true });
@@ -366,7 +367,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-8';
+    var pluginVersion = '2026-10-13-all-in-one-9';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -378,6 +379,7 @@
     var currentSegments = [];
     var currentSegment = null;
     var startEvent = null;
+    var startObjects = [];
     var retryTimer = 0;
     var pollCount = 0;
     var malIdCache = new Map();
@@ -551,7 +553,7 @@
         if (knownId) return Promise.resolve(knownId);
         var candidates = titleCandidates(objects);
         if (title && candidates.indexOf(title) === -1) candidates.unshift(title);
-        candidates = candidates.slice(0, 4);
+        candidates = candidates.slice(0, 2);
         if (!candidates.length) return Promise.resolve(0);
         var key = candidates.map(normalizeTitle).join('|');
         if (malIdCache.has(key)) return malIdCache.get(key);
@@ -560,7 +562,7 @@
             for (var i = 0; i < candidates.length; i++) {
                 var query = candidates[i];
                 var controller = new AbortController();
-                var timer = setTimeout(function () { controller.abort(); }, 2500);
+                var timer = setTimeout(function () { controller.abort(); }, 1800);
                 try {
                     var response = await fetch('https://graphql.anilist.co', {
                         method: 'POST', signal: controller.signal,
@@ -575,9 +577,9 @@
                     }
                 } catch (error) {} finally { clearTimeout(timer); }
             }
-            for (var j = 0; j < Math.min(2, candidates.length); j++) {
+            for (var j = 0; j < Math.min(1, candidates.length); j++) {
                 var jikanController = new AbortController();
-                var jikanTimer = setTimeout(function () { jikanController.abort(); }, 2500);
+                var jikanTimer = setTimeout(function () { jikanController.abort(); }, 1800);
                 try {
                     var jikanResponse = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(candidates[j]) + '&limit=10', { signal: jikanController.signal, headers: { Accept: 'application/json' } });
                     if (!jikanResponse.ok) continue;
@@ -798,13 +800,15 @@
         currentSegments = [];
         currentSegment = null;
         lastVisibilityLog = null;
+        startObjects = [];
         if (currentButton && currentButton.parentNode) currentButton.parentNode.removeChild(currentButton);
         currentButton = null;
     }
     function loadForCurrent(token) {
         if (token !== requestToken) return;
         var video = getVideo();
-        var objects = asObjects(startEvent);
+        if (!startObjects.length || pollCount % 4 === 0) startObjects = asObjects(startEvent);
+        var objects = startObjects;
         var episode = episodeFromObjects(objects);
         var title = titleFrom(objects);
         var malId = directMalId(objects);
@@ -812,7 +816,7 @@
             pollCount++;
             if (pollCount === 1) debugLog('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
             if (pollCount === 60) debugLog('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
-            if (pollCount < 60) retryTimer = setTimeout(function () { loadForCurrent(token); }, 500);
+            if (pollCount < 20) retryTimer = setTimeout(function () { loadForCurrent(token); }, 750);
             return;
         }
         debugLog('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
@@ -840,6 +844,7 @@
         debugLog('[Lampa AniSkip] Player start');
         clearCurrent();
         startEvent = event || null;
+        startObjects = asObjects(startEvent);
         var token = requestToken;
         installStyles();
         retryTimer = setTimeout(function () { loadForCurrent(token); }, 350);

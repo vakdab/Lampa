@@ -69,7 +69,6 @@
         }
         function prepareVideo(video) {
             if (!video) return;
-            video.setAttribute('preload', 'metadata');
             video.setAttribute('playsinline', 'true');
             video.setAttribute('webkit-playsinline', 'true');
             applySmoothing(video);
@@ -112,7 +111,7 @@
             });
         }
         function scheduleHudFit() {
-            requestAnimationFrame(function () { requestAnimationFrame(fitHudToVideo); });
+            return;
         }
         function clearMode(video) {
             if (!video || !video.style) return;
@@ -244,8 +243,10 @@
         }
         window.addEventListener('resize', function () {
             cancelAnimationFrame(resizeFrame);
-            resizeFrame = requestAnimationFrame(applySavedMode);
-            scheduleHudFit();
+            resizeFrame = requestAnimationFrame(function () {
+                applySavedMode();
+                setTimeout(applySavedMode, 220);
+            });
         }, { passive: true });
         window.addEventListener('orientationchange', reflowAfterOrientation, { passive: true });
         if (window.visualViewport) window.visualViewport.addEventListener('resize', reflowAfterOrientation, { passive: true });
