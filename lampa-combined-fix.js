@@ -8270,6 +8270,10 @@
     function logoImgUrl(logoPath) {
       return Lampa.TMDB.image('t/p/w300' + logoPath);
     }
+    // Reuse the same TMDB logo resolver on the full details page.
+    window.AgNativeLogo = window.AgNativeLogo || {};
+    window.AgNativeLogo.fetch = fetchLogo;
+    window.AgNativeLogo.url = logoImgUrl;
 
     function fetchTitledBackdrop(id, type, callback) {
       if (!id) return callback(null);
@@ -9061,6 +9065,9 @@
             /* details (seasons / episodes / genres): no overlap, readable */
             B + '.full-start-new__details{justify-content:center;color:rgba(255,255,255,.82)!important;font-size:.98em!important;line-height:1.45!important;margin:0 0 .9em!important;position:relative;z-index:1}',
             B + '.full-start-new__reactions{justify-content:center;min-height:0!important;margin-bottom:.4em!important}',
+            B + '.lampa-prisma-detail-logo{display:flex!important;align-items:center;justify-content:center;width:100%;min-height:2em;margin:.15em auto .65em;pointer-events:none}',
+            B + '.lampa-prisma-detail-logo img{display:block;width:auto;max-width:min(78vw,19em);max-height:5.2em;object-fit:contain;filter:drop-shadow(0 3px 9px rgba(0,0,0,.7))}',
+            B + '.lampa-prisma-detail-logo.is-empty{display:none!important}',
             /* buttons row */
             B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
             B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
@@ -9097,6 +9104,56 @@
         var text = (span ? span.textContent : el.textContent) || '';
         text = text.replace(/\s+/g, ' ').trim();
         return text || 'Джерело';
+    }
+
+    function detailItem(root, event) {
+        var candidates = [
+            root && root.card_data,
+            root && root.dataset,
+            event && event.object && event.object.card,
+            event && event.object && event.object.data,
+            event && event.object && event.object.activity && event.object.activity.data,
+            event && event.object && event.object.activity && event.object.activity.card_data,
+            event && event.card,
+            event && event.data
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            var item = candidates[i];
+            if (!item || typeof item !== 'object') continue;
+            var id = item.tmdb_id || item.tmdbId || item.id;
+            if (id) return { id: id, type: item.media_type || item.type || (item.name ? 'tv' : 'movie') };
+        }
+        var poster = root && root.querySelector('.full-start-new__poster img, .full-start__poster img');
+        var raw = poster && (poster.getAttribute('src') || poster.getAttribute('data-src') || '');
+        var match = raw.match(/\/t\/p\/[^/]+\/([^?]+)/);
+        return match ? null : null;
+    }
+
+    function renderDetailLogo(root, event) {
+        if (!root) return;
+        var right = root.querySelector('.full-start-new__right');
+        if (!right) return;
+        var holder = right.querySelector('.lampa-prisma-detail-logo');
+        if (!holder) {
+            holder = document.createElement('div');
+            holder.className = 'lampa-prisma-detail-logo is-empty';
+            right.insertBefore(holder, right.querySelector('.full-start-new__buttons') || null);
+        }
+        var item = detailItem(root, event);
+        var resolver = window.AgNativeLogo;
+        if (!item || !resolver || typeof resolver.fetch !== 'function') return;
+        var type = item.type === 'tv' || item.type === 'series' ? 'tv' : 'movie';
+        if (holder.getAttribute('data-logo-key') === type + '/' + item.id) return;
+        holder.setAttribute('data-logo-key', type + '/' + item.id);
+        holder.classList.add('is-empty');
+        resolver.fetch(item.id, type, function (logo) {
+            if (!logo || !logo.path || holder.getAttribute('data-logo-key') !== type + '/' + item.id) return;
+            var img = document.createElement('img');
+            img.alt = '';
+            img.src = resolver.url(logo.path);
+            img.onload = function () { holder.textContent = ''; holder.appendChild(img); holder.classList.remove('is-empty'); };
+            img.onerror = function () { holder.classList.add('is-empty'); };
+        });
     }
 
     function collect(root) {
@@ -9162,6 +9219,7 @@
     function bind(root) {
         var row = root.querySelector('.full-start-new__buttons');
         if (!row) return;
+        renderDetailLogo(root, window.__lampaFullEvent || null);
         var play = row.querySelector('.button--play');
         if (!play) {
             // Some Lampa builds omit the native play button when sources arrive
@@ -9241,6 +9299,10 @@
     else start();
     if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) {
         Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') { install(); scan(); } });
-        Lampa.Listener.follow('full', function () { schedule(); });
+        Lampa.Listener.follow('full', function (e) {
+            window.__lampaFullEvent = e;
+            schedule();
+            setTimeout(function () { scan(); }, 350);
+        });
     }
 })();
