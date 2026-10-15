@@ -9064,8 +9064,8 @@
             B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
             B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
             B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.04)}',
-            '.full-start-new__buttons .button--play,.full-start-new__buttons .button--play.hide{display:inline-flex!important;visibility:visible!important;opacity:1!important}',
-            B + '.full-start-new__buttons .button--play,' + B + '.full-start-new__buttons .button--play.hide{display:inline-flex!important;visibility:visible!important;opacity:1!important}',
+            '.full-start-new__buttons .button--play,.full-start-new__buttons .button--play.hide,.full-start-new__buttons .button--play[hidden]{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}',
+            B + '.full-start-new__buttons .button--play,' + B + '.full-start-new__buttons .button--play.hide,' + B + '.full-start-new__buttons .button--play[hidden]{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}',
             B + '.full-start-new__buttons .button--play{flex:1 1 auto;max-width:15em;padding:0 2em!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.6em}',
             B + '.full-start-new__buttons .button--play span{font-weight:700}',
             B + '.full-start-new__buttons .button--book,' + B + '.full-start-new__buttons .button--reaction,' + B + '.full-start-new__buttons .button--subscribe,' + B + '.full-start-new__buttons .button--options,' + B + '.full-start-new__buttons .lampa-prisma-more{flex:0 0 3.6em;width:3.6em!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center}',
@@ -9166,9 +9166,12 @@
             play.classList.remove('hide');
             play.hidden = false;
             play.removeAttribute('aria-hidden');
-            play.style.removeProperty('display');
-            play.style.removeProperty('visibility');
-            play.style.removeProperty('opacity');
+            // Lampa can apply an inline hide after the details view is rendered.
+            // Keep the primary action visible instead of only removing the class.
+            play.style.setProperty('display', 'inline-flex', 'important');
+            play.style.setProperty('visibility', 'visible', 'important');
+            play.style.setProperty('opacity', '1', 'important');
+            play.style.setProperty('pointer-events', 'auto', 'important');
             if (row.firstElementChild !== play) row.insertBefore(play, row.firstElementChild);
         }
         // hide every source/plugin button in the row, keep only the system ones
@@ -9213,7 +9216,12 @@
         scan();
         try {
             var mo = new MutationObserver(schedule);
-            mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+            mo.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style', 'hidden', 'aria-hidden']
+            });
         } catch (e) { setInterval(scan, 800); }
     }
 
