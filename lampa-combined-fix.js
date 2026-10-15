@@ -9064,6 +9064,7 @@
             B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
             B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
             B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.04)}',
+            '.full-start-new__buttons .button--play,.full-start-new__buttons .button--play.hide{display:inline-flex!important;visibility:visible!important;opacity:1!important}',
             B + '.full-start-new__buttons .button--play,' + B + '.full-start-new__buttons .button--play.hide{display:inline-flex!important;visibility:visible!important;opacity:1!important}',
             B + '.full-start-new__buttons .button--play{flex:1 1 auto;max-width:15em;padding:0 2em!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.6em}',
             B + '.full-start-new__buttons .button--play span{font-weight:700}',
