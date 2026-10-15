@@ -18,14 +18,16 @@
 Додавайте тільки цей URL через **Розширення → Додати плагін**:
 
 ```text
-https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 ```
 
 Запасний URL:
 
 ```text
-https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
+https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 ```
+
+Після оновлення повністю закрийте й відкрийте Lampa: плагін кешується у пам'яті застосунку.
 
 Не додавайте одночасно окремі `player-size.js`, `lampa-anime4k.js` або `anime4k-upscale.js`, інакше меню може дублюватися.
 
