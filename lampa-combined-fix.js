@@ -9163,7 +9163,12 @@
         if (!row) return;
         var play = row.querySelector('.button--play');
         if (play) {
-            if (play.classList.contains('hide')) play.classList.remove('hide');
+            play.classList.remove('hide');
+            play.hidden = false;
+            play.removeAttribute('aria-hidden');
+            play.style.removeProperty('display');
+            play.style.removeProperty('visibility');
+            play.style.removeProperty('opacity');
             if (row.firstElementChild !== play) row.insertBefore(play, row.firstElementChild);
         }
         // hide every source/plugin button in the row, keep only the system ones
