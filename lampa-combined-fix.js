@@ -9043,6 +9043,7 @@
     var STYLE_ID = 'lampa-prisma-buttons-skin-v3';
     var B = 'body.appletv-agnative-topnav ';
     var MORE_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+    var PLAY_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 8.5 16 12l-6 3.5z" fill="currentColor" stroke="none"/></svg>';
 
     function css() {
         return [
@@ -9162,6 +9163,15 @@
         var row = root.querySelector('.full-start-new__buttons');
         if (!row) return;
         var play = row.querySelector('.button--play');
+        if (!play) {
+            // Some Lampa builds omit the native play button when sources arrive
+            // asynchronously (or when no provider reports itself in time).
+            // Create the stable primary action so the user can retry source lookup.
+            play = document.createElement('div');
+            play.className = 'full-start__button button--play selector';
+            play.innerHTML = PLAY_ICON + '<span>Дивитися</span>';
+            row.insertBefore(play, row.firstElementChild || null);
+        }
         if (play) {
             play.classList.remove('hide');
             play.hidden = false;
