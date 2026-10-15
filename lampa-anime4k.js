@@ -895,29 +895,6 @@ window.Anime4K = {
     function disableCurrent() {
         removeCanvas();
     }
-    function openVideoShapeMenu() {
-        if (!window.Lampa || !Lampa.Select || typeof Lampa.Select.show !== 'function') return;
-        var saved = 'default';
-        try { saved = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get('player_size', 'default') : 'default'; } catch (error) {}
-        Lampa.Select.show({
-            title: 'Форма відео',
-            items: [
-                { title: 'За замовчуванням', subtitle: 'Штатний розмір кадру', value: 'default', selected: saved === 'default' },
-                { title: 'Вмістити', subtitle: 'Показати весь кадр', value: 'contain', selected: saved === 'contain' },
-                { title: 'Заповнити', subtitle: 'Заповнити екран', value: 'fill', selected: saved === 'fill' },
-                { title: 'Збільшити 150%', value: 's150', selected: saved === 's150' },
-                { title: 'Збільшити 170%', value: 's170', selected: saved === 's170' },
-                { title: 'Кіно 21:9', subtitle: 'Чорні поля без деформації', value: 'cinema219', selected: saved === 'cinema219' }
-            ],
-            onSelect: function (item) {
-                try {
-                    if (Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set('player_size', item.value);
-                    if (Lampa.Player && Lampa.Player.listener && typeof Lampa.Player.listener.send === 'function') Lampa.Player.listener.send('size', { size: item.value });
-                } catch (error) {}
-                if (Lampa.Select.close) Lampa.Select.close();
-            }
-        });
-    }
     function installMenu() {
         if (menuInstalled || !window.Lampa || !Lampa.Select || typeof Lampa.Select.show !== 'function') return;
         menuInstalled = true;
@@ -928,11 +905,7 @@ window.Anime4K = {
             var isQualityMenu = options.items.some(function (item) {
                 return item && (item.quality !== undefined || item.url) && item.value !== 'anime4k-toggle' && item.value !== 'anime4k2' && item.value !== 'anime4k-off';
             });
-            var isMoreMenu = options.items.length >= 2 && options.items.every(function (item) { return item && typeof item.onSelect === 'function'; }) && options.items.some(function (item) {
-                var title = String(item.title || '').toLowerCase();
-                return title.indexOf('якіст') !== -1 || title.indexOf('качеств') !== -1 || title.indexOf('quality') !== -1 || String(item.icon || '').indexOf('sprite-hd') !== -1;
-            });
-            if ((!isQualityMenu && !isMoreMenu) || values.indexOf('anime4k-toggle') !== -1 || values.indexOf('anime4k2') !== -1 || values.indexOf('anime4k-off') !== -1 || values.indexOf('lampa-video-shape') !== -1) return originalShow.apply(this, arguments);
+            if (!isQualityMenu || values.indexOf('anime4k-toggle') !== -1 || values.indexOf('anime4k2') !== -1 || values.indexOf('anime4k-off') !== -1) return originalShow.apply(this, arguments);
             var patched = Object.assign({}, options);
             patched.items = options.items.slice();
             if (isQualityMenu) patched.items.push({
@@ -941,13 +914,6 @@ window.Anime4K = {
                 value: 'anime4k-toggle',
                 quality: 'anime4k-toggle'
             });
-            if (isMoreMenu) patched.items.push({
-                title: 'Форма відео',
-                template: 'selectbox_icon',
-                icon: '<svg><use xlink:href="#sprite-size"></use></svg>',
-                value: 'lampa-video-shape',
-                onSelect: openVideoShapeMenu
-            });
             patched.onSelect = function (item) {
                 if (item && item.value === 'anime4k-toggle') {
                     var nextEnabled = !enabled();
@@ -955,9 +921,6 @@ window.Anime4K = {
                     if (nextEnabled) enableCurrent();
                     else disableCurrent();
                     if (Lampa.Select.close) Lampa.Select.close();
-                } else if (item && item.value === 'lampa-video-shape') {
-                    if (Lampa.Select.close) Lampa.Select.close();
-                    openVideoShapeMenu();
                 } else if (typeof options.onSelect === 'function') options.onSelect(item);
             };
             return originalShow.call(this, patched);

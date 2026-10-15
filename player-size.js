@@ -47,7 +47,8 @@
         if (!document.getElementById(style.id)) document.head.appendChild(style);
 
         function getSavedSize() {
-            return Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get(storageKey, 'default') : 'default';
+            var saved = Lampa.Storage && Lampa.Storage.get ? Lampa.Storage.get(storageKey, 'cinema219') : 'cinema219';
+            return saved === 'default' ? 'cinema219' : saved;
         }
         function saveSize(value) {
             if (Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set(storageKey, value);
