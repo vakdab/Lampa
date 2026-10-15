@@ -9064,6 +9064,7 @@
             B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
             B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
             B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.04)}',
+            B + '.full-start-new__buttons .button--play,' + B + '.full-start-new__buttons .button--play.hide{display:inline-flex!important;visibility:visible!important;opacity:1!important}',
             B + '.full-start-new__buttons .button--play{flex:1 1 auto;max-width:15em;padding:0 2em!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.6em}',
             B + '.full-start-new__buttons .button--play span{font-weight:700}',
             B + '.full-start-new__buttons .button--book,' + B + '.full-start-new__buttons .button--reaction,' + B + '.full-start-new__buttons .button--subscribe,' + B + '.full-start-new__buttons .button--options,' + B + '.full-start-new__buttons .lampa-prisma-more{flex:0 0 3.6em;width:3.6em!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center}',
@@ -9097,13 +9098,18 @@
     }
 
     function collect(root) {
-        var all = root.querySelectorAll('.full-start-new__buttons .full-start__button, .buttons--container .full-start__button');
+        var all = root.querySelectorAll('.full-start-new__buttons .full-start__button, .buttons--container .full-start__button, .full-start__buttons .full-start__button');
         var out = [];
+        var seen = {};
         for (var i = 0; i < all.length; i++) {
             var el = all[i];
+            var key = labelOf(el);
+            if (seen[key]) continue;
+            seen[key] = 1;
             if (el.classList.contains('button--play') || el.classList.contains('lampa-prisma-more') || el.classList.contains('button--priority')) continue;
             if (isKept(el)) continue;
-            if (el.classList.contains('hide') && !el.classList.contains('lampa-prisma-hidden')) continue;
+            var inContainer = !!(el.closest && el.closest('.buttons--container'));
+            if (el.classList.contains('hide') && !inContainer) continue;
             out.push(el);
         }
         return out;
@@ -9120,7 +9126,11 @@
     function showMenu(root) {
         var sources = collect(root);
         if (!sources.length) {
-            try { Lampa.Noty.show('Джерела ще завантажуються'); } catch (e) {}
+            try { Lampa.Noty.show('Шукаю джерела...'); } catch (e) {}
+            setTimeout(function () {
+                if (collect(root).length) showMenu(root);
+                else { try { Lampa.Noty.show('Джерел не знайдено'); } catch (e) {} }
+            }, 1200);
             return;
         }
         var items = sources.map(function (el) {
@@ -9151,12 +9161,16 @@
         var row = root.querySelector('.full-start-new__buttons');
         if (!row) return;
         var play = row.querySelector('.button--play');
+        if (play) {
+            if (play.classList.contains('hide')) play.classList.remove('hide');
+            if (row.firstElementChild !== play) row.insertBefore(play, row.firstElementChild);
+        }
         // hide every source/plugin button in the row, keep only the system ones
         var kids = row.querySelectorAll('.full-start__button');
         for (var i = 0; i < kids.length; i++) {
             var el = kids[i];
             if (isKept(el)) continue;
-            el.classList.add('lampa-prisma-hidden');
+            if (!el.classList.contains('lampa-prisma-hidden')) el.classList.add('lampa-prisma-hidden');
         }
         // make sure the hidden-container sources are also available
         if (play && !play.getAttribute('data-prisma-bound')) {
@@ -9193,7 +9207,7 @@
         scan();
         try {
             var mo = new MutationObserver(schedule);
-            mo.observe(document.body, { childList: true, subtree: true });
+            mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
         } catch (e) { setInterval(scan, 800); }
     }
 
