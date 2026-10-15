@@ -868,16 +868,23 @@
 })();
 /* Lampa WebGPU Video Enhancement
  * Anime4K-WebGPU is MIT-licensed: https://github.com/Anime4KWebBoost/Anime4K-WebGPU
- * The renderer is kept as an optional overlay so native HTML5/HLS playback,
- * audio, controls and subtitles remain owned by Lampa.
+ * The renderer is an overlay only: native HTML5/HLS playback, audio,
+ * controls and subtitles remain owned by Lampa.
  */
 (function () {
     'use strict';
-    var VERSION = '2026-10-15-anime4k-webgpu-2';
+    var VERSION = '2026-10-15-anime4k-webgpu-3';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
     var STORAGE_KEY = 'anime4k_enabled';
+    var STATE_OFF = 'off';
+    var STATE_UNSUPPORTED = 'unsupported';
+    var STATE_WAIT = 'wait';
+    var STATE_STARTING = 'starting';
+    var STATE_ACTIVE = 'active';
+    var state = STATE_OFF;
+
     var canvas = null;
     var video = null;
     var host = null;
@@ -889,15 +896,20 @@
     var resizeHandler = null;
     var metadataHandler = null;
     var sourceHandler = null;
+    var revealPlayHandler = null;
     var retryTimer = 0;
+    var retryAttempts = 0;
     var renderToken = 0;
     var menuInstalled = false;
 
     function enabled() {
         try {
-            return !(window.Lampa && Lampa.Storage && Lampa.Storage.get &&
-                (Lampa.Storage.get(STORAGE_KEY, true) === false || Lampa.Storage.get(STORAGE_KEY, true) === 'false'));
-        } catch (error) { return true; }
+            if (window.Lampa && Lampa.Storage && Lampa.Storage.get) {
+                var stored = Lampa.Storage.get(STORAGE_KEY, true);
+                return stored !== false && stored !== 'false' && stored !== 0 && stored !== '0';
+            }
+        } catch (error) {}
+        return true;
     }
     function setEnabled(value) {
         try { if (window.Lampa && Lampa.Storage && Lampa.Storage.set) Lampa.Storage.set(STORAGE_KEY, !!value); } catch (error) {}
@@ -911,6 +923,24 @@
         } catch (error) {}
         return document.querySelector('.player-video__video, video');
     }
+    function toast(text) {
+        try {
+            if (window.Lampa && Lampa.Toast && typeof Lampa.Toast.show === 'function') {
+                Lampa.Toast.show({ title: '', text: text });
+            }
+        } catch (error) {}
+    }
+    function getApi() {
+        return window['anime4k-webgpu'];
+    }
+    function supportsVideoFrameCallback() {
+        try { return typeof document.createElement('video').requestVideoFrameCallback === 'function'; }
+        catch (error) { return false; }
+    }
+    function webgpuSupported() {
+        return !!(navigator.gpu && getApi() && typeof getApi().render === 'function' &&
+            typeof getApi().CNNx2M === 'function' && supportsVideoFrameCallback());
+    }
     function clearRetry() {
         if (retryTimer) window.clearTimeout(retryTimer);
         retryTimer = 0;
@@ -919,6 +949,14 @@
         if (!host) return;
         if (originalPosition) host.style.setProperty('position', originalPosition, originalPositionPriority);
         else host.style.removeProperty('position');
+    }
+    function destroyRenderer() {
+        if (!canvas) return;
+        try {
+            var gpuctx = canvas.getContext && canvas.getContext('webgpu');
+            if (gpuctx && typeof gpuctx.unconfigure === 'function') gpuctx.unconfigure();
+        } catch (error) {}
+        try { canvas.width = 0; canvas.height = 0; } catch (error) {}
     }
     function cleanup() {
         renderToken++;
@@ -930,6 +968,10 @@
             video.removeEventListener('emptied', sourceHandler);
             video.removeEventListener('loadstart', sourceHandler);
         }
+        if (video && revealPlayHandler) {
+            video.removeEventListener('play', revealPlayHandler);
+            revealPlayHandler = null;
+        }
         resizeObserver = null;
         resizeHandler = null;
         metadataHandler = null;
@@ -938,6 +980,7 @@
             if (originalOpacity) video.style.setProperty('opacity', originalOpacity, originalOpacityPriority);
             else video.style.removeProperty('opacity');
         }
+        destroyRenderer();
         if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
         restoreHost();
         canvas = null;
@@ -947,6 +990,7 @@
         originalOpacityPriority = '';
         originalPosition = null;
         originalPositionPriority = '';
+        state = enabled() ? STATE_OFF : STATE_OFF;
     }
     function syncCanvas() {
         if (!canvas || !video || !host) return;
@@ -957,20 +1001,12 @@
         canvas.style.width = Math.max(1, vr.width).toFixed(2) + 'px';
         canvas.style.height = Math.max(1, vr.height).toFixed(2) + 'px';
     }
-    function getApi() {
-        return window['anime4k-webgpu'];
-    }
-    function canUseWebGPU(target) {
-        var api = getApi();
-        return !!(target && target.videoWidth > 0 && target.videoHeight > 0 &&
-            navigator.gpu && typeof target.requestVideoFrameCallback === 'function' &&
-            api && typeof api.render === 'function' && typeof api.CNNx2M === 'function');
-    }
     function retryFor(target, token) {
         clearRetry();
-        if (!enabled() || token !== renderToken || video !== target) return;
+        if (!enabled() || token !== renderToken || retryAttempts >= 12) return;
+        retryAttempts++;
         retryTimer = window.setTimeout(function () {
-            if (token !== renderToken || video !== target) return;
+            if (token !== renderToken) return;
             startFor(target);
         }, 350);
     }
@@ -991,16 +1027,49 @@
         syncCanvas();
         return true;
     }
+    function reveal(token) {
+        if (token !== renderToken || !canvas || !video) return;
+        syncCanvas();
+        video.style.setProperty('opacity', '0', 'important');
+        canvas.style.setProperty('opacity', '1', 'important');
+        state = STATE_ACTIVE;
+    }
+    function scheduleReveal(token) {
+        if (token !== renderToken || !canvas || !video) return;
+        if (!video.paused && video.readyState >= 2) {
+            if (typeof video.requestVideoFrameCallback === 'function') {
+                video.requestVideoFrameCallback(function () {
+                    window.setTimeout(function () { reveal(token); }, 0);
+                });
+            } else {
+                window.setTimeout(function () { reveal(token); }, 150);
+            }
+            return;
+        }
+        if (revealPlayHandler) video.removeEventListener('play', revealPlayHandler);
+        revealPlayHandler = function () {
+            if (revealPlayHandler && video) video.removeEventListener('play', revealPlayHandler);
+            revealPlayHandler = null;
+            scheduleReveal(token);
+        };
+        video.addEventListener('play', revealPlayHandler, { passive: true });
+    }
     async function startFor(target) {
         if (!enabled() || !target) return false;
-        if (!canUseWebGPU(target)) {
+        if (!target.videoWidth || !target.videoHeight) {
+            state = STATE_WAIT;
             if (video !== target) { cleanup(); video = target; }
             retryFor(target, renderToken);
             return false;
         }
+        if (!webgpuSupported() || typeof target.requestVideoFrameCallback !== 'function') {
+            state = STATE_UNSUPPORTED;
+            return false;
+        }
         cleanup();
-        if (!canUseWebGPU(target) || !createCanvas(target)) return false;
+        if (!createCanvas(target)) return false;
         video = target;
+        retryAttempts = 0;
         var token = ++renderToken;
         originalOpacity = target.style.getPropertyValue('opacity');
         originalOpacityPriority = target.style.getPropertyPriority('opacity');
@@ -1012,12 +1081,14 @@
             resizeObserver.observe(target);
         }
         metadataHandler = function () {
-            if (token === renderToken && (target.videoWidth * 2 !== canvas.width || target.videoHeight * 2 !== canvas.height)) startFor(target);
+            if (token === renderToken && canvas &&
+                (target.videoWidth * 2 !== canvas.width || target.videoHeight * 2 !== canvas.height)) startFor(target);
         };
         sourceHandler = function () { if (token === renderToken) startFor(target); };
         target.addEventListener('loadedmetadata', metadataHandler, { passive: true });
         target.addEventListener('emptied', sourceHandler, { passive: true });
         target.addEventListener('loadstart', sourceHandler, { passive: true });
+        state = STATE_STARTING;
         try {
             var api = getApi();
             await api.render({
@@ -1028,16 +1099,28 @@
                 }
             });
             if (token !== renderToken || !canvas) return false;
-            await new Promise(function (resolve) { window.setTimeout(resolve, 120); });
-            if (token !== renderToken || !canvas) return false;
             syncCanvas();
-            target.style.setProperty('opacity', '0', 'important');
-            canvas.style.setProperty('opacity', '1', 'important');
+            scheduleReveal(token);
             return true;
         } catch (error) {
-            if (token === renderToken) cleanup();
+            if (token === renderToken) { state = STATE_UNSUPPORTED; cleanup(); }
             return false;
         }
+    }
+    function menuTitle() {
+        return enabled() ? '✓ Покращення відео: увімкнено' : '✕ Покращення відео: вимкнено';
+    }
+    function menuSubtitle() {
+        if (!enabled()) {
+            return webgpuSupported()
+                ? 'Стандартне HTML5/HLS відео. Виберіть, щоб увімкнути Anime4K WebGPU'
+                : 'WebGPU недоступний на цьому пристрої';
+        }
+        if (state === STATE_ACTIVE) return 'Працює: Anime4K WebGPU, збільшення x2';
+        if (state === STATE_STARTING) return 'WebGPU запускається…';
+        if (state === STATE_WAIT) return 'Очікує завантаження відео…';
+        if (state === STATE_UNSUPPORTED) return 'WebGPU недоступний — показує стандартне відео';
+        return 'WebGPU Anime4K';
     }
     function installMenu() {
         if (menuInstalled || !window.Lampa || !Lampa.Select || typeof Lampa.Select.show !== 'function') return;
@@ -1045,20 +1128,50 @@
         var originalShow = Lampa.Select.show;
         Lampa.Select.show = function (options) {
             if (!options || !Array.isArray(options.items)) return originalShow.apply(this, arguments);
-            var isQuality = options.items.some(function (item) { return item && (item.quality !== undefined || item.url); });
-            if (!isQuality || options.items.some(function (item) { return item && item.value === 'anime4k-toggle'; })) return originalShow.apply(this, arguments);
+            var isQuality = options.items.some(function (item) {
+                return item && item.value !== 'anime4k-toggle' && (item.quality !== undefined || item.url);
+            });
+            if (!isQuality || options.items.some(function (item) { return item && item.value === 'anime4k-toggle'; })) {
+                return originalShow.apply(this, arguments);
+            }
             var patched = Object.assign({}, options);
-            patched.items = options.items.concat([{ title: enabled() ? 'Покращення відео: Вимкнути' : 'Покращення відео: Увімкнути', subtitle: enabled() ? 'Anime4K WebGPU, CNN x2' : 'Стандартне HTML5/HLS відео', value: 'anime4k-toggle', quality: 'anime4k-toggle' }]);
+            patched.items = options.items.concat([{
+                title: menuTitle(),
+                subtitle: menuSubtitle(),
+                value: 'anime4k-toggle',
+                quality: 'anime4k-toggle'
+            }]);
             patched.onSelect = function (item) {
                 if (item && item.value === 'anime4k-toggle') {
-                    var next = !enabled();
-                    setEnabled(next);
-                    if (next) startFor(currentVideo()); else cleanup();
-                    if (Lampa.Select.close) Lampa.Select.close();
-                } else if (typeof options.onSelect === 'function') options.onSelect(item);
+                    toggle();
+                    return;
+                }
+                if (typeof options.onSelect === 'function') options.onSelect(item);
             };
             return originalShow.call(this, patched);
         };
+    }
+    async function toggle() {
+        var next = !enabled();
+        setEnabled(next);
+        if (!next) {
+            cleanup();
+            state = STATE_OFF;
+            toast('Покращення відео вимкнено');
+        } else {
+            var target = currentVideo();
+            if (!target) {
+                state = STATE_OFF;
+                toast('Покращення відео увімкнено — застосується при відтворенні');
+            } else {
+                var ok = await startFor(target);
+                if (state === STATE_ACTIVE) toast('Покращення відео працює (WebGPU, x2)');
+                else if (state === STATE_UNSUPPORTED) toast('WebGPU недоступний — показує стандартне відео');
+                else if (ok || state === STATE_STARTING || state === STATE_WAIT) toast('Покращення відео увімкнено');
+                else toast('Не вдалося запустити WebGPU — показує стандартне відео');
+            }
+        }
+        if (window.Lampa && Lampa.Select && typeof Lampa.Select.close === 'function') Lampa.Select.close();
     }
     function onStart() {
         installMenu();
@@ -1066,6 +1179,7 @@
         if (!target) return;
         if (enabled()) {
             clearRetry();
+            retryAttempts = 0;
             startFor(target);
         } else cleanup();
     }
