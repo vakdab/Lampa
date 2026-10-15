@@ -9123,7 +9123,12 @@
             var item = candidates[i];
             if (!item || typeof item !== 'object') continue;
             var id = item.tmdb_id || item.tmdbId || item.id;
-            if (id) return { id: id, type: item.media_type || item.type || (item.name ? 'tv' : 'movie') };
+            if (id) {
+                var rawType = String(item.media_type || item.type || '').toLowerCase();
+                var isSeries = rawType === 'tv' || rawType === 'series' || rawType === 'anime' ||
+                    !!item.name || !!item.first_air_date || !!item.number_of_episodes;
+                return { id: id, type: isSeries ? 'tv' : 'movie' };
+            }
         }
         var poster = root && root.querySelector('.full-start-new__poster img, .full-start__poster img');
         var raw = poster && (poster.getAttribute('src') || poster.getAttribute('data-src') || '');
@@ -9144,18 +9149,27 @@
         var item = detailItem(root, event);
         var resolver = window.AgNativeLogo;
         if (!item || !resolver || typeof resolver.fetch !== 'function') return;
-        var type = item.type === 'tv' || item.type === 'series' ? 'tv' : 'movie';
+        var type = item.type === 'tv' ? 'tv' : 'movie';
         if (holder.getAttribute('data-logo-key') === type + '/' + item.id) return;
         holder.setAttribute('data-logo-key', type + '/' + item.id);
         holder.classList.add('is-empty');
-        resolver.fetch(item.id, type, function (logo) {
-            if (!logo || !logo.path || holder.getAttribute('data-logo-key') !== type + '/' + item.id) return;
+        function applyLogo(logo, triedAlternate) {
+            if (!logo || !logo.path) {
+                if (!triedAlternate) {
+                    resolver.fetch(item.id, type === 'tv' ? 'movie' : 'tv', function (alternate) {
+                        applyLogo(alternate, true);
+                    });
+                }
+                return;
+            }
+            if (holder.getAttribute('data-logo-key') !== type + '/' + item.id) return;
             var img = document.createElement('img');
             img.alt = '';
             img.src = resolver.url(logo.path);
             img.onload = function () { holder.textContent = ''; holder.appendChild(img); holder.classList.remove('is-empty'); };
             img.onerror = function () { holder.classList.add('is-empty'); };
-        });
+        }
+        resolver.fetch(item.id, type, function (logo) { applyLogo(logo, false); });
     }
 
     function collect(root) {
