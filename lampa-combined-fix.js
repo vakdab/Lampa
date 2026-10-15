@@ -1541,7 +1541,7 @@ window.Anime4K = {
 
     return new Scaler(gl)
   }
-}
+};
 /* Lampa Anime4K WebGL Upscale — real GPU shader processing, with safe fallback */
 (function () {
     'use strict';

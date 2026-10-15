@@ -674,5 +674,4 @@ window.Anime4K = {
 
     return new Scaler(gl)
   }
-}
-
+};
