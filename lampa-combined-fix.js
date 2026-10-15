@@ -9184,8 +9184,10 @@
             play.style.setProperty('pointer-events', 'auto', 'important');
             if (row.firstElementChild !== play) row.insertBefore(play, row.firstElementChild);
         }
-        // hide every source/plugin button in the row, keep only the system ones
-        var kids = row.querySelectorAll('.full-start__button');
+        // Hide every source/plugin action in the row, including buttons from
+        // providers that use a different class name in newer Lampa builds.
+        // Keep only the standard actions and the primary Play action.
+        var kids = row.children;
         for (var i = 0; i < kids.length; i++) {
             var el = kids[i];
             if (isKept(el)) continue;
