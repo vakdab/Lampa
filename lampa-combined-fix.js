@@ -934,7 +934,7 @@
  */
 (function () {
     'use strict';
-    var VERSION = '2026-10-15-anime4k-webgpu-4';
+    var VERSION = '2026-10-15-anime4k-webgpu-5';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
@@ -1072,7 +1072,6 @@
         originalOpacityPriority = '';
         originalPosition = null;
         originalPositionPriority = '';
-        state = enabled() ? STATE_OFF : STATE_OFF;
     }
     function syncCanvas() {
         if (!canvas || !video || !host) return;
@@ -1266,7 +1265,10 @@
             startFor(target);
         } else cleanup();
     }
-    function onDestroy() { cleanup(); }
+    function onDestroy() {
+        cleanup();
+        state = STATE_OFF;
+    }
     function start() {
         if (!window.Lampa || !Lampa.Player || !Lampa.Player.listener) { setTimeout(start, 300); return; }
         installMenu();
