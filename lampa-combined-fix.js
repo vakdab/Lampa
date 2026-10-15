@@ -9035,43 +9035,33 @@
 
 })();
 
-/* Prisma-inspired full details page skin for AppleTV AG Native */
+/* Prisma-style info & buttons on the full details page
+ * Keeps the standard Lampa layout: normal blurred background and normal poster. */
 (function () {
     'use strict';
-    var STYLE_ID = 'lampa-prisma-full-skin-v1';
+    var STYLE_ID = 'lampa-prisma-buttons-skin-v2';
     function install() {
         if (!document || document.getElementById(STYLE_ID)) return;
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            'body.appletv-agnative-topnav{background:#000!important}',
-            'body.appletv-agnative-topnav .full-start-new,body.appletv-agnative-topnav .full-start{max-width:100%!important;padding:0 2.2em 5em!important;background:#000!important}',
-            'body.appletv-agnative-topnav .full-start-new__body{min-height:34em;align-items:flex-end;position:relative;overflow:hidden;border-radius:0 0 2.2em 2.2em;background:linear-gradient(180deg,rgba(0,0,0,.18),#000 92%)}',
-            'body.appletv-agnative-topnav .full-start-new__body:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,rgba(0,0,0,.12) 45%,#000 100%);pointer-events:none;z-index:1}',
-            'body.appletv-agnative-topnav .full-start-new__left{position:absolute;inset:0;width:100%!important;margin:0!important;z-index:0}',
-            'body.appletv-agnative-topnav .full-start-new__poster{height:100%;padding:0!important;border-radius:0!important;background:#000!important;overflow:hidden}',
-            'body.appletv-agnative-topnav .full-start-new__img{width:100%;height:100%;border-radius:0!important;object-fit:cover;object-position:center 30%;opacity:.88!important;mask-image:linear-gradient(to bottom,#fff 48%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,#fff 48%,transparent 100%)}',
-            'body.appletv-agnative-topnav .full-start-new__right{position:relative;z-index:2;width:100%;padding:12em 2em 2em;text-align:center;display:flex;flex-direction:column;align-items:center;background:linear-gradient(to bottom,transparent 0,#000 44%,#000 100%)}',
-            'body.appletv-agnative-topnav .full-start-new__head{font-size:1.05em;color:rgba(255,255,255,.7)!important}',
-            'body.appletv-agnative-topnav .full-start-new__title{font-size:clamp(2.4em,5vw,4.9em)!important;line-height:1.08!important;color:#f3fff9!important;text-align:center;margin:.2em auto .12em!important;max-width:18em;text-shadow:0 2px 24px rgba(0,0,0,.55)}',
-            'body.appletv-agnative-topnav .full-start-new__tagline{font-size:clamp(1.25em,2.3vw,2em)!important;color:rgba(255,255,255,.6)!important;text-align:center;max-width:32em}',
-            'body.appletv-agnative-topnav .full-start-new__details{justify-content:center;color:rgba(255,255,255,.8)!important;font-size:1.08em!important}',
-            'body.appletv-agnative-topnav .full-start-new__rate-line{justify-content:center;margin:1em 0 1.8em!important;gap:.9em}',
-            'body.appletv-agnative-topnav .full-start-new__rate-line>*{margin:0!important}',
-            'body.appletv-agnative-topnav .full-start__rate>div:first-child{font-size:2.15em!important;font-weight:700;color:#fff}',
-            'body.appletv-agnative-topnav .full-start__rate>div:last-child{font-size:.72em;color:rgba(255,255,255,.48);letter-spacing:.08em}',
-            'body.appletv-agnative-topnav .full-start__pg,body.appletv-agnative-topnav .full-start__status{border:1px solid rgba(255,255,255,.34)!important;border-radius:.55em!important;padding:.35em .6em!important;color:#fff!important;background:rgba(255,255,255,.06)}',
+            'body.appletv-agnative-topnav .full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center}',
+            'body.appletv-agnative-topnav .full-start-new__title{font-size:clamp(2.1em,4.4vw,3.9em)!important;line-height:1.12!important;color:#fff!important;margin:0 auto .12em!important;max-width:100%}',
+            'body.appletv-agnative-topnav .full-start-new__tagline{color:rgba(255,255,255,.62)!important;margin:0 auto 1em!important;font-size:1.65em;max-width:100%}',
+            'body.appletv-agnative-topnav .full-start-new__head{color:rgba(255,255,255,.7)!important}',
+            'body.appletv-agnative-topnav .full-start-new__details{justify-content:center;color:rgba(255,255,255,.8)!important}',
+            'body.appletv-agnative-topnav .full-start-new__rate-line{justify-content:center;margin:0 0 1.6em!important}',
+            'body.appletv-agnative-topnav .full-start__rate>div:first-child{font-size:2em!important;font-weight:700;color:#fff}',
+            'body.appletv-agnative-topnav .full-start__rate>div:last-child{font-size:.72em;color:rgba(255,255,255,.5)!important;letter-spacing:.08em}',
+            'body.appletv-agnative-topnav .full-start__pg,body.appletv-agnative-topnav .full-start__status{border:1px solid rgba(255,255,255,.32)!important;border-radius:.55em!important;padding:.3em .55em!important;color:#fff!important;background:rgba(255,255,255,.06)!important}',
             'body.appletv-agnative-topnav .full-start-new__reactions{justify-content:center}',
-            'body.appletv-agnative-topnav .full-start-new__buttons{justify-content:center;gap:.65em;width:100%;margin-top:.5em}',
+            'body.appletv-agnative-topnav .full-start-new__buttons{justify-content:center;gap:.65em;width:100%;margin-top:.4em;flex-wrap:wrap}',
             'body.appletv-agnative-topnav .full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;min-height:4em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .full-start__button.focus,body.appletv-agnative-topnav .full-start-new__buttons .full-start__button:hover{background:#303033!important;transform:scale(1.04)}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .button--play{padding:0 2em!important}',
+            'body.appletv-agnative-topnav .full-start-new__buttons .full-start__button.focus,body.appletv-agnative-topnav .full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.05)}',
+            'body.appletv-agnative-topnav .full-start-new__buttons .button--play{padding:0 2.1em!important}',
             'body.appletv-agnative-topnav .full-start-new__buttons .button--play span{font-weight:700}',
             'body.appletv-agnative-topnav .full-start-new__buttons .button--book,body.appletv-agnative-topnav .full-start-new__buttons .button--reaction,body.appletv-agnative-topnav .full-start-new__buttons .button--subscribe,body.appletv-agnative-topnav .full-start-new__buttons .button--options{width:4em!important;padding:0!important}',
-            'body.appletv-agnative-topnav .full-start-new__buttons svg{width:1.45em;height:1.45em}',
-            'body.appletv-agnative-topnav .full-start-new~.items-line,body.appletv-agnative-topnav .full-start~.items-line{max-width:100%!important;padding-left:2.2em;padding-right:2.2em}',
-            'body.appletv-agnative-topnav .full-start__background{opacity:.2!important;filter:blur(16px) saturate(.8)!important}',
-            '@media(max-width:700px){body.appletv-agnative-topnav .full-start-new,body.appletv-agnative-topnav .full-start{padding:0 0 4em!important}body.appletv-agnative-topnav .full-start-new__body{min-height:52em;border-radius:0}body.appletv-agnative-topnav .full-start-new__right{padding:22em 1.1em 1.6em;background:linear-gradient(to bottom,transparent 0,#000 35%,#000 100%)}body.appletv-agnative-topnav .full-start-new__img{object-position:center 22%}body.appletv-agnative-topnav .full-start-new__title{font-size:clamp(2.15em,9vw,3.5em)!important}body.appletv-agnative-topnav .full-start-new__details{font-size:.92em!important}body.appletv-agnative-topnav .full-start-new__buttons{flex-wrap:wrap}.full-start-new__buttons .button--play{min-width:11em!important}}'
+            'body.appletv-agnative-topnav .full-start-new__buttons svg{width:1.4em;height:1.4em}'
         ].join('');
         (document.head || document.documentElement).appendChild(style);
     }
