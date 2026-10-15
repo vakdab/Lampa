@@ -1546,7 +1546,7 @@ window.Anime4K = {
 (function () {
     'use strict';
 
-    var VERSION = '2026-10-15-anime4k-4';
+    var VERSION = '2026-10-15-anime4k-5';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
@@ -1701,11 +1701,26 @@ window.Anime4K = {
         frameHandle = 0;
         renderFrame();
     }
+    function hasRenderedFrame() {
+        if (!gl || !gl.readPixels || !gl.drawingBufferWidth || !gl.drawingBufferHeight) return false;
+        var points = [
+            [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75], [0.5, 0.5]
+        ];
+        var pixel = new Uint8Array(4);
+        for (var index = 0; index < points.length; index++) {
+            var x = Math.max(0, Math.min(gl.drawingBufferWidth - 1, Math.floor(gl.drawingBufferWidth * points[index][0])));
+            var y = Math.max(0, Math.min(gl.drawingBufferHeight - 1, Math.floor(gl.drawingBufferHeight * points[index][1])));
+            gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+            if (pixel[0] > 2 || pixel[1] > 2 || pixel[2] > 2) return true;
+        }
+        return false;
+    }
     function startRendering(target) {
         if (!setupCanvas(target)) return false;
         running = true;
         try {
             scaler.render();
+            if (!hasRenderedFrame()) throw new Error('Anime4K returned an empty frame');
             target.style.setProperty('opacity', '0', 'important');
         } catch (error) {
             removeCanvas();
