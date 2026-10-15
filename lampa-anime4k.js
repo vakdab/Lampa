@@ -698,6 +698,10 @@ window.Anime4K = {
     var menuInstalled = false;
     var onVideoPlay = null;
     var onVideoSeeked = null;
+    var onWindowResize = null;
+    var parentElement = null;
+    var parentPosition = '';
+    var parentPositionPriority = '';
 
     function enabled() {
         try {
@@ -728,14 +732,23 @@ window.Anime4K = {
         running = false;
         if (video && onVideoPlay) video.removeEventListener('play', onVideoPlay);
         if (video && onVideoSeeked) video.removeEventListener('seeked', onVideoSeeked);
+        if (window.removeEventListener && onWindowResize) window.removeEventListener('resize', onWindowResize);
         onVideoPlay = null;
         onVideoSeeked = null;
+        onWindowResize = null;
         if (video && originalOpacity !== null) {
             if (originalOpacity) video.style.setProperty('opacity', originalOpacity, originalOpacityPriority);
             else video.style.removeProperty('opacity');
         }
         originalOpacity = null;
         originalOpacityPriority = '';
+        if (parentElement) {
+            if (parentPosition) parentElement.style.setProperty('position', parentPosition, parentPositionPriority);
+            else parentElement.style.removeProperty('position');
+        }
+        parentElement = null;
+        parentPosition = '';
+        parentPositionPriority = '';
         if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
         canvas = null;
         scaler = null;
@@ -751,12 +764,18 @@ window.Anime4K = {
         var context = document.createElement('canvas');
         context.className = 'lampa-anime4k-canvas';
         context.setAttribute('aria-hidden', 'true');
-        context.style.cssText = 'position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;pointer-events:none!important;object-fit:contain!important;z-index:1!important;background:#000!important;';
-        parent.style.position = window.getComputedStyle(parent).position === 'static' ? 'relative' : parent.style.position;
+        context.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:0!important;height:0!important;display:block!important;pointer-events:none!important;object-fit:fill!important;z-index:1!important;background:#000!important;';
+        parentElement = parent;
+        parentPosition = parent.style.getPropertyValue('position');
+        parentPositionPriority = parent.style.getPropertyPriority('position');
+        if (window.getComputedStyle(parent).position === 'static') parent.style.setProperty('position', 'relative');
         parent.appendChild(context);
         var contextGl = context.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
         if (!contextGl) {
             context.remove();
+            parentElement = null;
+            parentPosition = '';
+            parentPositionPriority = '';
             return false;
         }
         try {
@@ -775,13 +794,30 @@ window.Anime4K = {
             originalOpacity = target.style.getPropertyValue('opacity');
             originalOpacityPriority = target.style.getPropertyPriority('opacity');
             target.style.setProperty('opacity', '0', 'important');
-            context.style.width = '100%';
-            context.style.height = '100%';
+            syncCanvasGeometry();
             return true;
         } catch (error) {
             context.remove();
+            if (parentElement) {
+                if (parentPosition) parentElement.style.setProperty('position', parentPosition, parentPositionPriority);
+                else parentElement.style.removeProperty('position');
+            }
+            parentElement = null;
+            parentPosition = '';
+            parentPositionPriority = '';
             return false;
         }
+    }
+    function syncCanvasGeometry() {
+        if (!canvas || !video || !canvas.parentElement) return;
+        var videoRect = video.getBoundingClientRect();
+        var parentRect = canvas.parentElement.getBoundingClientRect();
+        var left = videoRect.left - parentRect.left;
+        var top = videoRect.top - parentRect.top;
+        canvas.style.setProperty('left', left.toFixed(2) + 'px', 'important');
+        canvas.style.setProperty('top', top.toFixed(2) + 'px', 'important');
+        canvas.style.setProperty('width', Math.max(1, videoRect.width).toFixed(2) + 'px', 'important');
+        canvas.style.setProperty('height', Math.max(1, videoRect.height).toFixed(2) + 'px', 'important');
     }
     function renderFrame() {
         if (!running || !video || !scaler) return;
@@ -815,6 +851,12 @@ window.Anime4K = {
         };
         target.addEventListener('play', onVideoPlay, { passive: true });
         target.addEventListener('seeked', onVideoSeeked, { passive: true });
+        onWindowResize = function () {
+            if (!running) return;
+            syncCanvasGeometry();
+            requestAnimationFrame(syncCanvasGeometry);
+        };
+        window.addEventListener('resize', onWindowResize, { passive: true });
         if (typeof target.requestVideoFrameCallback === 'function') frameHandle = target.requestVideoFrameCallback(renderVideoFrame);
         else if (!target.paused) frameHandle = requestAnimationFrame(renderFrame);
         return true;
@@ -840,11 +882,15 @@ window.Anime4K = {
         Lampa.Select.show = function (options) {
             if (!options || !Array.isArray(options.items)) return originalShow.apply(this, arguments);
             var values = options.items.map(function (item) { return item && String(item.value); });
-            if (values.indexOf('default') === -1 || (values.indexOf('cover') === -1 && values.indexOf('fill') === -1) || values.indexOf('anime4k2') !== -1) return originalShow.apply(this, arguments);
+            var isSizeMenu = values.indexOf('default') !== -1 && (values.indexOf('cover') !== -1 || values.indexOf('fill') !== -1);
+            var isQualityMenu = options.items.some(function (item) {
+                return item && (item.quality !== undefined || item.url) && item.value !== 'anime4k2' && item.value !== 'anime4k-off';
+            });
+            if ((!isSizeMenu && !isQualityMenu) || values.indexOf('anime4k2') !== -1 || values.indexOf('anime4k-off') !== -1) return originalShow.apply(this, arguments);
             var patched = Object.assign({}, options);
             patched.items = options.items.concat([
-                { title: 'Anime4K x2', subtitle: 'Реальний WebGL апскейл на GPU', value: 'anime4k2', selected: enabled() },
-                { title: 'Вимкнути Anime4K', subtitle: 'Стандартне відео Lampa', value: 'anime4k-off', selected: !enabled() }
+                { title: 'Anime4K x2', subtitle: 'Реальний WebGL апскейл на GPU', value: 'anime4k2', quality: 'anime4k2', selected: enabled() },
+                { title: 'Вимкнути Anime4K', subtitle: 'Стандартне відео Lampa', value: 'anime4k-off', quality: 'anime4k-off', selected: !enabled() }
             ]);
             patched.onSelect = function (item) {
                 if (item && item.value === 'anime4k2') {
