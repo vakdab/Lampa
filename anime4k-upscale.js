@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var VERSION = '2026-10-15-anime4k-3';
+    var VERSION = '2026-10-15-anime4k-4';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
@@ -116,7 +116,6 @@
             sourceHeight = target.videoHeight;
             originalOpacity = target.style.getPropertyValue('opacity');
             originalOpacityPriority = target.style.getPropertyPriority('opacity');
-            target.style.setProperty('opacity', '0', 'important');
             syncCanvasGeometry();
             return true;
         } catch (error) {
@@ -161,7 +160,13 @@
     function startRendering(target) {
         if (!setupCanvas(target)) return false;
         running = true;
-        scaler.render();
+        try {
+            scaler.render();
+            target.style.setProperty('opacity', '0', 'important');
+        } catch (error) {
+            removeCanvas();
+            return false;
+        }
         onVideoPlay = function () {
             if (!running || frameHandle) return;
             if (typeof target.requestVideoFrameCallback === 'function') frameHandle = target.requestVideoFrameCallback(renderVideoFrame);
@@ -169,7 +174,7 @@
         };
         onVideoSeeked = function () {
             if (running && scaler) {
-                try { scaler.render(); } catch (error) {}
+                try { scaler.render(); } catch (error) { removeCanvas(); }
             }
         };
         target.addEventListener('play', onVideoPlay, { passive: true });
