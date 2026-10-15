@@ -1546,7 +1546,7 @@ window.Anime4K = {
 (function () {
     'use strict';
 
-    var VERSION = '2026-10-15-anime4k-2';
+    var VERSION = '2026-10-15-anime4k-3';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
@@ -1631,7 +1631,7 @@ window.Anime4K = {
         var context = document.createElement('canvas');
         context.className = 'lampa-anime4k-canvas';
         context.setAttribute('aria-hidden', 'true');
-        context.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:0!important;height:0!important;display:block!important;pointer-events:none!important;object-fit:fill!important;z-index:1!important;background:#000!important;';
+        context.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:0!important;height:0!important;display:block!important;pointer-events:none!important;object-fit:fill!important;z-index:2!important;background:#000!important;';
         parentElement = parent;
         parentPosition = parent.style.getPropertyValue('position');
         parentPositionPriority = parent.style.getPropertyPriority('position');
@@ -1733,9 +1733,9 @@ window.Anime4K = {
         if (!target || !enabled()) return;
         if (video === target && scaler) return;
         removeCanvas();
-        if (target.readyState >= 1) startRendering(target);
-        else target.addEventListener('loadedmetadata', function onMetadata() {
-            target.removeEventListener('loadedmetadata', onMetadata);
+        if (target.readyState >= 2) startRendering(target);
+        else target.addEventListener('loadeddata', function onLoadedData() {
+            target.removeEventListener('loadeddata', onLoadedData);
             if (enabled()) startRendering(target);
         }, { once: true, passive: true });
     }
@@ -1773,19 +1773,21 @@ window.Anime4K = {
             if (!options || !Array.isArray(options.items)) return originalShow.apply(this, arguments);
             var values = options.items.map(function (item) { return item && String(item.value); });
             var isQualityMenu = options.items.some(function (item) {
-                return item && (item.quality !== undefined || item.url) && item.value !== 'anime4k2' && item.value !== 'anime4k-off';
+                return item && (item.quality !== undefined || item.url) && item.value !== 'anime4k-toggle' && item.value !== 'anime4k2' && item.value !== 'anime4k-off';
             });
             var isMoreMenu = options.items.length >= 2 && options.items.every(function (item) { return item && typeof item.onSelect === 'function'; }) && options.items.some(function (item) {
                 var title = String(item.title || '').toLowerCase();
                 return title.indexOf('якіст') !== -1 || title.indexOf('качеств') !== -1 || title.indexOf('quality') !== -1 || String(item.icon || '').indexOf('sprite-hd') !== -1;
             });
-            if ((!isQualityMenu && !isMoreMenu) || values.indexOf('anime4k2') !== -1 || values.indexOf('anime4k-off') !== -1 || values.indexOf('lampa-video-shape') !== -1) return originalShow.apply(this, arguments);
+            if ((!isQualityMenu && !isMoreMenu) || values.indexOf('anime4k-toggle') !== -1 || values.indexOf('anime4k2') !== -1 || values.indexOf('anime4k-off') !== -1 || values.indexOf('lampa-video-shape') !== -1) return originalShow.apply(this, arguments);
             var patched = Object.assign({}, options);
             patched.items = options.items.slice();
-            if (isQualityMenu) patched.items = patched.items.concat([
-                { title: 'Anime4K x2', subtitle: 'Реальний WebGL апскейл на GPU', value: 'anime4k2', quality: 'anime4k2', selected: enabled() },
-                { title: 'Вимкнути Anime4K', subtitle: 'Стандартне відео Lampa', value: 'anime4k-off', quality: 'anime4k-off', selected: !enabled() }
-            ]);
+            if (isQualityMenu) patched.items.push({
+                title: enabled() ? 'Anime4K: Вимкнути' : 'Anime4K: Увімкнути',
+                subtitle: enabled() ? 'Зараз увімкнено — WebGL апскейл x2' : 'Зараз вимкнено — стандартне відео Lampa',
+                value: 'anime4k-toggle',
+                quality: 'anime4k-toggle'
+            });
             if (isMoreMenu) patched.items.push({
                 title: 'Форма відео',
                 template: 'selectbox_icon',
@@ -1794,13 +1796,11 @@ window.Anime4K = {
                 onSelect: openVideoShapeMenu
             });
             patched.onSelect = function (item) {
-                if (item && item.value === 'anime4k2') {
-                    setEnabled(true);
-                    enableCurrent();
-                    if (Lampa.Select.close) Lampa.Select.close();
-                } else if (item && item.value === 'anime4k-off') {
-                    setEnabled(false);
-                    disableCurrent();
+                if (item && item.value === 'anime4k-toggle') {
+                    var nextEnabled = !enabled();
+                    setEnabled(nextEnabled);
+                    if (nextEnabled) enableCurrent();
+                    else disableCurrent();
                     if (Lampa.Select.close) Lampa.Select.close();
                 } else if (item && item.value === 'lampa-video-shape') {
                     if (Lampa.Select.close) Lampa.Select.close();
