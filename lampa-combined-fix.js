@@ -56,6 +56,9 @@
         var panel = findVisibleMenuPanel();
         if (!panel) return;
         if (x >= panel.rect.left && x <= panel.rect.right && y >= panel.rect.top && y <= panel.rect.bottom) return;
+        closeMenu();
+    }
+    function closeMenu() {
         try {
             if (window.Lampa && Lampa.Menu && typeof Lampa.Menu.close === 'function') {
                 Lampa.Menu.close();
@@ -64,6 +67,10 @@
         } catch (error) {}
         var closeButton = document.querySelector('.menu__close,.menu-close,[data-action="menu-close"]');
         if (closeButton && typeof closeButton.click === 'function') closeButton.click();
+    }
+    function onDocumentClick(event) {
+        if (!event) return;
+        closeMenuOutsideTap(event.clientX, event.clientY);
     }
     function onPointerDown(event) {
         if (event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
@@ -106,6 +113,9 @@
             document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
             document.addEventListener('touchcancel', function () { touchStart = null; }, { passive: true, capture: true });
         }
+        // Catch taps that do not produce a reliable touch-up event in iOS WebView.
+        // A tap inside the left panel is ignored; any tap outside closes it.
+        document.addEventListener('click', onDocumentClick, true);
     }
     if (document.body) start();
     else document.addEventListener('DOMContentLoaded', start, { once: true });
