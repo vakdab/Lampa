@@ -9066,8 +9066,8 @@
             B + '.full-start-new__details{justify-content:center;color:rgba(255,255,255,.82)!important;font-size:.98em!important;line-height:1.45!important;margin:0 0 .9em!important;position:relative;z-index:1}',
             B + '.full-start-new__reactions{justify-content:center;min-height:0!important;margin-bottom:.4em!important}',
             B + ' .full-start-new__poster{position:relative!important;overflow:hidden!important}',
-            B + ' .lampa-prisma-detail-logo{position:absolute;top:1.15em;left:50%;z-index:12;display:flex!important;align-items:center;justify-content:center;width:86%;min-height:2em;margin:0;transform:translateX(-50%);pointer-events:none}',
-            B + ' .lampa-prisma-detail-logo img{display:block;width:auto;max-width:100%;max-height:6.2em;object-fit:contain;filter:drop-shadow(0 3px 9px rgba(0,0,0,.78))}',
+            B + ' .lampa-prisma-detail-logo{position:absolute;top:auto;bottom:1.15em;left:50%;z-index:12;display:flex!important;align-items:center;justify-content:center;width:78%;min-height:1.5em;margin:0;transform:translateX(-50%);pointer-events:none}',
+            B + ' .lampa-prisma-detail-logo img{display:block;width:auto;max-width:100%;max-height:4.2em;object-fit:contain;filter:drop-shadow(0 3px 9px rgba(0,0,0,.78))}',
             B + '.lampa-prisma-detail-logo.is-empty{display:none!important}',
             /* buttons row */
             B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
