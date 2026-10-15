@@ -9036,36 +9036,171 @@
 })();
 
 /* Prisma-style info & buttons on the full details page
- * Keeps the standard Lampa layout: normal blurred background and normal poster. */
+ * Keeps the standard Lampa layout (normal background and poster).
+ * One big "Дивитися" button; all sources open in a menu after pressing it. */
 (function () {
     'use strict';
-    var STYLE_ID = 'lampa-prisma-buttons-skin-v2';
+    var STYLE_ID = 'lampa-prisma-buttons-skin-v3';
+    var B = 'body.appletv-agnative-topnav ';
+    var MORE_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+    function css() {
+        return [
+            B + '.full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center;margin-top:-17em!important;padding-top:1em!important}',
+            B + '.full-start-new__head{color:rgba(255,255,255,.72)!important;margin-bottom:.35em!important}',
+            B + '.full-start-new__title{font-size:clamp(1.9em,4vw,3.4em)!important;line-height:1.15!important;color:#fff!important;margin:0 auto .1em!important;max-width:100%;-webkit-line-clamp:3!important}',
+            B + '.full-start-new__tagline{color:rgba(255,255,255,.62)!important;margin:.1em auto .6em!important;font-size:1.3em!important;line-height:1.25!important;max-width:100%}',
+            /* rating row: smaller, tidy, no overlap with the next row */
+            B + '.full-start-new__rate-line{display:flex!important;justify-content:center;align-items:center;flex-wrap:wrap;gap:.5em;margin:.2em 0 .9em!important;padding:0!important;font-size:.82em!important}',
+            B + '.full-start-new__rate-line>*{margin:0!important}',
+            B + '.full-start-new__rate-line .full-start__rate{display:inline-flex;align-items:baseline;gap:.35em;padding:.25em .6em!important;border-radius:.7em;background:rgba(0,0,0,.28)}',
+            B + '.full-start__rate>div:first-child{font-size:1.45em!important;font-weight:700;color:#fff;line-height:1.1}',
+            B + '.full-start__rate>div:last-child{font-size:.7em;color:rgba(255,255,255,.55)!important;letter-spacing:.08em}',
+            B + '.full-start__pg,' + B + '.full-start__status{font-size:.95em!important;border:1px solid rgba(255,255,255,.32)!important;border-radius:.5em!important;padding:.15em .5em!important;color:#fff!important;background:rgba(255,255,255,.06)!important}',
+            /* details (seasons / episodes / genres): no overlap, readable */
+            B + '.full-start-new__details{justify-content:center;color:rgba(255,255,255,.82)!important;font-size:.98em!important;line-height:1.45!important;margin:0 0 .9em!important;position:relative;z-index:1}',
+            B + '.full-start-new__reactions{justify-content:center;min-height:0!important;margin-bottom:.4em!important}',
+            /* buttons row */
+            B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
+            B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
+            B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.04)}',
+            B + '.full-start-new__buttons .button--play{flex:1 1 auto;max-width:15em;padding:0 2em!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.6em}',
+            B + '.full-start-new__buttons .button--play span{font-weight:700}',
+            B + '.full-start-new__buttons .button--book,' + B + '.full-start-new__buttons .button--reaction,' + B + '.full-start-new__buttons .button--subscribe,' + B + '.full-start-new__buttons .button--options,' + B + '.full-start-new__buttons .lampa-prisma-more{flex:0 0 3.6em;width:3.6em!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center}',
+            B + '.full-start-new__buttons .button--book span,' + B + '.full-start-new__buttons .button--reaction span,' + B + '.full-start-new__buttons .button--subscribe span{display:none!important}',
+            B + '.full-start-new__buttons svg{width:1.4em;height:1.4em;margin:0!important}',
+            /* every source/plugin button is hidden: they live in the menu behind "Дивитися" */
+            B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
+            '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-15em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
+        ].join('');
+    }
+
     function install() {
-        if (!document || document.getElementById(STYLE_ID)) return;
+        if (document.getElementById(STYLE_ID)) return;
         var style = document.createElement('style');
         style.id = STYLE_ID;
-        style.textContent = [
-            'body.appletv-agnative-topnav .full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center}',
-            'body.appletv-agnative-topnav .full-start-new__title{font-size:clamp(2.1em,4.4vw,3.9em)!important;line-height:1.12!important;color:#fff!important;margin:0 auto .12em!important;max-width:100%}',
-            'body.appletv-agnative-topnav .full-start-new__tagline{color:rgba(255,255,255,.62)!important;margin:0 auto 1em!important;font-size:1.65em;max-width:100%}',
-            'body.appletv-agnative-topnav .full-start-new__head{color:rgba(255,255,255,.7)!important}',
-            'body.appletv-agnative-topnav .full-start-new__details{justify-content:center;color:rgba(255,255,255,.8)!important}',
-            'body.appletv-agnative-topnav .full-start-new__rate-line{justify-content:center;margin:0 0 1.6em!important}',
-            'body.appletv-agnative-topnav .full-start__rate>div:first-child{font-size:2em!important;font-weight:700;color:#fff}',
-            'body.appletv-agnative-topnav .full-start__rate>div:last-child{font-size:.72em;color:rgba(255,255,255,.5)!important;letter-spacing:.08em}',
-            'body.appletv-agnative-topnav .full-start__pg,body.appletv-agnative-topnav .full-start__status{border:1px solid rgba(255,255,255,.32)!important;border-radius:.55em!important;padding:.3em .55em!important;color:#fff!important;background:rgba(255,255,255,.06)!important}',
-            'body.appletv-agnative-topnav .full-start-new__reactions{justify-content:center}',
-            'body.appletv-agnative-topnav .full-start-new__buttons{justify-content:center;gap:.65em;width:100%;margin-top:.4em;flex-wrap:wrap}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;min-height:4em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .full-start__button.focus,body.appletv-agnative-topnav .full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.05)}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .button--play{padding:0 2.1em!important}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .button--play span{font-weight:700}',
-            'body.appletv-agnative-topnav .full-start-new__buttons .button--book,body.appletv-agnative-topnav .full-start-new__buttons .button--reaction,body.appletv-agnative-topnav .full-start-new__buttons .button--subscribe,body.appletv-agnative-topnav .full-start-new__buttons .button--options{width:4em!important;padding:0!important}',
-            'body.appletv-agnative-topnav .full-start-new__buttons svg{width:1.4em;height:1.4em}'
-        ].join('');
+        style.textContent = css();
         (document.head || document.documentElement).appendChild(style);
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
-    else install();
-    if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') install(); });
+
+    var KEEP = ['button--play', 'button--book', 'button--reaction', 'button--subscribe', 'button--options', 'lampa-prisma-more'];
+    function isKept(el) {
+        for (var i = 0; i < KEEP.length; i++) if (el.classList.contains(KEEP[i])) return true;
+        return false;
+    }
+
+    function labelOf(el) {
+        var span = el.querySelector('span');
+        var text = (span ? span.textContent : el.textContent) || '';
+        text = text.replace(/\s+/g, ' ').trim();
+        return text || 'Джерело';
+    }
+
+    function collect(root) {
+        var all = root.querySelectorAll('.full-start-new__buttons .full-start__button, .buttons--container .full-start__button');
+        var out = [];
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            if (el.classList.contains('button--play') || el.classList.contains('lampa-prisma-more') || el.classList.contains('button--priority')) continue;
+            if (isKept(el)) continue;
+            if (el.classList.contains('hide') && !el.classList.contains('lampa-prisma-hidden')) continue;
+            out.push(el);
+        }
+        return out;
+    }
+
+    function trigger(el) {
+        try {
+            if (window.$ && window.jQuery) { window.$(el).trigger('hover:enter'); return; }
+        } catch (e) {}
+        try { el.dispatchEvent(new Event('hover:enter')); } catch (e2) {}
+        try { el.click(); } catch (e3) {}
+    }
+
+    function showMenu(root) {
+        var sources = collect(root);
+        if (!sources.length) {
+            try { Lampa.Noty.show('Джерела ще завантажуються'); } catch (e) {}
+            return;
+        }
+        var items = sources.map(function (el) {
+            var svg = el.querySelector('svg');
+            return {
+                title: labelOf(el),
+                template: svg ? 'selectbox_icon' : 'selectbox_item',
+                icon: svg ? svg.outerHTML : '',
+                node: el
+            };
+        });
+        var controller = '';
+        try { controller = Lampa.Controller.enabled().name; } catch (e) {}
+        Lampa.Select.show({
+            title: 'Дивитися',
+            items: items,
+            onSelect: function (item) {
+                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
+                trigger(item.node);
+            },
+            onBack: function () {
+                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
+            }
+        });
+    }
+
+    function bind(root) {
+        var row = root.querySelector('.full-start-new__buttons');
+        if (!row) return;
+        var play = row.querySelector('.button--play');
+        // hide every source/plugin button in the row, keep only the system ones
+        var kids = row.querySelectorAll('.full-start__button');
+        for (var i = 0; i < kids.length; i++) {
+            var el = kids[i];
+            if (isKept(el)) continue;
+            el.classList.add('lampa-prisma-hidden');
+        }
+        // make sure the hidden-container sources are also available
+        if (play && !play.getAttribute('data-prisma-bound')) {
+            play.setAttribute('data-prisma-bound', '1');
+            var handler = function (e) {
+                if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+                if (e && e.preventDefault) e.preventDefault();
+                showMenu(root);
+            };
+            if (window.$ && window.jQuery) {
+                window.$(play).unbind('hover:enter').on('hover:enter', handler);
+                window.$(play).off('click').on('click', handler);
+            } else {
+                play.addEventListener('click', handler, true);
+            }
+        }
+        // compact "options" button should be a round icon only
+        var opts = row.querySelector('.button--options');
+        if (opts && !opts.querySelector('svg')) opts.innerHTML = MORE_ICON;
+    }
+
+    var timer = null;
+    function scan() {
+        var roots = document.querySelectorAll('.full-start-new');
+        for (var i = 0; i < roots.length; i++) bind(roots[i]);
+    }
+    function schedule() {
+        if (timer) return;
+        timer = setTimeout(function () { timer = null; scan(); }, 120);
+    }
+
+    function start() {
+        install();
+        scan();
+        try {
+            var mo = new MutationObserver(schedule);
+            mo.observe(document.body, { childList: true, subtree: true });
+        } catch (e) { setInterval(scan, 800); }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
+    if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) {
+        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') { install(); scan(); } });
+        Lampa.Listener.follow('full', function () { schedule(); });
+    }
 })();
