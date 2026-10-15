@@ -934,7 +934,7 @@
  */
 (function () {
     'use strict';
-    var VERSION = '2026-10-15-anime4k-webgpu-3';
+    var VERSION = '2026-10-15-anime4k-webgpu-4';
     if (window.LampaAnime4KVersion === VERSION) return;
     window.LampaAnime4KVersion = VERSION;
 
@@ -962,6 +962,7 @@
     var retryAttempts = 0;
     var renderToken = 0;
     var menuInstalled = false;
+    var badge = null;
 
     function enabled() {
         try {
@@ -1019,6 +1020,25 @@
         } catch (error) {}
         try { canvas.width = 0; canvas.height = 0; } catch (error) {}
     }
+    function showBadge() {
+        if (!host) return;
+        if (badge) return;
+        var style = document.getElementById('lampa-webgpu-badge-style');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'lampa-webgpu-badge-style';
+            style.textContent = '.lampa-webgpu-badge{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;right:14px!important;z-index:20!important;pointer-events:none!important;font-size:11px!important;font-weight:700!important;letter-spacing:.4px;color:#fff!important;background:rgba(0,0,0,.6)!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:999px!important;padding:3px 10px!important;font-family:inherit!important;}';
+            document.head.appendChild(style);
+        }
+        badge = document.createElement('div');
+        badge.className = 'lampa-webgpu-badge';
+        badge.textContent = '\u2713 Anime4K';
+        host.appendChild(badge);
+    }
+    function hideBadge() {
+        if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
+        badge = null;
+    }
     function cleanup() {
         renderToken++;
         clearRetry();
@@ -1043,6 +1063,7 @@
         }
         destroyRenderer();
         if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+        hideBadge();
         restoreHost();
         canvas = null;
         video = null;
@@ -1094,6 +1115,7 @@
         video.style.setProperty('opacity', '0', 'important');
         canvas.style.setProperty('opacity', '1', 'important');
         state = STATE_ACTIVE;
+        showBadge();
     }
     function scheduleReveal(token) {
         if (token !== renderToken || !canvas || !video) return;
@@ -1169,19 +1191,19 @@
         }
     }
     function menuTitle() {
-        return enabled() ? '✓ Покращення відео: увімкнено' : '✕ Покращення відео: вимкнено';
+        return enabled() ? '✓ Покращення відео — УВІМКНЕНО' : '✕ Покращення відео — ВИМКНЕНО';
     }
     function menuSubtitle() {
         if (!enabled()) {
             return webgpuSupported()
-                ? 'Стандартне HTML5/HLS відео. Виберіть, щоб увімкнути Anime4K WebGPU'
+                ? 'Зараз вимкнено. Натисніть, щоб увімкнути Anime4K WebGPU'
                 : 'WebGPU недоступний на цьому пристрої';
         }
-        if (state === STATE_ACTIVE) return 'Працює: Anime4K WebGPU, збільшення x2';
+        if (state === STATE_ACTIVE) return 'Зараз працює: Anime4K WebGPU, x2. Натисніть, щоб вимкнути';
         if (state === STATE_STARTING) return 'WebGPU запускається…';
         if (state === STATE_WAIT) return 'Очікує завантаження відео…';
         if (state === STATE_UNSUPPORTED) return 'WebGPU недоступний — показує стандартне відео';
-        return 'WebGPU Anime4K';
+        return 'Увімкнено';
     }
     function installMenu() {
         if (menuInstalled || !window.Lampa || !Lampa.Select || typeof Lampa.Select.show !== 'function') return;
