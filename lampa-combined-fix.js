@@ -38,7 +38,7 @@
         document.body.classList.add('lampa-mx-mobile-fix');
     }
     function findVisibleMenuPanel() {
-        var selectors = ['.menu__content', '.menu__list', '.menu__body', '.menu__container', '.menu'];
+        var selectors = ['.agnative-leftdock.is-visible', '.menu__content', '.menu__list', '.menu__body', '.menu__container', '.menu'];
         var candidates = [];
         selectors.forEach(function (selector) {
             Array.prototype.forEach.call(document.querySelectorAll(selector), function (element) {
@@ -59,6 +59,17 @@
         closeMenu();
     }
     function closeMenu() {
+        var leftdock = document.querySelector('.agnative-leftdock.is-visible');
+        if (leftdock) {
+            leftdock.classList.remove('is-visible');
+            try {
+                if (window.Lampa && Lampa.Controller && typeof Lampa.Controller.enabled === 'function' &&
+                    Lampa.Controller.enabled() && Lampa.Controller.enabled().name === 'agnative_leftdock') {
+                    Lampa.Controller.toggle('content');
+                }
+            } catch (error) {}
+            return true;
+        }
         var closed = false;
         try {
             if (window.Lampa && Lampa.Menu && typeof Lampa.Menu.close === 'function') {
