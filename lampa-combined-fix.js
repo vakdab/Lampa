@@ -59,14 +59,16 @@
         closeMenu();
     }
     function closeMenu() {
+        var closed = false;
         try {
             if (window.Lampa && Lampa.Menu && typeof Lampa.Menu.close === 'function') {
                 Lampa.Menu.close();
-                return;
+                closed = true;
             }
         } catch (error) {}
         var closeButton = document.querySelector('.menu__close,.menu-close,[data-action="menu-close"]');
         if (closeButton && typeof closeButton.click === 'function') closeButton.click();
+        return closed;
     }
     function onDocumentClick(event) {
         if (!event) return;
@@ -75,6 +77,9 @@
     function onPointerDown(event) {
         if (event.pointerType && event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
         touchStart = { x: event.clientX, y: event.clientY, id: event.pointerId };
+        // Close immediately on the initial tap; some Lampa menu layers stop
+        // pointerup/click from reaching the document afterwards.
+        closeMenuOutsideTap(event.clientX, event.clientY);
     }
     function onPointerUp(event) {
         if (!touchStart || (touchStart.id !== undefined && event.pointerId !== touchStart.id)) return;
@@ -89,6 +94,7 @@
         if (!event.changedTouches || !event.changedTouches.length) return;
         var touch = event.changedTouches[0];
         touchStart = { x: touch.clientX, y: touch.clientY };
+        closeMenuOutsideTap(touch.clientX, touch.clientY);
     }
     function onTouchEnd(event) {
         if (!touchStart || !event.changedTouches || !event.changedTouches.length) return;
