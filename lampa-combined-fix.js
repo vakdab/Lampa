@@ -1327,6 +1327,7 @@
   const AGNATIVE_KEYS = {
     STYLE_ID: 'appletv-agnative-topnav-style',
     BODY_CLASS: 'appletv-agnative-topnav',
+    TV_CLASS: 'agnative-tv-mode',
     CLOCK_ID: 'agnative-topnav-clock',
     TMDB_KEY: '4ef0d7355d9ffb5151e987764708ce96',
     ENABLE_KEY: 'appletv_agnative_topnav_enabled',
@@ -2271,6 +2272,7 @@
     var {
       STYLE_ID,
       BODY_CLASS,
+      TV_CLASS,
       CLOCK_ID,
       TMDB_KEY,
       ENABLE_KEY,
@@ -2650,6 +2652,7 @@
       try {
         if (document.body) {
           document.body.classList.remove(BODY_CLASS);
+          document.body.classList.remove(TV_CLASS);
           document.body.classList.remove(GLARE_CLASS);
           document.body.removeAttribute(CARD_ANIM_ATTR);
           document.body.removeAttribute(FONT_SIZE_ATTR);
@@ -2925,7 +2928,7 @@
 
     function syncPerfMode() {
       if (!document.body) return;
-      var level = resolvePerfLevel();
+      var level = isTvDevice() ? 'high' : resolvePerfLevel();
       document.body.setAttribute(PERF_ATTR, level);
       if (level === 'ultra') document.body.classList.remove(GLARE_CLASS);
     }
@@ -5412,6 +5415,19 @@
       return window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window);
     }
 
+    function isTvDevice() {
+      try {
+        var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
+        return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua) ||
+          !!(window.matchMedia && window.matchMedia('(display-mode: tv)').matches);
+      } catch (e) { return false; }
+    }
+
+    function syncTvClass() {
+      if (!document.body) return;
+      document.body.classList.toggle(TV_CLASS, isTvDevice());
+    }
+
     // On mobile Lampa only renders rows visible in the initial viewport (~4).
     // Simulate a scroll-down so the IntersectionObserver triggers 2 extra rows,
     // then snap back to top — invisible to the user but forces 6 rows to render.
@@ -6940,7 +6956,20 @@
         // Performance mode "ultra" — no scale, no shadows, only background change
         'body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-item.selector, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-serial.selector, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .online-prestige.selector, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .watched-history.selector, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .explorer__files .torrent-filter .simple-button { transition:none !important; will-change:auto !important; }',
         'body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-item.selector.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-item.selector.hover, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-serial.selector.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .torrent-serial.selector.hover, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .online-prestige.selector.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .online-prestige.selector.hover, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .watched-history.selector.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .watched-history.selector.hover { transform:none !important; box-shadow:none !important; background:rgba(255,255,255,.18) !important; border-color:rgba(255,255,255,.28) !important; }',
-        'body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .explorer__files .torrent-filter .simple-button.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .explorer__files .torrent-filter .simple-button.hover { transform:none !important; box-shadow:none !important; background:rgba(255,255,255,.26) !important; }'
+        'body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .explorer__files .torrent-filter .simple-button.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="ultra"] .explorer__files .torrent-filter .simple-button.hover { transform:none !important; box-shadow:none !important; background:rgba(255,255,255,.26) !important; }',
+
+        // Smart TV: keep the native details geometry, remove mobile-only offsets,
+        // and prefer cheap compositor-friendly transitions for stable 60 FPS.
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .activity__slides { padding-top:0 !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start-new__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start-new ~ .items-line, body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start ~ .items-line { transform:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__content .layer--height, body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__content .layer--width { padding-top:0 !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start-new__right { margin-top:0 !important; padding-top:0 !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .lampa-prisma-detail-logo { display:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' *, body.' + BODY_CLASS + '.' + TV_CLASS + ' *::before, body.' + BODY_CLASS + '.' + TV_CLASS + ' *::after { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card .card__view, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card-episode, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selector { transition:transform .12s linear, background-color .12s linear, box-shadow .12s linear !important; will-change:transform !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.focus .card__view, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.hover .card__view, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card-episode.focus .full-episode__img, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card-episode.hover .full-episode__img, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selector.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.hover { filter:none !important; border-color:rgba(255,255,255,.95) !important; outline:2px solid rgba(255,255,255,.95) !important; outline-offset:2px !important; box-shadow:0 0 0 2px rgba(255,255,255,.95), 0 8px 20px rgba(0,0,0,.28) !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.focus::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.hover::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card__view::before, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card__view::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start-new__poster::after { display:none !important; content:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .torrent-item.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .torrent-serial.selector.focus { outline:2px solid rgba(255,255,255,.95) !important; outline-offset:2px !important; border-color:rgba(255,255,255,.95) !important; box-shadow:0 0 0 2px rgba(255,255,255,.95) !important; }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
@@ -8983,6 +9012,7 @@
       }
       injectStyle();
       if (document.body) document.body.classList.add(BODY_CLASS);
+      syncTvClass();
       syncFontSize();
       syncCardFlags();
       syncPerfMode();
@@ -9015,6 +9045,7 @@
       prune(getCacheMaxBytes());
       injectStyle();
       if (document.body) document.body.classList.add(BODY_CLASS);
+      syncTvClass();
       syncGlareClass();
       syncFontSize();
       syncCardSize();
