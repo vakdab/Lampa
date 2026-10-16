@@ -9078,7 +9078,7 @@
 
     function css() {
         return [
-            B + '.full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center;margin-top:-10em!important;padding-top:1em!important}',
+            B + '.full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center;margin-top:-17em!important;padding-top:1em!important}',
             B + '.full-start-new__head{color:rgba(255,255,255,.72)!important;margin-bottom:.35em!important}',
             B + '.full-start-new__title{font-size:clamp(1.9em,4vw,3.4em)!important;line-height:1.15!important;color:#fff!important;margin:0 auto .1em!important;max-width:100%;-webkit-line-clamp:3!important}',
             B + '.full-start-new__tagline{color:rgba(255,255,255,.62)!important;margin:.1em auto .6em!important;font-size:1.3em!important;line-height:1.25!important;max-width:100%}',
@@ -9093,7 +9093,7 @@
             B + '.full-start-new__details{justify-content:center;color:rgba(255,255,255,.82)!important;font-size:.98em!important;line-height:1.45!important;margin:0 0 .9em!important;position:relative;z-index:1}',
             B + '.full-start-new__reactions{justify-content:center;min-height:0!important;margin-bottom:.4em!important}',
             B + ' .full-start-new__poster{position:relative!important;overflow:hidden!important}',
-            B + ' .lampa-prisma-detail-logo{position:absolute;top:1.15em;bottom:auto;left:50%;z-index:12;display:flex!important;align-items:center;justify-content:center;width:100%;min-height:1.5em;margin:0;transform:translateX(-50%);pointer-events:none}',
+            B + ' .lampa-prisma-detail-logo{position:absolute;top:calc(.85em + 4cm);bottom:auto;left:50%;z-index:12;display:flex!important;align-items:center;justify-content:center;width:100%;min-height:1.5em;margin:0;transform:translateX(-50%);pointer-events:none}',
             B + ' .lampa-prisma-detail-logo img{display:block;width:auto;max-width:100%;max-height:8.4em;object-fit:contain;filter:drop-shadow(0 3px 9px rgba(0,0,0,.78))}',
             B + '.lampa-prisma-detail-logo.is-empty{display:none!important}',
             /* buttons row */
@@ -9109,7 +9109,7 @@
             B + '.full-start-new__buttons svg{width:1.4em;height:1.4em;margin:0!important}',
             /* every source/plugin button is hidden: they live in the menu behind "Дивитися" */
             B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
-            '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-8em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
+            '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-15em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
         ].join('');
     }
 
