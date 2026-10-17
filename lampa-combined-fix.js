@@ -10697,10 +10697,11 @@
     }, {
       key: "sourceBase",
       value: function sourceBase(sourceKey) {
-        // Bandera API owns the source adapters, result normalization, seasons,
-        // voice selection and stream extraction. Do not scrape source websites
-        // here: their navigation pages are HTML, not searchable catalog data.
-        return config.api_base;
+        var custom = ['uakino', 'eneyida', 'uaserials'];
+        var keys = Array.isArray(sourceKey) ? sourceKey : String(sourceKey || '').split(',');
+        return keys.some(function (key) {
+          return custom.indexOf(key) >= 0;
+        }) ? config.uk_api_base : config.api_base;
       }
     }, {
       key: "getAuth",
@@ -10736,7 +10737,26 @@
     }, {
       key: "getSources",
       value: function getSources(success, fail) {
-        this.getJson(this.apiBase() + '/sources', success, fail);
+        var _this = this;
+        this.getJson(this.apiBase() + '/sources', function (primary) {
+          _this.getJson(config.uk_api_base + '/sources', function (extra) {
+            var merged = [];
+            var seen = {};
+            [primary, extra].forEach(function (payload, index) {
+              (payload && Array.isArray(payload.sources) ? payload.sources : []).forEach(function (source) {
+                var key = source && (source.key || source.name);
+                if (!key || seen[key]) return;
+                // Overlapping keys stay on the official Bandera adapter.
+                if (index === 1 && ['uakino', 'eneyida', 'uaserials'].indexOf(key) === -1) return;
+                seen[key] = true;
+                merged.push(source);
+              });
+            });
+            success({ ok: true, sources: merged });
+          }, function () {
+            success(primary);
+          });
+        }, fail);
       }
     }, {
       key: "search",
