@@ -12160,3 +12160,78 @@
   }
   startPlugin();
 })();
+
+/* Play button -> Ukrainian sources directly (no source picker).
+ * Pressing the main "Дивитися" button opens Bandera Online straight away.
+ * Falls back to the normal picker if Ukrainian sources are not available.
+ * Disable with: localStorage.setItem('bandera_play_direct','false') */
+(function () {
+  'use strict';
+  if (window.__banderaPlayDirect) return;
+  window.__banderaPlayDirect = true;
+
+  function enabled() {
+    try { return window.localStorage.getItem('bandera_play_direct') !== 'false'; } catch (e) { return true; }
+  }
+  function openUkrainian(movie) {
+    if (!movie || !window.Lampa || !Lampa.Activity || !Lampa.Component) return false;
+    try {
+      if (!window.bandera_online) return false;
+      var title = movie.title || movie.name || '';
+      Lampa.Activity.push({
+        url: '',
+        title: 'Українські джерела',
+        component: 'bandera_online',
+        search: title,
+        search_one: title,
+        search_two: movie.original_title || movie.original_name || '',
+        movie: movie,
+        page: 1
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+  function currentMovie() {
+    try {
+      var act = Lampa.Activity.active();
+      if (act && (act.component === 'full' || act.card)) return act.card || act.movie || null;
+    } catch (e) {}
+    return null;
+  }
+
+  function handle(e) {
+    if (!enabled()) return;
+    var target = e && e.target;
+    if (!target || !target.closest) return;
+    var btn = target.closest('.button--play');
+    if (!btn || !btn.closest('.full-start-new, .full-start')) return;
+    var movie = currentMovie();
+    if (!movie) return;
+    if (openUkrainian(movie)) {
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      if (e.preventDefault) e.preventDefault();
+    }
+  }
+
+  // touch / mouse
+  document.addEventListener('click', handle, true);
+
+  // remote / keyboard "enter" on a focused button (Lampa emits hover:enter via jQuery)
+  function patchJq() {
+    if (!window.$ || !$.fn || $.fn.__banderaPlayPatched) return;
+    $.fn.__banderaPlayPatched = true;
+    var origTrigger = $.fn.trigger;
+    $.fn.trigger = function (name) {
+      try {
+        if (name === 'hover:enter' && enabled() && this.length && this.hasClass && this.hasClass('button--play') && this.closest('.full-start-new, .full-start').length) {
+          var m = currentMovie();
+          if (m && openUkrainian(m)) return this;
+        }
+      } catch (err) {}
+      return origTrigger.apply(this, arguments);
+    };
+  }
+  patchJq();
+  var tries = 0;
+  var iv = setInterval(function () { patchJq(); if (++tries > 40) clearInterval(iv); }, 500);
+})();
