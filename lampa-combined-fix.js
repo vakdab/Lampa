@@ -10650,7 +10650,7 @@
     };
   }
   var config = {
-    api_base: 'https://bbe.lme.isroot.in/api/v2',
+    api_base: 'https://lampa-uk-proxy.animegran8.workers.dev',
     storage_prefixes: {
       cw_autoinstall_done: 'bandera_online_cw_autoinstall_done',
       last_balanser: 'bandera_online_last_balanser',
