@@ -5428,10 +5428,9 @@
       if (!document.body) return;
       var tv = isTvDevice();
       document.body.classList.toggle(TV_CLASS, tv);
-      // Applecation owns the TV details template. Keeping our global body
-      // class here would also activate the mobile source-picker skin.
-      if (tv) document.body.classList.remove(BODY_CLASS);
-      else document.body.classList.add(BODY_CLASS);
+      // Keep the global Lampa/TV interface skin active. Only the separate
+      // Prisma details layer is skipped on TV so Applecation can own that page.
+      document.body.classList.add(BODY_CLASS);
     }
 
     // On mobile Lampa only renders rows visible in the initial viewport (~4).
