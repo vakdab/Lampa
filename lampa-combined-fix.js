@@ -7653,6 +7653,24 @@
         clearTimeout(leftdockHoverHideTimer);
         leftdockHoverHideTimer = 0;
       }
+      focusLeftdock(dock);
+      // Some TV builds finish the controller transition one tick later and
+      // leave focus on the card underneath the dock. Re-assert the collection
+      // after the transition so Enter cannot start that card.
+      setTimeout(function () {
+        if (dock.classList.contains('is-visible')) focusLeftdock(dock);
+      }, 0);
+    }
+
+    function focusLeftdock(dock) {
+      if (!dock || !window.Lampa || !Lampa.Controller || !window.$) return;
+      try {
+        var view = $(dock);
+        var current = qs('.agnative-leftdock__item.is-active', dock) ||
+          qs('.agnative-leftdock__item.selector', dock);
+        Lampa.Controller.collectionSet(view);
+        Lampa.Controller.collectionFocus(current || false, view, true);
+      } catch (e) { }
     }
 
     function hideLeftdock(immediate, force) {
@@ -7979,11 +7997,7 @@
             var d = qs('.agnative-leftdock');
             if (!d) return;
             showLeftdock();
-            var view = $(d);
-            var current = qs('.agnative-leftdock__item.is-active', d)
-              || qs('.agnative-leftdock__item.selector', d);
-            Lampa.Controller.collectionSet(view);
-            Lampa.Controller.collectionFocus(current || false, view, true);
+            focusLeftdock(d);
           },
           update: function () { },
           gone: function () {
