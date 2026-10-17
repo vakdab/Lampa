@@ -2404,6 +2404,8 @@
     var leftdockHoverHideTimer = 0;
     var controllerTogglePatched = false;
     var controllerToggleOriginal = null;
+    var leftdockKeyGuardBound = false;
+    var leftdockKeyIndex = -1;
     var menuChangesObserver = null;
     var menuListObservedNode = null;
     var menuRebuildTimer = 0;
@@ -7653,6 +7655,7 @@
         clearTimeout(leftdockHoverHideTimer);
         leftdockHoverHideTimer = 0;
       }
+      bindLeftdockKeyGuard();
       focusLeftdock(dock);
       // Some TV builds finish the controller transition one tick later and
       // leave focus on the card underneath the dock. Re-assert the collection
@@ -7671,6 +7674,49 @@
         Lampa.Controller.collectionSet(view);
         Lampa.Controller.collectionFocus(current || false, view, true);
       } catch (e) { }
+    }
+
+    function bindLeftdockKeyGuard() {
+      if (leftdockKeyGuardBound || !document || !document.addEventListener) return;
+      leftdockKeyGuardBound = true;
+      document.addEventListener('keydown', function (e) {
+        if (!isTvDevice()) return;
+        var dock = qs('.agnative-leftdock.is-visible');
+        if (!dock) return;
+        var code = e.keyCode || 0;
+        var key = e.key || '';
+        var items = qsa('.agnative-leftdock__item.selector', dock);
+        if (!items.length) return;
+        var index = -1;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].classList.contains('focus') || items[i].classList.contains('hover')) { index = i; break; }
+        }
+        if (index < 0) index = leftdockKeyIndex >= 0 ? leftdockKeyIndex : 0;
+        if (key === 'ArrowDown' || code === 40 || key === 'ArrowUp' || code === 38) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          index = key === 'ArrowUp' || code === 38 ? index - 1 : index + 1;
+          if (index < 0) index = items.length - 1;
+          if (index >= items.length) index = 0;
+          leftdockKeyIndex = index;
+          items.forEach(function (item, n) {
+            item.classList.toggle('focus', n === index);
+            item.classList.toggle('hover', n === index);
+          });
+          scrollLeftdockItemIntoView(items[index], dock);
+          return false;
+        }
+        if (key === 'Enter' || key === ' ' || code === 13 || code === 32) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          leftdockKeyIndex = index;
+          items[index].click();
+          return false;
+        }
+        if (key === 'Escape' || key === 'Backspace' || code === 27 || code === 8) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          try { Lampa.Controller.toggle('content'); } catch (err) { hideLeftdock(true, true); }
+          return false;
+        }
+      }, true);
     }
 
     function hideLeftdock(immediate, force) {
