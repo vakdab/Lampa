@@ -10582,7 +10582,9 @@
       function wrapStreamProxy(url) {
         var base = 'https://api.framextv.tech/api/proxy?url=';
         if (url.indexOf(base) === 0) return url;
-        return base + url;
+        // HLS URLs contain '/', '?', '&' and sometimes '+'. Leaving them
+        // unescaped changes the proxy query and corrupts the media URL.
+        return base + encodeURIComponent(url);
       }
       function getStream(ref, success, fail) {
         var cache_key = Lampa.Utils.hash(JSON.stringify(ref));
@@ -10695,11 +10697,10 @@
     }, {
       key: "sourceBase",
       value: function sourceBase(sourceKey) {
-        var custom = ['uakino', 'uaflix', 'bambooua', 'eneyida', 'uaserials'];
-        var keys = Array.isArray(sourceKey) ? sourceKey : String(sourceKey || '').split(',');
-        return keys.some(function (key) {
-          return custom.indexOf(key) >= 0;
-        }) ? config.uk_api_base : config.api_base;
+        // Bandera API owns the source adapters, result normalization, seasons,
+        // voice selection and stream extraction. Do not scrape source websites
+        // here: their navigation pages are HTML, not searchable catalog data.
+        return config.api_base;
       }
     }, {
       key: "getAuth",
@@ -10735,25 +10736,7 @@
     }, {
       key: "getSources",
       value: function getSources(success, fail) {
-        var _this = this;
-        this.getJson(this.apiBase() + '/sources', function (primary) {
-          _this.getJson(config.uk_api_base + '/sources', function (extra) {
-            var merged = [];
-            var seen = {};
-            [primary, extra].forEach(function (payload) {
-              (payload && Array.isArray(payload.sources) ? payload.sources : []).forEach(function (source) {
-                var key = source && (source.key || source.name);
-                if (!key || seen[key]) return;
-                seen[key] = true;
-                merged.push(source);
-              });
-            });
-            success({
-              ok: true,
-              sources: merged
-            });
-          }, fail);
-        }, fail);
+        this.getJson(this.apiBase() + '/sources', success, fail);
       }
     }, {
       key: "search",
