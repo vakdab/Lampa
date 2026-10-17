@@ -9978,6 +9978,17 @@
       function normalizeEpisodeTitle(episode, number) {
         return episode.title || episode.name || Lampa.Lang.translate('torrent_serial_episode') + ' ' + number;
       }
+      function isCustomNavigationItem(item) {
+        if (['uakino', 'uaflix', 'bambooua', 'eneyida', 'uaserials'].indexOf(sourceKey) === -1) return false;
+        var title = String(item && (item.title || item.name) || '').replace(/\s+/g, ' ').trim();
+        var ref = item && item.ref;
+        var url = String(ref && (ref.url || ref.href) || '');
+        var path = '';
+        try { path = new URL(url).pathname.toLowerCase(); } catch (error) {}
+        if (!url || path === '/') return true;
+        if (/^(?:ене?йида\s*\.tv|ua serials|головна|меню|пошук|увійти|реєстрація|мої закладки|фільми(?:\s+\d+)?|серіали(?:\s+\d+)?|мультфільми|жанри|категорії|новинки|біографія|бойовик|комедія|драма|фантастика|фентезі|жахи|детектив|тривалери?)$/i.test(title)) return true;
+        return /^(?:\/favorites?\/?|\/categories?\/?|\/genres?\/?|\/collections?\/?|\/colections?\/?|\/for-supporters\/?|\/lastnews\/?|\/films?\/?|\/series?\/?|\/serials?\/?|\/cartoons?\/?|\/fcartoon\/?|\/tv-show\/?|\/search\/?|\/f\/)/i.test(path);
+      }
       function search(params) {
         params = params || {};
         var movie = object && object.movie || object || {};
@@ -9999,7 +10010,9 @@
             component.empty();
             return;
           }
-          var items = json.items || [];
+          var items = (json.items || []).filter(function (item) {
+            return !isCustomNavigationItem(item);
+          });
           if (!items.length) {
             component.empty();
             return;
