@@ -70,6 +70,7 @@ function isContentLink(url, title, key) {
   const path = parsed.pathname.toLowerCase();
   if (!path || path === '/' || /(?:login|register|feedback|favorites|comments|genres?|categories|collections|colections|for-supporters|lastnews|lostpassword)/i.test(path)) return false;
   if (/^\/(?:filmy|films|series|serials|anime|cartoons|fcartoon|tv-show|search)\/?$/i.test(path)) return false;
+  if (/^(?:\/f\/|\/xfsearch\/|\/index\.php\/?$)/i.test(path)) return false;
   if (/^(?:меню|пошук|увійти|реєстрація|головна|фільми|серіали|мультфільми|жанри|категорії|новинки|ua serials)$/i.test(C(title))) return false;
   return /\.html?(?:$|[?#])|\/(?:anime|serial|film|movie)[^/]*\/|\/[^/]+-[0-9]{3,}/i.test(url) || path.split('/').filter(Boolean).length >= 2;
 }
@@ -90,13 +91,16 @@ function links(html, base, key) {
 
 async function search(key, query) {
   const base = S[key][1];
-  const html = key === 'uakino'
+  const encoded = encodeURIComponent(query).replace(/%20/g, '+');
+  const html = key === 'uaserials'
+    ? await G(base + '/search/' + encodeURIComponent(query) + '/')
+    : key === 'uakino'
     ? await G(base + '/ua/', {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded', referer: base + '/' },
         body: new URLSearchParams({ do: 'search', subaction: 'search', story: query })
       })
-    : await G(base + '/index.php?do=search&subaction=search&search_start=0&story=' + encodeURIComponent(query));
+    : await G(base + '/index.php?do=search&subaction=search&search_start=0&story=' + encoded);
   return links(html, base, key);
 }
 

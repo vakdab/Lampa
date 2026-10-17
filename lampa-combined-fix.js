@@ -10562,10 +10562,10 @@
         return base + encodeURIComponent(url);
       }
       function shouldUseStreamProxy(url) {
-        // uaflix віддає стріми плеєра zetvideo — вони працюють напряму, обгортка не потрібна
-        if (sourceKey === 'uaflix' && isZetvideoUrl(url)) return false;
-        if (!isInnerPlayer()) return false;
-        return isAshdiUrl(url) || isZetvideoUrl(url) || isSniplyoUrl(url) || isCreavioUrl(url);
+        // Bandera returns real HLS/MP4 resources. The proxy rewrites nested
+        // playlists and breaks native iOS decoding, so keep these streams
+        // direct. Native media loading does not need browser CORS access.
+        return false;
       }
       function isAshdiUrl(url) {
         return /(^|\/\/)([^\/]*\.)?ashdi\.vip(\/|$)/i.test(url || '');
