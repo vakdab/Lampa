@@ -10650,7 +10650,8 @@
     };
   }
   var config = {
-    api_base: 'https://lampa-uk-proxy.animegran8.workers.dev',
+    api_base: 'https://bbe.lme.isroot.in/api/v2',
+    uk_api_base: 'https://lampa-uk-proxy.animegran8.workers.dev',
     storage_prefixes: {
       cw_autoinstall_done: 'bandera_online_cw_autoinstall_done',
       last_balanser: 'bandera_online_last_balanser',
@@ -10668,6 +10669,15 @@
       key: "apiBase",
       value: function apiBase() {
         return config.api_base;
+      }
+    }, {
+      key: "sourceBase",
+      value: function sourceBase(sourceKey) {
+        var custom = ['uakino', 'uaflix', 'bambooua', 'eneyida', 'uaserials'];
+        var keys = Array.isArray(sourceKey) ? sourceKey : String(sourceKey || '').split(',');
+        return keys.some(function (key) {
+          return custom.indexOf(key) >= 0;
+        }) ? config.uk_api_base : config.api_base;
       }
     }, {
       key: "getAuth",
@@ -10703,12 +10713,30 @@
     }, {
       key: "getSources",
       value: function getSources(success, fail) {
-        this.getJson(this.apiBase() + '/sources', success, fail);
+        var _this = this;
+        this.getJson(this.apiBase() + '/sources', function (primary) {
+          _this.getJson(config.uk_api_base + '/sources', function (extra) {
+            var merged = [];
+            var seen = {};
+            [primary, extra].forEach(function (payload) {
+              (payload && Array.isArray(payload.sources) ? payload.sources : []).forEach(function (source) {
+                var key = source && (source.key || source.name);
+                if (!key || seen[key]) return;
+                seen[key] = true;
+                merged.push(source);
+              });
+            });
+            success({
+              ok: true,
+              sources: merged
+            });
+          }, fail);
+        }, fail);
       }
     }, {
       key: "search",
       value: function search(params, sources, success, fail) {
-        var url = this.apiBase() + '/search';
+        var url = this.sourceBase(sources) + '/search';
         var sourceKey = Array.isArray(sources) ? sources.join(',') : sources;
         url = this.addParam(url, 'sources', sourceKey);
         url = this.addParam(url, 'source', sourceKey);
@@ -10720,7 +10748,7 @@
     }, {
       key: "getContent",
       value: function getContent(sourceKey, ref, success, fail) {
-        var url = this.apiBase() + '/content';
+        var url = this.sourceBase(sourceKey) + '/content';
         var data = {
           source: sourceKey,
           ref: this.extendRefWithAuth(sourceKey, ref),
@@ -10731,7 +10759,7 @@
     }, {
       key: "getStream",
       value: function getStream(sourceKey, ref, success, fail) {
-        var url = this.apiBase() + '/stream';
+        var url = this.sourceBase(sourceKey) + '/stream';
         var data = {
           source: sourceKey,
           ref: this.extendRefWithAuth(sourceKey, ref)
