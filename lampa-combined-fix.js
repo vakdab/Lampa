@@ -9986,8 +9986,9 @@
         var path = '';
         try { path = new URL(url).pathname.toLowerCase(); } catch (error) {}
         if (!url || path === '/') return true;
-        if (/^(?:ене?йида\s*\.tv|ua serials|головна|меню|пошук|увійти|реєстрація|мої закладки|фільми(?:\s+\d+)?|серіали(?:\s+\d+)?|мультфільми|жанри|категорії|новинки|біографія|бойовик|комедія|драма|фантастика|фентезі|жахи|детектив|тривалери?)$/i.test(title)) return true;
-        return /^(?:\/favorites?\/?|\/categories?\/?|\/genres?\/?|\/collections?\/?|\/colections?\/?|\/for-supporters\/?|\/lastnews\/?|\/films?\/?|\/series?\/?|\/serials?\/?|\/cartoons?\/?|\/fcartoon\/?|\/tv-show\/?|\/search\/?|\/f\/)/i.test(path);
+        if (/^(?:ене?йида\s*\.tv|ua serials|головна|меню|пошук|увійти|реєстрація|мої закладки|мої списки|зворотн(?:ій|ий)\s+зв['’]?язок|правовласникам|забули пароль\??|фільми(?:\s+\d+)?|серіали(?:\s+\d+)?|мультфільми|жанри|категорії|новинки|біографія|бойовик|комедія|драма|фантастика|фентезі|жахи|детектив|трилер|тривалери?)$/i.test(title)) return true;
+        if (/^(?:\/favorites?\/?|\/mylists?\/?|\/categories?\/?|\/genres?\/?|\/collections?\/?|\/colections?\/?|\/for-supporters\/?|\/lastnews\/?|\/films?\/?|\/series?\/?|\/serials?\/?|\/cartoons?\/?|\/fcartoon\/?|\/tv-show\/?|\/search\/?|\/f\/|\/abuse\.html?\/?)/i.test(path)) return true;
+        return /\/index\.php$/i.test(path) && /(?:^|&|\?)(?:do|action)=(?:feedback|register|lostpassword|lastcomments|mobile)/i.test(url);
       }
       function search(params) {
         params = params || {};
