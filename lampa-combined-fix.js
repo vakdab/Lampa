@@ -10517,8 +10517,16 @@
           qualitys: qualitys
         };
       }
+      function isPlayableStreamUrl(url) {
+        var text = String(url || '').trim();
+        if (!text) return false;
+        // iframe/embed URLs are HTML documents, not video resources. Passing
+        // them to the native player causes "Error decoding video".
+        return !/(?:\/embed(?:\/|$)|\/iframe(?:\/|$)|\/player(?:\/|$)|[?&](?:embed|iframe|player)=|\.html?(?:[?#]|$))/i.test(text);
+      }
       function normalizeStreamUrl(url) {
         if (!url) return url;
+        if (!isPlayableStreamUrl(url)) return '';
         if (shouldUseSirkoProxy()) return wrapSirkoProxy(url);
         if (!shouldUseStreamProxy(url)) return url;
         return wrapStreamProxy(url);
