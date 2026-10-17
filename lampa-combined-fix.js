@@ -2930,7 +2930,8 @@
 
     function syncPerfMode() {
       if (!document.body) return;
-      var level = isTvDevice() ? 'high' : resolvePerfLevel();
+      // TV browsers have limited CPU/GPU; prefer predictable rendering.
+      var level = isTvDevice() ? 'ultra' : resolvePerfLevel();
       document.body.setAttribute(PERF_ATTR, level);
       if (level === 'ultra') document.body.classList.remove(GLARE_CLASS);
     }
@@ -8564,7 +8565,10 @@
       if (!data) return;
 
       var perfLevel = resolvePerfLevel();
-      var isUltra = perfLevel === 'ultra';
+      var isTv = isTvDevice();
+      var isUltra = isTv || perfLevel === 'ultra';
+      var cardPosterQuality = isTv ? 'w342' : getPosterQuality();
+      var cardBackdropQuality = isTv ? 'w300' : getBackdropQuality();
       var cardImageMode = getCardImageMode();
 
       var imgEl = cardEl.querySelector('.card__img');
@@ -8572,6 +8576,19 @@
 
       function setImgUrl(url) {
         if (!imgEl) return;
+        if (isTv) {
+          if (imgEl.tagName === 'IMG') {
+            imgEl.loading = 'lazy';
+            imgEl.decoding = 'async';
+            imgEl.setAttribute('fetchpriority', 'low');
+            imgEl.src = url;
+          } else {
+            imgEl.style.backgroundImage = 'url(' + url + ')';
+          }
+          imgEl.style.objectFit = 'cover';
+          imgEl.style.objectPosition = 'center';
+          return;
+        }
         if (imgEl.tagName === 'IMG') {
           imgLoad(url, function (src) {
             imgEl.onload = function () { if (src !== url) URL.revokeObjectURL(src); };
@@ -8602,23 +8619,23 @@
         }
         if (useHorizontal) {
           if (data.backdrop_path) {
-            setImgUrl(Lampa.TMDB.image('t/p/' + getBackdropQuality() + data.backdrop_path));
+            setImgUrl(Lampa.TMDB.image('t/p/' + cardBackdropQuality + data.backdrop_path));
           }
         } else {
           var bTmdbType = data.name ? 'tv' : 'movie';
           if (data.poster_path) {
-            setImgUrl(Lampa.TMDB.image('t/p/' + getPosterQuality() + data.poster_path));
+            setImgUrl(Lampa.TMDB.image('t/p/' + cardPosterQuality + data.poster_path));
           }
-          if (data.id) {
+          if (data.id && !isTv) {
             fetchCleanPoster(data.id, bTmdbType, function (cleanPath) {
               if (cleanPath) {
-                setImgUrl(Lampa.TMDB.image('t/p/' + getPosterQuality() + cleanPath));
+                setImgUrl(Lampa.TMDB.image('t/p/' + cardPosterQuality + cleanPath));
               } else if (data.backdrop_path) {
-                setImgUrl(Lampa.TMDB.image('t/p/' + getBackdropQuality() + data.backdrop_path));
+                setImgUrl(Lampa.TMDB.image('t/p/' + cardBackdropQuality + data.backdrop_path));
               }
             });
           } else if (data.backdrop_path) {
-            setImgUrl(Lampa.TMDB.image('t/p/' + getBackdropQuality() + data.backdrop_path));
+            setImgUrl(Lampa.TMDB.image('t/p/' + cardBackdropQuality + data.backdrop_path));
           }
         }
       }
@@ -8677,15 +8694,15 @@
         }
 
         if (useHorizontal && data.id && !isUltra) {
-          if (data.poster_path) setImgUrl(Lampa.TMDB.image('t/p/' + getPosterQuality() + data.poster_path));
+          if (data.poster_path) setImgUrl(Lampa.TMDB.image('t/p/' + cardPosterQuality + data.poster_path));
           fetchTitledBackdrop(data.id, pTmdbType, function (titledPath) {
             if (titledPath) {
-              setImgUrl(Lampa.TMDB.image('t/p/' + getBackdropQuality() + titledPath));
+              setImgUrl(Lampa.TMDB.image('t/p/' + cardBackdropQuality + titledPath));
             }
             buildPosterOverlay();
           });
         } else {
-          if (data.poster_path) setImgUrl(Lampa.TMDB.image('t/p/' + getPosterQuality() + data.poster_path));
+          if (data.poster_path) setImgUrl(Lampa.TMDB.image('t/p/' + cardPosterQuality + data.poster_path));
           buildPosterOverlay();
         }
         return;
