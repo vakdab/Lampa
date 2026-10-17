@@ -5417,6 +5417,7 @@
 
     function isTvDevice() {
       try {
+        if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
         var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
         return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua) ||
           !!(window.matchMedia && window.matchMedia('(display-mode: tv)').matches);
@@ -5425,7 +5426,12 @@
 
     function syncTvClass() {
       if (!document.body) return;
-      document.body.classList.toggle(TV_CLASS, isTvDevice());
+      var tv = isTvDevice();
+      document.body.classList.toggle(TV_CLASS, tv);
+      // Applecation owns the TV details template. Keeping our global body
+      // class here would also activate the mobile source-picker skin.
+      if (tv) document.body.classList.remove(BODY_CLASS);
+      else document.body.classList.add(BODY_CLASS);
     }
 
     // On mobile Lampa only renders rows visible in the initial viewport (~4).
@@ -9113,6 +9119,14 @@
     var MORE_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
     var PLAY_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 8.5 16 12l-6 3.5z" fill="currentColor" stroke="none"/></svg>';
 
+    function isTvScreen() {
+        try {
+            if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
+            var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
+            return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
+        } catch (e) { return false; }
+    }
+
     function css() {
         return [
             B + '.full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center;margin-top:-17em!important;padding-top:1em!important}',
@@ -9362,6 +9376,13 @@
     }
 
     function start() {
+        // Applecation is the TV details interface. Do not overwrite its
+        // template, button row or source picker with the mobile Prisma skin.
+        if (isTvScreen()) {
+            var oldStyle = document.getElementById(STYLE_ID);
+            if (oldStyle) oldStyle.remove();
+            return;
+        }
         install();
         scan();
         try {
@@ -9378,8 +9399,9 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
     else start();
     if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) {
-        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') { install(); scan(); } });
+        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready' && !isTvScreen()) { install(); scan(); } });
         Lampa.Listener.follow('full', function (e) {
+            if (isTvScreen()) return;
             window.__lampaFullEvent = e;
             schedule();
             setTimeout(function () { scan(); }, 350);
