@@ -144,14 +144,28 @@ addEventListener('fetch', event => event.respondWith((async () => {
   if (url.pathname === '/search') {
     const requested = (url.searchParams.get('source') || url.searchParams.get('sources') || '').split(',');
     const keys = requested.filter(key => S[key]);
-    const query = url.searchParams.get('title') || url.searchParams.get('query') || '';
+    const queries = [
+      url.searchParams.get('title'),
+      url.searchParams.get('original_title'),
+      url.searchParams.get('original_name'),
+      url.searchParams.get('name'),
+      url.searchParams.get('query')
+    ].map(value => String(value || '').trim()).filter((value, index, list) => value && list.indexOf(value) === index);
     const items = [];
-    for (const key of keys) try { items.push(...await search(key, query)); } catch (_) {}
+    for (const key of keys) {
+      for (const query of queries) {
+        try { items.push(...await search(key, query)); } catch (_) {}
+      }
+    }
+    const unique = items.filter((item, index, list) => {
+      const ref = item && item.ref && (item.ref.url || item.ref.href || item.ref.id);
+      return ref && list.findIndex(other => other && other.ref && (other.ref.url || other.ref.href || other.ref.id) === ref) === index;
+    });
     if (!keys.length) {
       const response = await fetch(B + url.pathname + url.search, { headers: request.headers });
       return new Response(response.body, { status: response.status, headers: { ...H, 'content-type': response.headers.get('content-type') || H['content-type'] } });
     }
-    return J({ ok: true, items });
+    return J({ ok: true, items: unique });
   }
   if ((url.pathname === '/content' || url.pathname === '/stream') && request.method === 'POST') {
     const body = await request.json();
