@@ -7116,6 +7116,24 @@
       return qs('.menu .menu__item.selector[data-action="' + action + '"]');
     }
 
+    function replaceMenuActivity(params) {
+      if (!window.Lampa || !Lampa.Activity) return false;
+      try {
+        // From a full movie page the catalog must replace that page, not be
+        // stacked behind it. This is especially important on TV where the
+        // back stack otherwise restores the previously opened title.
+        if (typeof Lampa.Activity.replace === 'function') {
+          Lampa.Activity.replace(params);
+          return true;
+        }
+        if (typeof Lampa.Activity.push === 'function') {
+          Lampa.Activity.push(params);
+          return true;
+        }
+      } catch (e) { }
+      return false;
+    }
+
     function triggerMenuAction(action) {
       action = normalizeTopnavAction(action);
       try {
@@ -7131,7 +7149,7 @@
         if (!Storage || !Lang || !Lampa.Activity) return false;
 
         if (action === 'movie' || action === 'tv' || action === 'anime') {
-          Lampa.Activity.push({
+          replaceMenuActivity({
             url: action,
             title: (action === 'movie' ? Lang.translate('menu_movies') : action === 'anime' ? Lang.translate('menu_anime') : Lang.translate('menu_tv')) + ' - ' + Storage.field('source').toUpperCase(),
             component: 'category',
@@ -7142,7 +7160,7 @@
         }
 
         if (action === 'cartoon') {
-          Lampa.Activity.push({
+          replaceMenuActivity({
             url: 'movie',
             title: Lang.translate('menu_multmovie') + ' - ' + Storage.field('source').toUpperCase(),
             component: 'category',
@@ -7153,7 +7171,7 @@
         }
 
         if (action === 'main') {
-          Lampa.Activity.push({
+          replaceMenuActivity({
             url: '',
             title: Lang.translate('title_main') + ' - ' + Storage.field('source').toUpperCase(),
             component: 'main',
