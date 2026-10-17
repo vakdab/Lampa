@@ -7118,9 +7118,10 @@
       action = normalizeTopnavAction(action);
       try {
         if (!window.Lampa) return false;
-        // The native cartoon item can inherit the current card context on TV
-        // and open a random title. Route it directly to the cartoon category.
-        var nativeMenuItem = action === 'cartoon' ? null : getMenuItem(action);
+        // Native hidden menu items can inherit the currently focused card on
+        // TV and open its Play screen. Route all primary sections directly.
+        var directRoute = action === 'main' || action === 'movie' || action === 'tv' || action === 'anime' || action === 'cartoon';
+        var nativeMenuItem = directRoute ? null : getMenuItem(action);
         if (nativeMenuItem && triggerSelectorEnter(nativeMenuItem)) return true;
 
         var Storage = Lampa.Storage;
