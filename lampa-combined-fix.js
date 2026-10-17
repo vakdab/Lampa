@@ -6976,7 +6976,7 @@
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.focus::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.hover::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card__view::before, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card__view::after, body.' + BODY_CLASS + '.' + TV_CLASS + ' .full-start-new__poster::after { display:none !important; content:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .torrent-item.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .torrent-serial.selector.focus { outline:2px solid rgba(255,255,255,.95) !important; outline-offset:2px !important; border-color:rgba(255,255,255,.95) !important; box-shadow:0 0 0 2px rgba(255,255,255,.95) !important; }',
         // TV source picker: wide, centered and readable from a distance.
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content.layer--height { top:10vh !important; right:12vw !important; bottom:10vh !important; left:12vw !important; width:auto !important; min-width:0 !important; max-width:none !important; padding:1.7em 2em !important; border-radius:1.2em !important; background:rgba(18,20,25,.97) !important; box-shadow:0 18px 50px rgba(0,0,0,.55) !important; animation:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content.layer--height { top:8vh !important; right:8vw !important; bottom:8vh !important; left:8vw !important; width:auto !important; min-width:0 !important; max-width:none !important; transform:none !important; padding:1.7em 2em !important; border-radius:1.2em !important; background:rgba(18,20,25,.97) !important; box-shadow:0 18px 50px rgba(0,0,0,.55) !important; animation:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__title { font-size:1.45em !important; padding:.15em 0 .55em !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__body { padding:.5em .25em !important; mask-image:none !important; -webkit-mask-image:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.selector { min-height:3.3em !important; margin-bottom:.55em !important; padding:1em 1.25em !important; border-radius:.75em !important; font-size:1.25em !important; transition:background-color .12s linear, outline-color .12s linear !important; }',
@@ -6988,7 +6988,7 @@
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item--icon.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile.selector { width:2.65em !important; min-width:2.65em !important; height:2.65em !important; padding:0 !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock { right:1.5em !important; top:1em !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .head__menu-icon { left:1.5em !important; top:1em !important; width:3.25em !important; height:3.25em !important; font-size:1.15em !important; background:rgba(18,20,25,.9) !important; border-radius:1em !important; }',
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock { left:1.5em !important; max-width:24em !important; max-height:82vh !important; padding:.55em !important; border-radius:1em !important; background:rgba(18,20,25,.97) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; font-size:clamp(1.1rem,1.35vw,1.9rem) !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock { left:1.5em !important; max-width:18em !important; max-height:82vh !important; padding:.5em !important; border-radius:1em !important; background:rgba(18,20,25,.97) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; font-size:clamp(1rem,1.15vw,1.55rem) !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.selector { min-height:2.9em !important; padding:.55em 1em !important; border-radius:.7em !important; font-size:1em !important; transition:background-color .12s linear, outline-color .12s linear !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.hover { background:rgba(255,255,255,.2) !important; outline:3px solid #fff !important; outline-offset:-3px !important; border-color:#fff !important; box-shadow:none !important; transform:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selector.hover { outline-color:#fff !important; }'
@@ -7097,6 +7097,7 @@
       if (value === 'bookmarks') return 'favorite';
       if (value === 'schedule') return 'timetable';
       if (value === 'collection' || value === 'collections') return 'catalog';
+      if (value === 'multmovie' || value === 'multfilm' || value === 'cartoons') return 'cartoon';
       return value;
     }
 
@@ -7117,7 +7118,9 @@
       action = normalizeTopnavAction(action);
       try {
         if (!window.Lampa) return false;
-        var nativeMenuItem = getMenuItem(action);
+        // The native cartoon item can inherit the current card context on TV
+        // and open a random title. Route it directly to the cartoon category.
+        var nativeMenuItem = action === 'cartoon' ? null : getMenuItem(action);
         if (nativeMenuItem && triggerSelectorEnter(nativeMenuItem)) return true;
 
         var Storage = Lampa.Storage;
