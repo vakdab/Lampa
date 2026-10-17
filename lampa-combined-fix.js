@@ -7891,7 +7891,18 @@
               icoEl.innerHTML = pickLeftdockIcon(action, label || action);
             }
             (function (sourceItem) {
-              bindAction(btn, function () { triggerSelectorEnter(sourceItem); });
+              bindAction(btn, function () {
+                var route = normalizeTopnavAction(action);
+                // Category/home routes must not be sent through the hidden
+                // menu controller: on TV it can reuse the focused card and
+                // open its Play screen instead of the requested section.
+                if (route === 'main' || route === 'movie' || route === 'tv' || route === 'anime' || route === 'cartoon') {
+                  if (triggerMenuAction(route)) return;
+                }
+                // Use the real menu item's click, not hover:enter. The latter
+                // is also used by cards and may open the currently focused film.
+                if (sourceItem) clickNode(sourceItem);
+              });
             })(item);
             caseEl.appendChild(btn);
           });
