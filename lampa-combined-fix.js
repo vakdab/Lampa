@@ -11673,18 +11673,21 @@
         ru: 'Смотреть онлайн',
         en: 'Watch online',
         ua: 'Дивитися онлайн',
+        uk: 'Дивитися онлайн',
         zh: '在线观看'
       },
       online_no_watch_history: {
         ru: 'Нет истории просмотра',
         en: 'No browsing history',
         ua: 'Немає історії перегляду',
+        uk: 'Немає історії перегляду',
         zh: '没有浏览历史'
       },
       online_video: {
         ru: 'Видео',
         en: 'Video',
         ua: 'Відео',
+        uk: 'Відео',
         zh: '视频'
       },
       online_nolink: {
