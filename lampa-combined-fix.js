@@ -10428,6 +10428,8 @@
       }
     }]);
   }();
+  // Sources that are NOT taken from Bandera Online (needs its own account/token)
+  var EXCLUDED_SOURCES = ['filmix'];
   var SourcesStore = /*#__PURE__*/function () {
     function SourcesStore() {
       _classCallCheck(this, SourcesStore);
@@ -10485,11 +10487,16 @@
         Lampa.Storage.set(this.sources_hide_key, list);
       }
     }, {
+      key: "isExcluded",
+      value: function isExcluded(name) {
+        return EXCLUDED_SOURCES.indexOf(this.normalizeName(name)) !== -1;
+      }
+    }, {
       key: "getEnabledKeys",
       value: function getEnabledKeys() {
         var _this2 = this;
         return this.available_sources.filter(function (item) {
-          return item && item.enabled !== false;
+          return item && item.enabled !== false && !_this2.isExcluded(item.key || item.name);
         }).map(function (item) {
           return _this2.normalizeName(item.key || item.name);
         }).filter(Boolean);
@@ -10497,9 +10504,12 @@
     }, {
       key: "applyUserFilters",
       value: function applyUserFilters(list) {
+        var _this3 = this;
         var hidden = this.getHidden();
         var sorted = this.getSorted();
-        var result = list.slice(0);
+        var result = list.slice(0).filter(function (name) {
+          return !_this3.isExcluded(name);
+        });
         if (sorted.length) {
           var ordered = [];
           sorted.forEach(function (key) {
@@ -10572,8 +10582,16 @@
 
     // TMDB Season Cache
     var tmdb_season_cache = {};
+    function decodeEntities(text) {
+      return String(text).replace(/&#(\d+);/g, function (m, n) {
+        return String.fromCharCode(parseInt(n, 10));
+      }).replace(/&#x([0-9a-f]+);/gi, function (m, n) {
+        return String.fromCharCode(parseInt(n, 16));
+      }).replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    }
     function escapeHtml(text) {
       if (!text) return '';
+      text = decodeEntities(text);
       return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
     var filter_translate = {
@@ -10662,7 +10680,7 @@
     function getEnabledSources() {
       if (!available_sources || !available_sources.length) return null;
       var enabled = available_sources.filter(function (item) {
-        return item && item.enabled !== false;
+        return item && item.enabled !== false && !sourcesStore.isExcluded(item.key || item.name);
       }).map(function (item) {
         return sourcesStore.normalizeName(item.key || item.name);
       }).filter(Boolean);
