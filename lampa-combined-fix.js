@@ -9258,9 +9258,9 @@
             B + ' .lampa-prisma-detail-logo img{display:block;width:auto;max-width:100%;max-height:8.4em;object-fit:contain;filter:drop-shadow(0 3px 9px rgba(0,0,0,.78))}',
             B + '.lampa-prisma-detail-logo.is-empty{display:none!important}',
             /* buttons row */
-            B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.2em 0 0!important;flex-wrap:nowrap}',
-            B + '.full-start-new__buttons .full-start__button{border:0!important;border-radius:999px!important;background:#1d1d1f!important;height:3.6em;min-height:3.6em;box-shadow:none!important;transition:transform .2s ease,background .2s ease}',
-            B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:#333336!important;transform:scale(1.04)}',
+            B + '.full-start-new__buttons{display:flex!important;justify-content:center;align-items:center;gap:.6em;width:100%;margin:.55em 0 0!important;flex-wrap:nowrap}',
+            B + '.full-start-new__buttons .full-start__button{border:1px solid rgba(255,255,255,.10)!important;border-radius:999px!important;background:rgba(22,24,30,.26)!important;height:3.6em;min-height:3.6em;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 8px 18px rgba(0,0,0,.12)!important;backdrop-filter:blur(18px) saturate(140%)!important;-webkit-backdrop-filter:blur(18px) saturate(140%)!important;transition:transform .2s ease,background .2s ease,border-color .2s ease}',
+            B + '.full-start-new__buttons .full-start__button.focus,' + B + '.full-start-new__buttons .full-start__button:hover{background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.20)!important;transform:scale(1.04)}',
             '.full-start-new__buttons .button--play,.full-start-new__buttons .button--play.hide,.full-start-new__buttons .button--play[hidden]{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}',
             B + '.full-start-new__buttons .button--play,' + B + '.full-start-new__buttons .button--play.hide,' + B + '.full-start-new__buttons .button--play[hidden]{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}',
             B + '.full-start-new__buttons .button--play{flex:1 1 auto;max-width:15em;padding:0 2em!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.6em}',
