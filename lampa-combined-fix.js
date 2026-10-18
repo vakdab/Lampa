@@ -9240,6 +9240,7 @@
     function css() {
         return [
             B + '.full-start-new__right{text-align:center;display:flex;flex-direction:column;align-items:center;margin-top:-17em!important;padding-top:1em!important}',
+            B + '.full-start-new__right,' + B + '.full-start-new__right::before,' + B + '.full-start-new__right::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
             B + '.full-start-new__head{color:rgba(255,255,255,.72)!important;margin-bottom:.35em!important}',
             B + '.full-start-new__title{font-size:clamp(1.9em,4vw,3.4em)!important;line-height:1.15!important;color:#fff!important;margin:0 auto .1em!important;max-width:100%;-webkit-line-clamp:3!important}',
             B + '.full-start-new__tagline{color:rgba(255,255,255,.62)!important;margin:.1em auto .6em!important;font-size:1.3em!important;line-height:1.25!important;max-width:100%}',
