@@ -8938,6 +8938,8 @@
     }
 
     function labelOf(el) {
+        if (el.classList.contains('lampac--button')) return 'L-vid';
+        if (el.classList.contains('view--bandera-online')) return 'Bandera Online';
         var span = el.querySelector('span');
         var text = (span ? span.textContent : el.textContent) || '';
         text = text.replace(/\s+/g, ' ').trim();
@@ -9035,14 +9037,39 @@
         try { el.click(); } catch (e3) {}
     }
 
-    function openLvid(root, attempt) {
-        var source = root.querySelector('.lampac--button');
-        if (source) { trigger(source); return; }
-        if (attempt < 6) {
-            setTimeout(function () { openLvid(root, attempt + 1); }, 250);
+    function chooseSource(root, attempt) {
+        var sources = collect(root);
+        if (!sources.length) {
+            if (attempt === 0) try { Lampa.Noty.show('Шукаю плагіни джерел...'); } catch (e) {}
+            if (attempt < 6) {
+                setTimeout(function () { chooseSource(root, attempt + 1); }, 250);
+                return;
+            }
+            try { Lampa.Noty.show('Плагіни джерел не знайдено'); } catch (e) {}
             return;
         }
-        try { Lampa.Noty.show('Плагін джерел l-vid не знайдено'); } catch (e) {}
+        var items = sources.map(function (el) {
+            var svg = el.querySelector('svg');
+            return {
+                title: labelOf(el),
+                template: svg ? 'selectbox_icon' : 'selectbox_item',
+                icon: svg ? svg.outerHTML : '',
+                node: el
+            };
+        });
+        var controller = '';
+        try { controller = Lampa.Controller.enabled().name; } catch (e) {}
+        Lampa.Select.show({
+            title: 'Виберіть плагін',
+            items: items,
+            onSelect: function (item) {
+                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
+                trigger(item.node);
+            },
+            onBack: function () {
+                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
+            }
+        });
     }
 
     function bind(root) {
@@ -9086,7 +9113,7 @@
             var handler = function (e) {
                 if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
                 if (e && e.preventDefault) e.preventDefault();
-                openLvid(root, 0);
+                chooseSource(root, 0);
             };
             if (window.$ && window.jQuery) {
                 window.$(play).unbind('hover:enter').on('hover:enter', handler);
