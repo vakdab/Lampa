@@ -9386,38 +9386,14 @@
         try { el.click(); } catch (e3) {}
     }
 
-    function showMenu(root) {
-        var sources = collect(root);
-        if (!sources.length) {
-            try { Lampa.Noty.show('Шукаю джерела...'); } catch (e) {}
-            setTimeout(function () {
-                if (collect(root).length) showMenu(root);
-                else { try { Lampa.Noty.show('Джерел не знайдено'); } catch (e) {} }
-            }, 1200);
+    function openLvid(root, attempt) {
+        var source = root.querySelector('.lampac--button');
+        if (source) { trigger(source); return; }
+        if (attempt < 6) {
+            setTimeout(function () { openLvid(root, attempt + 1); }, 250);
             return;
         }
-        var items = sources.map(function (el) {
-            var svg = el.querySelector('svg');
-            return {
-                title: labelOf(el),
-                template: svg ? 'selectbox_icon' : 'selectbox_item',
-                icon: svg ? svg.outerHTML : '',
-                node: el
-            };
-        });
-        var controller = '';
-        try { controller = Lampa.Controller.enabled().name; } catch (e) {}
-        Lampa.Select.show({
-            title: 'Дивитися',
-            items: items,
-            onSelect: function (item) {
-                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
-                trigger(item.node);
-            },
-            onBack: function () {
-                try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
-            }
-        });
+        try { Lampa.Noty.show('Плагін джерел l-vid не знайдено'); } catch (e) {}
     }
 
     function bind(root) {
@@ -9461,7 +9437,7 @@
             var handler = function (e) {
                 if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
                 if (e && e.preventDefault) e.preventDefault();
-                showMenu(root);
+                openLvid(root, 0);
             };
             if (window.$ && window.jQuery) {
                 window.$(play).unbind('hover:enter').on('hover:enter', handler);
