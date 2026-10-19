@@ -5046,6 +5046,7 @@
         Lampa.Listener.follow('activity', function (e) {
           if (!pluginEnabled()) return;
           if (e.type === 'start' || e.type === 'activity') {
+            if (document.body) document.body.classList.remove('agnative-detail-open');
             if (perfModeDirty) {
               perfModeDirty = false;
               resetCardSwitches();
@@ -5087,6 +5088,11 @@
         fullListenerBound = true;
         Lampa.Listener.follow('full', function (e) {
           if (!pluginEnabled()) return;
+          if (document.body && (e.type === 'start' || e.type === 'complite')) {
+            document.body.classList.add('agnative-detail-open');
+          } else if (document.body && (e.type === 'destroy' || e.type === 'end')) {
+            document.body.classList.remove('agnative-detail-open');
+          }
           if (e.type === 'complite') {
             try {
               var render = e.object.activity.render();
@@ -6799,7 +6805,12 @@
         '@media (max-aspect-ratio: 4/3) { body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { width:min(70vw,38em) !important; } }',
         // Final override for Lampa's native exit/choice window (selectbox).
         // This intentionally does not depend on BODY_CLASS/TV_CLASS.
-        '.selectbox__content { position:fixed !important; top:0 !important; right:0 !important; bottom:0 !important; left:0 !important; inset:0 !important; margin:auto !important; width:min(28em,90vw) !important; height:fit-content !important; max-height:90vh !important; transform:none !important; }'
+        '.selectbox__content { position:fixed !important; top:0 !important; right:0 !important; bottom:0 !important; left:0 !important; inset:0 !important; margin:auto !important; width:min(28em,90vw) !important; height:fit-content !important; max-height:90vh !important; transform:none !important; }',
+        // Detail-page performance mode: preserve all content and controls, but avoid
+        // expensive compositor work while the poster/details screen is loading.
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .info-start { contain:layout paint !important; animation:none !important; transition:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start *, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new *, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .info-start * { animation-duration:0s !important; animation-delay:0s !important; transition-duration:0s !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start__background, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new__background, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start__poster, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new__poster { filter:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; will-change:auto !important; }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
