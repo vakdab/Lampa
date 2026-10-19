@@ -2830,6 +2830,7 @@
       try {
         if (!window.Lampa || !Lampa.Storage) return 'w1280';
         var v = Lampa.Storage.get(HERO_QUALITY_KEY, 'w1280') || 'w1280';
+        if (document.body && document.body.classList.contains(TV_CLASS) && v === 'w1280') return 'w780';
         if (v === 'w780' || v === 'w1280' || v === 'original') return v;
         return 'w1280';
       } catch (e) { return 'w1280'; }
@@ -3708,17 +3709,41 @@
         if (document.querySelector('.full-start, .info-start, .player__maket')) return;
 
         var cards = scrollContent.querySelectorAll('.items-line .card');
-        heroItems = [];
-        for (var i = 0; i < cards.length && heroItems.length < 5; i++) {
+        var heroBuckets = { anime: [], animation: [], series: [], movie: [], other: [] };
+        var seenHeroIds = {};
+        for (var i = 0; i < cards.length; i++) {
           var data = extractCardData(cards[i]);
           if (!data || !data.id) continue;
+          var heroId = String(data.id);
+          if (seenHeroIds[heroId]) continue;
+          seenHeroIds[heroId] = true;
           if (data.backdrop_path) {
-            heroItems.push(data);
+            // Keep every homepage row intact; only curate the rotating hero slides.
           } else {
             var imgEl = cards[i].querySelector('.card__img');
             var src = imgEl && (imgEl.tagName === 'IMG' ? imgEl.src : '') || imgEl && imgEl.getAttribute('data-nfx-original-src') || '';
-            if (src && src.indexOf('tmdb') !== -1) { data._heroFallbackImg = src; heroItems.push(data); }
+            if (src && src.indexOf('tmdb') !== -1) data._heroFallbackImg = src;
+            else continue;
           }
+          var mediaType = detectHeroItemType(data);
+          var genres = data.genre_ids || [];
+          var isAnimation = genres.indexOf(16) !== -1 || (data.genres || []).some(function (g) { return g && (g.id === 16 || /animation|анимац|мульт/i.test(g.name || '')); });
+          var isAnime = data.original_language === 'ja' || (data.origin_country || []).indexOf('JP') !== -1 || (data.production_countries || []).some(function (c) { return c && c.iso_3166_1 === 'JP'; });
+          if (isAnime) heroBuckets.anime.push(data);
+          else if (isAnimation) heroBuckets.animation.push(data);
+          else if (mediaType === 'tv') heroBuckets.series.push(data);
+          else if (mediaType === 'movie') heroBuckets.movie.push(data);
+          else heroBuckets.other.push(data);
+        }
+        heroItems = [];
+        var heroOrder = ['anime', 'animation', 'series', 'movie', 'other'];
+        for (var round = 0; heroItems.length < 8; round++) {
+          var addedInRound = false;
+          for (var bucketIndex = 0; bucketIndex < heroOrder.length && heroItems.length < 8; bucketIndex++) {
+            var bucket = heroBuckets[heroOrder[bucketIndex]];
+            if (bucket[round]) { heroItems.push(bucket[round]); addedInRound = true; }
+          }
+          if (!addedInRound) break;
         }
         if (!heroItems.length) return;
 
@@ -3827,7 +3852,7 @@
         ensureHeroController();
         if (!isUiLayerOpen()) setTimeout(focusHeroPlayButton, 100);
         if (heroTrailerEnabled() && !heroVideoCooldown) {
-          scheduleHeroPrefetch(heroItems.slice());
+          scheduleHeroPrefetch(heroItems.slice(0, 1));
         }
       } catch (e) { }
     }
@@ -6641,7 +6666,13 @@
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__inner, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content.layer--height, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content.layer--height, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input--free, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__body { background:#000 !important; background-image:none !important; border-color:#000 !important; box-shadow:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel__tile.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .simple-button, body.' + BODY_CLASS + '.' + TV_CLASS + ' .button.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.selector { background:#000 !important; background-image:none !important; border-color:#000 !important; box-shadow:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.focus { background:linear-gradient(180deg,rgba(65,65,70,.98) 0%,rgba(16,16,18,.99) 55%,#000 100%) !important; }',
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero { display:block !important; visibility:visible !important; opacity:1 !important; min-height:420px !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero { display:block !important; visibility:visible !important; opacity:1 !important; height:34vh !important; min-height:270px !important; max-height:390px !important; margin-top:.55em !important; margin-bottom:.8em !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero__bg { width:100% !important; height:100% !important; min-height:0 !important; object-fit:cover !important; animation:none !important; transform:none !important; will-change:auto !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero__content { top:1.25em !important; left:1.6em !important; max-width:38% !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero__title { font-size:1.75em !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero__overview { -webkit-line-clamp:2 !important; font-size:.82em !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.hover { outline:none !important; border-color:transparent !important; box-shadow:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.focus .card__view, body.' + BODY_CLASS + '.' + TV_CLASS + ' .card.hover .card__view { outline:0 !important; outline-offset:0 !important; border-color:rgba(255,255,255,.95) !important; box-shadow:0 0 0 2px rgba(255,255,255,.95), 0 8px 20px rgba(0,0,0,.28) !important; }',
         // Final TV override: solid black everywhere, including focused controls.
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock *, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__inner, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel__tile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input--free, body.' + BODY_CLASS + '.' + TV_CLASS + ' .simple-button, body.' + BODY_CLASS + '.' + TV_CLASS + ' .button.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.selector { background:#000 !important; background-image:none !important; border-color:#000 !important; box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }'
       ].join('\n');
