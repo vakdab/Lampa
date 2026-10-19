@@ -7442,7 +7442,7 @@
           update: function () { },
           left: function () {
             if (window.Navigator && Navigator.canmove && !Navigator.canmove('left')) {
-              try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
+              try { Lampa.Controller.toggle('menu'); } catch (e) { }
               return;
             }
             if (window.Navigator && Navigator.move) Navigator.move('left');
@@ -7459,7 +7459,7 @@
             try { Lampa.Controller.toggle('content'); } catch (e) { }
           },
           back: function () {
-            try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
+            try { Lampa.Controller.toggle('menu'); } catch (e) { }
           }
         });
       } catch (e) {
@@ -7753,12 +7753,7 @@
         if (e && e.stopPropagation) e.stopPropagation();
         if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
         try {
-          var enabled = (Lampa.Controller.enabled && Lampa.Controller.enabled()) || null;
-          if (enabled && enabled.name === 'agnative_leftdock') {
-            Lampa.Controller.toggle('content');
-          } else {
-            Lampa.Controller.toggle('agnative_leftdock');
-          }
+          toggleNativeLampaMenu();
         } catch (err) { }
       };
 
@@ -9025,11 +9020,11 @@
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
       patchTopnav();
-      // The custom dock owns focus and OK on every platform. On TV the old
-      // code removed it, leaving the native content card as select_active.
-      buildLeftdock();
-      syncLeftdockActive();
-      observeMenuChanges();
+      // Use Lampa's native menu. The custom left dock is intentionally disabled
+      // so the original black menu keeps ownership of focus and Enter/OK.
+      var leftdock = qs('.agnative-leftdock');
+      if (leftdock) leftdock.remove();
+      disconnectMenuObserver();
       if (!content) return;
       processCards(content);
       injectExplorerBackButton(document.body);
@@ -9067,8 +9062,6 @@
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
-      neutralizeMenuController();
-      patchActivityPushForMenu();
       patchControllerToggleForLeftdock();
       watchSettingsLifecycle();
       processCards(document.body);
