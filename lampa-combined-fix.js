@@ -6796,7 +6796,10 @@
         // Home menu: center the actual main-page menu, not the permanent left dock.
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { position:fixed !important; top:50% !important; left:50% !important; right:auto !important; bottom:auto !important; width:min(42vw,38em) !important; max-width:calc(100vw - 4em) !important; max-height:78vh !important; transform:translate(-50%,-50%) !important; margin:0 !important; z-index:9998 !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content .menu__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content .menu__list { width:100% !important; max-height:74vh !important; overflow-y:auto !important; }',
-        '@media (max-aspect-ratio: 4/3) { body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { width:min(70vw,38em) !important; } }'
+        '@media (max-aspect-ratio: 4/3) { body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { width:min(70vw,38em) !important; } }',
+        // Final override for Lampa's native exit/choice window (selectbox).
+        // This intentionally does not depend on BODY_CLASS/TV_CLASS.
+        '.selectbox__content { position:fixed !important; top:0 !important; right:0 !important; bottom:0 !important; left:0 !important; inset:0 !important; margin:auto !important; width:min(28em,90vw) !important; height:fit-content !important; max-height:90vh !important; transform:none !important; }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
