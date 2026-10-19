@@ -7519,10 +7519,10 @@
           return false;
         }
         if (key === 'Enter' || key === 'NumpadEnter' || key === 'Select' || key === ' ' ||
-            code === 13 || code === 23 || code === 32 || code === 66 || code === 96) {
+            code === 13 || code === 23 || code === 32 || code === 66 || code === 96 || code === 29443 || code === 117 || code === 65385) {
+          // Lampa activates the focused selector on keyup. Suppress keydown;
+          // the real activation happens in the keyup guard below.
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          leftdockKeyIndex = index;
-          items[index].click();
           return false;
         }
         if (key === 'Escape' || key === 'Backspace' || code === 27 || code === 8) {
@@ -7533,6 +7533,30 @@
       }, true);
     }
 
+    // Core Lampa calls Controller.enter() from keyup. Capture that event
+    // before the core handler, otherwise the focused card underneath the
+    // dock opens even though a menu item is visibly selected.
+    document.addEventListener('keyup', function (e) {
+      var dock = qs('.agnative-leftdock.is-visible');
+      if (!dock) return;
+      var code = e.keyCode || e.which || 0;
+      var key = e.key || '';
+      if (!(key === 'Enter' || key === 'NumpadEnter' || key === 'Select' || key === ' ' ||
+            code === 13 || code === 23 || code === 32 || code === 66 || code === 96 || code === 29443 || code === 117 || code === 65385)) return;
+      var items = qsa('.agnative-leftdock__item.selector', dock);
+      if (!items.length) return;
+      var index = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].classList.contains('focus') || items[i].classList.contains('hover') ||
+            items[i] === document.activeElement) { index = i; break; }
+      }
+      if (index < 0 && leftdockKeyIndex >= 0 && leftdockKeyIndex < items.length) index = leftdockKeyIndex;
+      if (index < 0) index = 0;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      leftdockKeyIndex = index;
+      items[index].click();
+      return false;
+    }, true);
     function hideLeftdock(immediate, force) {
       var dock = qs('.agnative-leftdock');
       if (!dock) return;
