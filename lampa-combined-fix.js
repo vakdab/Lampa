@@ -7439,8 +7439,7 @@
           update: function () { },
           left: function () {
             if (window.Navigator && Navigator.canmove && !Navigator.canmove('left')) {
-              if (isTvDevice()) toggleNativeLampaMenu();
-              else { try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { } }
+              try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
               return;
             }
             if (window.Navigator && Navigator.move) Navigator.move('left');
@@ -7457,8 +7456,7 @@
             try { Lampa.Controller.toggle('content'); } catch (e) { }
           },
           back: function () {
-            if (isTvDevice()) toggleNativeLampaMenu();
-            else { try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { } }
+            try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
           }
         });
       } catch (e) {
@@ -7893,6 +7891,21 @@
             focusLeftdock(d);
           },
           update: function () { },
+          enter: function () {
+            var items = qsa('.agnative-leftdock__item.selector', d);
+            if (!items.length) return;
+            var index = -1;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].classList.contains('focus') || items[i].classList.contains('hover') ||
+                  items[i] === document.activeElement) { index = i; break; }
+            }
+            if (index < 0 && leftdockKeyIndex >= 0 && leftdockKeyIndex < items.length) index = leftdockKeyIndex;
+            if (index < 0) index = 0;
+            leftdockKeyIndex = index;
+            var route = normalizeTopnavAction(items[index].getAttribute('data-action') || '');
+            if (route && isDirectMenuRoute(route)) triggerMenuAction(route);
+            else items[index].click();
+          },
           gone: function () {
             hideLeftdock(true, true);
           },
@@ -9003,13 +9016,10 @@
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
       patchTopnav();
-      if (isTvDevice()) {
-        var customLeftdock = qs('.agnative-leftdock');
-        if (customLeftdock) customLeftdock.remove();
-      } else {
-        buildLeftdock();
-        syncLeftdockActive();
-      }
+      // The custom dock owns focus and OK on every platform. On TV the old
+      // code removed it, leaving the native content card as select_active.
+      buildLeftdock();
+      syncLeftdockActive();
       observeMenuChanges();
       if (!content) return;
       processCards(content);
@@ -9048,10 +9058,8 @@
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
-      if (!isTvDevice()) {
-        neutralizeMenuController();
-        patchActivityPushForMenu();
-      }
+      neutralizeMenuController();
+      patchActivityPushForMenu();
       patchControllerToggleForLeftdock();
       watchSettingsLifecycle();
       processCards(document.body);
