@@ -6707,6 +6707,8 @@
         'body.' + BODY_CLASS + ' .explorer__left, body.' + BODY_CLASS + ' .explorer__card { display:none !important; }',
         'body.' + BODY_CLASS + ' .explorer__files { width:100% !important; max-width:78em !important; margin:0 auto !important; padding:0 1.5em !important; }',
         'body.' + BODY_CLASS + ' .explorer__files-head { padding:4.1em 0 .8em !important; }',
+        // TV: the top nav is taller (top 1em + 3.25em * 1.12 font), so push the source/filter row below it.
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .explorer__files-head { padding:6.2em 0 .8em !important; }',
         'body.' + BODY_CLASS + ' .explorer__files-head .torrent-filter { display:flex !important; justify-content:center !important; align-items:center !important; gap:.55em !important; flex-wrap:wrap !important; }',
 
         // Filter / search buttons
