@@ -2952,9 +2952,14 @@
         if (bg) {
           var newSrc = item.backdrop_path ? Lampa.TMDB.image('t/p/' + getHeroQuality() + item.backdrop_path) : (item._heroFallbackImg || '');
           if (bg.src !== newSrc) {
+            // Hide the old image until the new one is ready. This prevents
+            // the title/logo of one item appearing over another item's poster.
+            bg.setAttribute('data-hero-render-token', String(renderToken));
+            bg.classList.add('agnative-hero__bg--loading');
             bg.src = newSrc;
             extractDominantColor(newSrc, applyHeroAccent);
           } else {
+            bg.classList.remove('agnative-hero__bg--loading');
             applyHeroBgAnim();
           }
         }
@@ -3737,44 +3742,48 @@
 
         if (document.querySelector('.full-start, .info-start, .player__maket')) return;
 
+        // Use every card currently rendered in every homepage row, not only
+        // the first row. The list is shuffled once per main Activity session.
         var cards = scrollContent.querySelectorAll('.items-line .card');
-        var heroBuckets = { anime: [], animation: [], series: [], movie: [], other: [] };
+        var candidates = [];
         var seenHeroIds = {};
         for (var i = 0; i < cards.length; i++) {
           var data = extractCardData(cards[i]);
           if (!data || !data.id) continue;
-          var heroId = String(data.id);
+          var mediaType = detectHeroItemType(data);
+          var heroId = mediaType + ':' + String(data.id);
           if (seenHeroIds[heroId]) continue;
           seenHeroIds[heroId] = true;
-          if (data.backdrop_path) {
-            // Keep every homepage row intact; only curate the rotating hero slides.
-          } else {
+          if (!data.backdrop_path) {
             var imgEl = cards[i].querySelector('.card__img');
             var src = imgEl && (imgEl.tagName === 'IMG' ? imgEl.src : '') || imgEl && imgEl.getAttribute('data-nfx-original-src') || '';
             if (src && src.indexOf('tmdb') !== -1) data._heroFallbackImg = src;
             else continue;
           }
-          var mediaType = detectHeroItemType(data);
-          var genres = data.genre_ids || [];
-          var isAnimation = genres.indexOf(16) !== -1 || (data.genres || []).some(function (g) { return g && (g.id === 16 || /animation|анимац|мульт/i.test(g.name || '')); });
-          var isAnime = data.original_language === 'ja' || (data.origin_country || []).indexOf('JP') !== -1 || (data.production_countries || []).some(function (c) { return c && c.iso_3166_1 === 'JP'; });
-          if (isAnime) heroBuckets.anime.push(data);
-          else if (isAnimation) heroBuckets.animation.push(data);
-          else if (mediaType === 'tv') heroBuckets.series.push(data);
-          else if (mediaType === 'movie') heroBuckets.movie.push(data);
-          else heroBuckets.other.push(data);
+          candidates.push(data);
         }
         var previousHeroItems = heroItems.slice();
-        heroItems = [];
-        var heroOrder = ['anime', 'animation', 'series', 'movie', 'other'];
-        for (var round = 0; heroItems.length < 8; round++) {
-          var addedInRound = false;
-          for (var bucketIndex = 0; bucketIndex < heroOrder.length && heroItems.length < 8; bucketIndex++) {
-            var bucket = heroBuckets[heroOrder[bucketIndex]];
-            if (bucket[round]) { heroItems.push(bucket[round]); addedInRound = true; }
-          }
-          if (!addedInRound) break;
+        var candidateMap = {};
+        candidates.forEach(function (item) { candidateMap[detectHeroItemType(item) + ':' + String(item.id)] = item; });
+        var shuffled = candidates.slice();
+        for (var shuffleIndex = shuffled.length - 1; shuffleIndex > 0; shuffleIndex--) {
+          var randomIndex = Math.floor(Math.random() * (shuffleIndex + 1));
+          var randomItem = shuffled[shuffleIndex];
+          shuffled[shuffleIndex] = shuffled[randomIndex];
+          shuffled[randomIndex] = randomItem;
         }
+        // Keep the current order stable when rows are still loading, then add
+        // newly rendered cards in random order instead of reshuffling every DOM mutation.
+        var ordered = [];
+        previousHeroItems.forEach(function (item) {
+          var key = detectHeroItemType(item) + ':' + String(item.id);
+          if (candidateMap[key]) { ordered.push(candidateMap[key]); delete candidateMap[key]; }
+        });
+        shuffled.forEach(function (item) {
+          var key = detectHeroItemType(item) + ':' + String(item.id);
+          if (candidateMap[key]) { ordered.push(item); delete candidateMap[key]; }
+        });
+        heroItems = ordered.slice(0, 12);
         if (!heroItems.length) return;
 
         if (existingHero) {
@@ -3825,11 +3834,17 @@
           }
         };
         bg.addEventListener('load', function () {
-          measureHeroPan(bg);
-          applyHeroBgAnim();
+          if (bg.getAttribute('data-hero-render-token') === String(heroRenderToken)) {
+            bg.classList.remove('agnative-hero__bg--loading');
+            measureHeroPan(bg);
+            applyHeroBgAnim();
+          }
           clearHeroSwitching();
         });
-        bg.addEventListener('error', clearHeroSwitching);
+        bg.addEventListener('error', function () {
+          bg.classList.remove('agnative-hero__bg--loading');
+          clearHeroSwitching();
+        });
 
         var content = document.createElement('div');
         content.className = 'agnative-hero__content';
@@ -6595,6 +6610,7 @@
         'body.' + BODY_CLASS + ' .agnative-beta-badge { display:inline-block; margin-left:.6em; padding:.12em .5em; font-size:.55em; font-weight:800; letter-spacing:.06em; color:#fff; background:linear-gradient(135deg, #ff6b35, #c1272d); border-radius:.4em; vertical-align:middle; line-height:1.2; box-shadow:0 1px 4px rgba(193,39,45,.4); }',
         'body.' + BODY_CLASS + ' .agnative-hero { position:relative; width:auto; margin:1em 2.5em 1.5em; height:52vh; min-height:380px; overflow:hidden; border-radius:1.5em; opacity:1; transition:opacity .6s ease, transform .3s cubic-bezier(.22,.61,.36,1), box-shadow .3s ease; flex-shrink:0; display:block; z-index:8; box-shadow:0 16px 40px rgba(0,0,0,.32), 0 6px 14px rgba(0,0,0,.18); }',
         'body.' + BODY_CLASS + ' .agnative-hero__bg { position:absolute; top:0; left:0; right:0; bottom:auto; width:100%; height:auto; min-height:100%; object-fit:cover; object-position:center top; border-radius:1.5em; opacity:1; transition:opacity .4s ease; pointer-events:none; transform-origin:center center; will-change:transform, opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; transform:translate3d(0,0,0); }',
+        'body.' + BODY_CLASS + ' .agnative-hero__bg.agnative-hero__bg--loading { opacity:0 !important; }',
         '@keyframes agnative-hero-pan-down { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, calc(var(--hero-pan-y, 0px) * -1), 0); } }',
         '@keyframes agnative-hero-pan-up { from { transform: translate3d(0, calc(var(--hero-pan-y, 0px) * -1), 0); } to { transform: translate3d(0, 0, 0); } }',
         '@keyframes agnative-hero-zoom-in { from { transform: scale(1) translate3d(0,0,0); } to { transform: scale(1.1) translate3d(0,0,0); } }',
