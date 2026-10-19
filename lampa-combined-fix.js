@@ -6791,7 +6791,11 @@
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .modal__content { position:relative !important; top:auto !important; right:auto !important; bottom:auto !important; left:auto !important; transform:none !important; width:min(46vw,38em) !important; max-width:calc(100vw - 4em) !important; max-height:78vh !important; margin:0 auto !important; background:rgba(255,255,255,.14) !important; border:1px solid rgba(255,255,255,.22) !important; border-radius:1.15em !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 12px 32px rgba(0,0,0,.24) !important; backdrop-filter:blur(18px) saturate(135%) !important; -webkit-backdrop-filter:blur(18px) saturate(135%) !important; }',
         '@media (max-aspect-ratio: 4/3) { body.' + BODY_CLASS + '.' + TV_CLASS + ' .modal__content { width:min(70vw,38em) !important; } }',
         // Some Lampa builds position the modal content itself from the bottom.
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .modal__content { position:fixed !important; top:50% !important; left:50% !important; right:auto !important; bottom:auto !important; inset:auto auto auto auto !important; transform:translate(-50%,-50%) !important; margin:0 !important; z-index:10000 !important; }'
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .modal__content { position:fixed !important; top:50% !important; left:50% !important; right:auto !important; bottom:auto !important; inset:auto auto auto auto !important; transform:translate(-50%,-50%) !important; margin:0 !important; z-index:10000 !important; }',
+        // Home menu: center the actual main-page menu, not the permanent left dock.
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { position:fixed !important; top:50% !important; left:50% !important; right:auto !important; bottom:auto !important; width:min(42vw,38em) !important; max-width:calc(100vw - 4em) !important; max-height:78vh !important; transform:translate(-50%,-50%) !important; margin:0 !important; z-index:9998 !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content .menu__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content .menu__list { width:100% !important; max-height:74vh !important; overflow-y:auto !important; }',
+        '@media (max-aspect-ratio: 4/3) { body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__content { width:min(70vw,38em) !important; } }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
