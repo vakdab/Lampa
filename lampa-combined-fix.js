@@ -6907,6 +6907,10 @@
       return false;
     }
 
+    function isDirectMenuRoute(action) {
+      action = normalizeTopnavAction(action);
+      return action === 'main' || action === 'movie' || action === 'tv' || action === 'anime' || action === 'cartoon';
+    }
     function triggerMenuAction(action) {
       action = normalizeTopnavAction(action);
       try {
@@ -7291,6 +7295,11 @@
         if (e && e.stopPropagation) e.stopPropagation();
         if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
         var route = normalizeTopnavAction((btn && btn.getAttribute('data-action')) || actionName);
+        if (route && isDirectMenuRoute(route)) {
+          triggerMenuAction(route);
+          markSwallowClick(500);
+          return false;
+        }
         if (route && triggerMenuAction(route)) {
           markSwallowClick(500);
           return false;
@@ -7554,7 +7563,12 @@
       if (index < 0) index = 0;
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
       leftdockKeyIndex = index;
-      items[index].click();
+      var selectedRoute = normalizeTopnavAction(items[index].getAttribute('data-action') || '');
+      if (selectedRoute && isDirectMenuRoute(selectedRoute)) {
+        triggerMenuAction(selectedRoute);
+      } else {
+        items[index].click();
+      }
       return false;
     }, true);
     function hideLeftdock(immediate, force) {
