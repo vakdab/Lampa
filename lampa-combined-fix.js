@@ -5162,6 +5162,7 @@
         '  padding-bottom: 0 !important;',
         '  overflow: visible !important;',
         '}',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .head__menu-icon { display: none !important; }',
         'body.' + BODY_CLASS + ' .activity.activity--active,',
         'body.' + BODY_CLASS + ' .activity__body,',
         'body.' + BODY_CLASS + ' .full-start,',
@@ -7260,6 +7261,18 @@
       }
     }
 
+    function toggleNativeLampaMenu() {
+      try {
+        if (!window.Lampa || !Lampa.Controller || typeof Lampa.Controller.toggle !== 'function') return;
+        var enabled = Lampa.Controller.enabled && Lampa.Controller.enabled();
+        if ((enabled && enabled.name === 'menu') || (document.body && document.body.classList.contains('menu--open'))) {
+          Lampa.Controller.toggle('content');
+        } else {
+          Lampa.Controller.toggle('menu');
+        }
+      } catch (e) { }
+    }
+
     function registerTopnavController(shell) {
       if (!shell || !window.Lampa || !Lampa.Controller || !window.$) return;
       if (topnavControllerReady || typeof Lampa.Controller.add !== 'function') return;
@@ -7279,7 +7292,8 @@
           update: function () { },
           left: function () {
             if (window.Navigator && Navigator.canmove && !Navigator.canmove('left')) {
-              try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
+              if (isTvDevice()) toggleNativeLampaMenu();
+              else { try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { } }
               return;
             }
             if (window.Navigator && Navigator.move) Navigator.move('left');
@@ -7296,7 +7310,8 @@
             try { Lampa.Controller.toggle('content'); } catch (e) { }
           },
           back: function () {
-            try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { }
+            if (isTvDevice()) toggleNativeLampaMenu();
+            else { try { Lampa.Controller.toggle('agnative_leftdock'); } catch (e) { } }
           }
         });
       } catch (e) {
@@ -7539,6 +7554,7 @@
 
     function bindHeadMenuIconClick() {
       var btn = qs('.head__menu-icon');
+      if (isTvDevice()) return;
       if (!btn || btn.__agnativeMenuIconBound) return;
       btn.__agnativeMenuIconBound = true;
 
@@ -8789,8 +8805,13 @@
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
       patchTopnav();
-      buildLeftdock();
-      syncLeftdockActive();
+      if (isTvDevice()) {
+        var customLeftdock = qs('.agnative-leftdock');
+        if (customLeftdock) customLeftdock.remove();
+      } else {
+        buildLeftdock();
+        syncLeftdockActive();
+      }
       observeMenuChanges();
       if (!content) return;
       processCards(content);
@@ -8829,8 +8850,10 @@
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
-      neutralizeMenuController();
-      patchActivityPushForMenu();
+      if (!isTvDevice()) {
+        neutralizeMenuController();
+        patchActivityPushForMenu();
+      }
       patchControllerToggleForLeftdock();
       watchSettingsLifecycle();
       processCards(document.body);
