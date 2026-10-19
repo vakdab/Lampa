@@ -7304,7 +7304,10 @@
           markSwallowClick(500);
           return false;
         }
-        if (sourceNode) clickNode(sourceNode);
+        // Lampa's real menu is bound to hover:enter, not native DOM click.
+        // Calling click() here leaves the old content card selected, so OK
+        // opens the film underneath instead of the chosen menu row.
+        if (sourceNode) triggerSelectorEnter(sourceNode);
         return false;
       }
       btn.addEventListener('click', run);
@@ -7904,7 +7907,11 @@
             leftdockKeyIndex = index;
             var route = normalizeTopnavAction(items[index].getAttribute('data-action') || '');
             if (route && isDirectMenuRoute(route)) triggerMenuAction(route);
-            else items[index].click();
+            else {
+              var source = getMenuItem(route);
+              if (source) triggerSelectorEnter(source);
+              else items[index].click();
+            }
           },
           gone: function () {
             hideLeftdock(true, true);
