@@ -7286,10 +7286,15 @@
       function run(e) {
         if (busy) return false;
         busy = true;
-        setTimeout(function () { busy = false; }, 180);
+        setTimeout(function () { busy = false; }, 220);
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
-        if (actionName && triggerMenuAction(actionName)) return;
+        if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+        var route = normalizeTopnavAction((btn && btn.getAttribute('data-action')) || actionName);
+        if (route && triggerMenuAction(route)) {
+          markSwallowClick(500);
+          return false;
+        }
         if (sourceNode) clickNode(sourceNode);
         return false;
       }
@@ -7761,20 +7766,10 @@
             if (icoEl) {
               icoEl.innerHTML = pickLeftdockIcon(action, label || action);
             }
-            (function (sourceItem, actionName) {
-              bindAction(btn, function () {
-                var route = normalizeTopnavAction(actionName);
-                // Category/home routes must not be sent through the hidden
-                // menu controller: on TV it can reuse the focused card and
-                // open its Play screen instead of the requested section.
-                if (route === 'main' || route === 'movie' || route === 'tv' || route === 'anime' || route === 'cartoon') {
-                  if (triggerMenuAction(route)) return;
-                }
-                // Use the real menu item's click, not hover:enter. The latter
-                // is also used by cards and may open the currently focused film.
-                if (sourceItem) clickNode(sourceItem);
-              });
-            })(item, action);
+            // Use the same guarded menu router as the top navigation. The
+            // old bespoke handler could leave Lampa's card controller focused,
+            // so Enter opened the previously focused film instead.
+            bindMenu(btn, action, item);
             caseEl.appendChild(btn);
           });
           if (caseEl.children.length) inner.appendChild(caseEl);
