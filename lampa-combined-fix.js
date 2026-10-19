@@ -3732,7 +3732,6 @@
     function buildHeroBanner() {
       try {
         if (!heroBannerEnabled()) return;
-        if (!isOnMainPage()) return;
         var existingHero = document.querySelector('.agnative-hero');
 
         var scrollContent = document.querySelector('.activity--active .scroll__content') || document.querySelector('.scroll__content');
@@ -5064,12 +5063,15 @@
             schedulePatch();
             try {
               var comp = e.object && e.object.component;
-              if (comp === 'main') {
-                // A new main Activity is a new content session. Never keep the
-                // previous hero while its cards are being replaced.
+              var isListActivity = comp !== 'full' && comp !== 'player' && comp !== 'settings' &&
+                comp !== 'menu' && comp !== 'explorer' && comp !== 'torrent';
+              if (isListActivity) {
+                // Every list-like Activity gets its own fresh random Hero set:
+                // main, movies, TV, anime, new releases, search, bookmarks, etc.
                 removeHeroBanner();
                 if (document.body) document.body.classList.add('agnative-has-hero');
-                setTimeout(buildHeroBanner, 900);
+                setTimeout(buildHeroBanner, 500);
+                setTimeout(buildHeroBanner, 1100);
                 setTimeout(buildHeroBanner, 1800);
               } else {
                 if (document.body) document.body.classList.remove('agnative-has-hero');
@@ -8711,7 +8713,7 @@
           }
           injectExplorerBackButton(node);
         }
-        if (isOnMainPage()) {
+        if (heroBannerEnabled() && !document.querySelector('.full-start, .info-start, .player__maket')) {
           if (heroRefreshTimer) clearTimeout(heroRefreshTimer);
           heroRefreshTimer = setTimeout(function () {
             heroRefreshTimer = null;
