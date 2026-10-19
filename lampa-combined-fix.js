@@ -9095,17 +9095,19 @@
     var modalCenteringFrame = 0;
     function centerVisibleModal() {
       modalCenteringFrame = 0;
-      if (!document.body || !document.body.classList.contains(TV_CLASS)) return;
+      if (!document.body) return;
       var modal = document.querySelector('.modal');
       var content = modal && modal.querySelector('.modal__content');
+      if (!content) content = document.querySelector('.selectbox__content');
       if (!content) return;
-      var modalStyle = window.getComputedStyle(modal);
-      if (modalStyle.display === 'none' || modalStyle.visibility === 'hidden' || modalStyle.opacity === '0') return;
+      var overlayStyle = window.getComputedStyle(modal || content);
+      if (overlayStyle.display === 'none' || overlayStyle.visibility === 'hidden' || overlayStyle.opacity === '0') return;
       content.style.setProperty('transform', 'none', 'important');
       var rect = content.getBoundingClientRect();
-      var correction = window.innerWidth / 2 - (rect.left + rect.width / 2);
-      if (Math.abs(correction) > 0.5) {
-        content.style.setProperty('transform', 'translateX(' + correction.toFixed(2) + 'px)', 'important');
+      var correctionX = window.innerWidth / 2 - (rect.left + rect.width / 2);
+      var correctionY = window.innerHeight / 2 - (rect.top + rect.height / 2);
+      if (Math.abs(correctionX) > 0.5 || Math.abs(correctionY) > 0.5) {
+        content.style.setProperty('transform', 'translate(' + correctionX.toFixed(2) + 'px,' + correctionY.toFixed(2) + 'px)', 'important');
       }
     }
     function scheduleModalCentering() {
