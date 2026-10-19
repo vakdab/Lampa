@@ -2054,6 +2054,7 @@
     var controllerTogglePatched = false;
     var controllerToggleOriginal = null;
     var leftdockKeyGuardBound = false;
+    var nativeMenuKeyGuardBound = false;
     var leftdockKeyIndex = -1;
     var menuChangesObserver = null;
     var menuListObservedNode = null;
@@ -7423,6 +7424,56 @@
       } catch (e) { }
     }
 
+    function bindNativeMenuKeyGuard() {
+      if (nativeMenuKeyGuardBound || !document || !document.addEventListener) return;
+      nativeMenuKeyGuardBound = true;
+
+      function activeMenuItem() {
+        var menu = qs('.menu');
+        if (!menu) return null;
+        var items = qsa('.menu .menu__item.selector[data-action]', menu);
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].classList.contains('focus') || items[i].classList.contains('hover') ||
+              items[i] === document.activeElement) return items[i];
+        }
+        return null;
+      }
+
+      function menuIsActive() {
+        try {
+          var enabled = Lampa.Controller && Lampa.Controller.enabled && Lampa.Controller.enabled();
+          return !!(enabled && enabled.name === 'menu') ||
+            !!(document.body && document.body.classList.contains('menu--open'));
+        } catch (e) { return false; }
+      }
+
+      function isOk(e) {
+        var code = e.keyCode || e.which || 0;
+        var key = e.key || '';
+        return key === 'Enter' || key === 'NumpadEnter' || key === 'Select' || key === ' ' ||
+          code === 13 || code === 23 || code === 32 || code === 66 || code === 96 ||
+          code === 29443 || code === 117 || code === 65385;
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (!menuIsActive() || !isOk(e)) return;
+        var item = activeMenuItem();
+        var route = item && normalizeTopnavAction(item.getAttribute('data-action') || '');
+        if (!route || !isDirectMenuRoute(route)) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      }, true);
+
+      document.addEventListener('keyup', function (e) {
+        if (!menuIsActive() || !isOk(e)) return;
+        var item = activeMenuItem();
+        var route = item && normalizeTopnavAction(item.getAttribute('data-action') || '');
+        if (!route || !isDirectMenuRoute(route)) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        triggerMenuAction(route);
+        return false;
+      }, true);
+    }
+
     function registerTopnavController(shell) {
       if (!shell || !window.Lampa || !Lampa.Controller || !window.$) return;
       if (topnavControllerReady || typeof Lampa.Controller.add !== 'function') return;
@@ -9058,6 +9109,7 @@
       syncFlexGapFlag();
       syncOverlayAlign();
       syncTopnavSize();
+      bindNativeMenuKeyGuard();
       applyHiddenSettingsSectionsCSS();
       observeCards();
       bindInputModeDetector();
