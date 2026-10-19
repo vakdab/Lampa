@@ -3736,17 +3736,33 @@
       } catch (e) { }
     }
 
+    function isDetailPageOpen() {
+      try {
+        if (document.body && document.body.classList.contains('agnative-detail-open')) return true;
+        if (document.querySelector('.full-start, .full-start-new, .info-start, .player__maket')) return true;
+        if (window.Lampa && Lampa.Activity && typeof Lampa.Activity.active === 'function') {
+          var act = Lampa.Activity.active();
+          var comp = act && act.component;
+          if (comp === 'full' || comp === 'player' || comp === 'settings') return true;
+        }
+      } catch (e) { }
+      return false;
+    }
+
     function buildHeroBanner() {
       try {
         if (!heroBannerEnabled()) return;
+        if (isDetailPageOpen()) {
+          // The home hero must never appear under a details page.
+          if (document.querySelector('.agnative-hero')) removeHeroBanner();
+          return;
+        }
         var existingHero = document.querySelector('.agnative-hero');
 
         var scrollContent = document.querySelector('.activity--active .scroll__content') || document.querySelector('.scroll__content');
         if (!scrollContent) return;
         var firstLine = scrollContent.querySelector('.items-line');
         if (!firstLine) return;
-
-        if (document.querySelector('.full-start, .info-start, .player__maket')) return;
 
         // Use every card currently rendered in every homepage row, not only
         // the first row. The list is shuffled once per main Activity session.
@@ -5078,6 +5094,7 @@
                 // main, movies, TV, anime, new releases, search, bookmarks, etc.
                 removeHeroBanner();
                 if (document.body) document.body.classList.add('agnative-has-hero');
+                // buildHeroBanner itself refuses to run while a details page is open.
                 setTimeout(buildHeroBanner, 500);
                 setTimeout(buildHeroBanner, 1100);
                 setTimeout(buildHeroBanner, 1800);
@@ -5096,6 +5113,7 @@
           if (!pluginEnabled()) return;
           if (document.body && (e.type === 'start' || e.type === 'complite')) {
             document.body.classList.add('agnative-detail-open');
+            if (document.querySelector('.agnative-hero')) removeHeroBanner();
           } else if (document.body && (e.type === 'destroy' || e.type === 'end')) {
             document.body.classList.remove('agnative-detail-open');
           }
@@ -6820,6 +6838,12 @@
         // expensive compositor work while the poster/details screen is loading.
         'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .info-start { contain:layout paint !important; animation:none !important; transition:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start *, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new *, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .info-start * { animation-duration:0s !important; animation-delay:0s !important; transition-duration:0s !important; }',
+        // Details page GPU load (TV): keep every effect, but promote layers only for the focused item
+        // and use a cheaper blur radius on the full-screen description overlay.
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .applecation .full-person__photo, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .applecation .full-episode__img { will-change:auto !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .applecation .full-person.focus .full-person__photo, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .applecation .full-episode.focus .full-episode__img { will-change:transform !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .applecation-description-overlay__bg { -webkit-backdrop-filter: blur(32px) !important; backdrop-filter: blur(32px) !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .scroll__content, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .items-line { contain:layout style !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start__background, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new__background, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start__poster, body.' + BODY_CLASS + '.' + TV_CLASS + '.agnative-detail-open .full-start-new__poster { filter:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; will-change:auto !important; }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
@@ -8880,7 +8904,7 @@
           }
           injectExplorerBackButton(node);
         }
-        if (heroBannerEnabled() && !document.querySelector('.full-start, .info-start, .player__maket')) {
+        if (heroBannerEnabled() && !isDetailPageOpen()) {
           if (heroRefreshTimer) clearTimeout(heroRefreshTimer);
           heroRefreshTimer = setTimeout(function () {
             heroRefreshTimer = null;
@@ -9200,7 +9224,7 @@
       if (!content) return;
       processCards(content);
       injectExplorerBackButton(document.body);
-      if (!document.querySelector('.agnative-hero')) setTimeout(buildHeroBanner, 300);
+      if (!document.querySelector('.agnative-hero') && !isDetailPageOpen()) setTimeout(buildHeroBanner, 300);
     }
 
     function schedulePatch() {
