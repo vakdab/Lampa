@@ -9085,6 +9085,39 @@
       }
     }
 
+    // Lampa may render the modal inside a horizontally shifted/transformed layer.
+    // Correct the rendered geometry instead of assuming that CSS left:50% is the
+    // viewport center.
+    var modalCenteringInstalled = false;
+    var modalCenteringFrame = 0;
+    function centerVisibleModal() {
+      modalCenteringFrame = 0;
+      if (!document.body || !document.body.classList.contains(TV_CLASS)) return;
+      var modal = document.querySelector('.modal');
+      var content = modal && modal.querySelector('.modal__content');
+      if (!content) return;
+      var modalStyle = window.getComputedStyle(modal);
+      if (modalStyle.display === 'none' || modalStyle.visibility === 'hidden' || modalStyle.opacity === '0') return;
+      content.style.setProperty('transform', 'none', 'important');
+      var rect = content.getBoundingClientRect();
+      var correction = window.innerWidth / 2 - (rect.left + rect.width / 2);
+      if (Math.abs(correction) > 0.5) {
+        content.style.setProperty('transform', 'translateX(' + correction.toFixed(2) + 'px)', 'important');
+      }
+    }
+    function scheduleModalCentering() {
+      if (modalCenteringFrame || typeof window.requestAnimationFrame !== 'function') return;
+      modalCenteringFrame = window.requestAnimationFrame(centerVisibleModal);
+    }
+    function installModalCentering() {
+      if (modalCenteringInstalled || !document.body || typeof MutationObserver !== 'function') return;
+      modalCenteringInstalled = true;
+      var observer = new MutationObserver(function () { scheduleModalCentering(); });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      window.addEventListener('resize', scheduleModalCentering);
+      scheduleModalCentering();
+    }
+
     function safePatch() {
       scheduled = false;
       if (!pluginEnabled()) {
@@ -9143,6 +9176,7 @@
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
+      installModalCentering();
       patchControllerToggleForLeftdock();
       watchSettingsLifecycle();
       processCards(document.body);
