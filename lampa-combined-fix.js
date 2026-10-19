@@ -7490,7 +7490,8 @@
       if (leftdockKeyGuardBound || !document || !document.addEventListener) return;
       leftdockKeyGuardBound = true;
       document.addEventListener('keydown', function (e) {
-        if (!isTvDevice()) return;
+        // The left dock must own OK/Enter on every platform. Otherwise the
+        // underlying focused card receives the same key and opens a movie.
         var dock = qs('.agnative-leftdock.is-visible');
         if (!dock) return;
         var code = e.keyCode || 0;
@@ -7499,9 +7500,11 @@
         if (!items.length) return;
         var index = -1;
         for (var i = 0; i < items.length; i++) {
-          if (items[i].classList.contains('focus') || items[i].classList.contains('hover')) { index = i; break; }
+          if (items[i].classList.contains('focus') || items[i].classList.contains('hover') ||
+              items[i] === document.activeElement) { index = i; break; }
         }
-        if (index < 0) index = leftdockKeyIndex >= 0 ? leftdockKeyIndex : 0;
+        if (index < 0 && leftdockKeyIndex >= 0 && leftdockKeyIndex < items.length) index = leftdockKeyIndex;
+        if (index < 0) index = 0;
         if (key === 'ArrowDown' || code === 40 || key === 'ArrowUp' || code === 38) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
           index = key === 'ArrowUp' || code === 38 ? index - 1 : index + 1;
@@ -7515,7 +7518,8 @@
           scrollLeftdockItemIntoView(items[index], dock);
           return false;
         }
-        if (key === 'Enter' || key === ' ' || code === 13 || code === 32) {
+        if (key === 'Enter' || key === 'NumpadEnter' || key === 'Select' || key === ' ' ||
+            code === 13 || code === 23 || code === 32 || code === 66 || code === 96) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
           leftdockKeyIndex = index;
           items[index].click();
@@ -7770,6 +7774,10 @@
             // old bespoke handler could leave Lampa's card controller focused,
             // so Enter opened the previously focused film instead.
             bindMenu(btn, action, item);
+            btn.addEventListener('mouseenter', function () {
+              var allItems = qsa('.agnative-leftdock__item.selector', dock);
+              leftdockKeyIndex = allItems.indexOf ? allItems.indexOf(btn) : Array.prototype.indexOf.call(allItems, btn);
+            }, true);
             caseEl.appendChild(btn);
           });
           if (caseEl.children.length) inner.appendChild(caseEl);
