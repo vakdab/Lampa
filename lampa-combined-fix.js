@@ -5162,7 +5162,6 @@
         '  padding-bottom: 0 !important;',
         '  overflow: visible !important;',
         '}',
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .head__body { height: auto !important; min-height: 4em !important; }',
         'body.' + BODY_CLASS + ' .activity.activity--active,',
         'body.' + BODY_CLASS + ' .activity__body,',
         'body.' + BODY_CLASS + ' .full-start,',
@@ -8789,16 +8788,9 @@
       syncPerfMode();
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
-      if (isTvDevice()) {
-        // Keep Lampa's native left menu and remote-controller navigation on TV.
-        removeTopnavUi();
-        var customLeftdock = qs('.agnative-leftdock');
-        if (customLeftdock) customLeftdock.remove();
-      } else {
-        patchTopnav();
-        buildLeftdock();
-        syncLeftdockActive();
-      }
+      patchTopnav();
+      buildLeftdock();
+      syncLeftdockActive();
       observeMenuChanges();
       if (!content) return;
       processCards(content);
@@ -8837,11 +8829,9 @@
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
-      if (!isTvDevice()) {
-        neutralizeMenuController();
-        patchActivityPushForMenu();
-        patchControllerToggleForLeftdock();
-      }
+      neutralizeMenuController();
+      patchActivityPushForMenu();
+      patchControllerToggleForLeftdock();
       watchSettingsLifecycle();
       processCards(document.body);
       schedulePatch();
