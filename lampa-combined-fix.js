@@ -6709,6 +6709,8 @@
         'body.' + BODY_CLASS + ' .explorer__files-head { padding:4.1em 0 .8em !important; }',
         // TV: the top nav is taller (top 1em + 3.25em * 1.12 font), so push the source/filter row below it.
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .explorer__files-head { padding:6.2em 0 .8em !important; }',
+        // Works even when TV mode is not detected: never let the filter row sit under the top nav.
+        'body.' + BODY_CLASS + ' .explorer__files-head { padding-top:max(4.1em, var(--agnative-topnav-bottom, 0px)) !important; }',
         'body.' + BODY_CLASS + ' .explorer__files-head .torrent-filter { display:flex !important; justify-content:center !important; align-items:center !important; gap:.55em !important; flex-wrap:wrap !important; }',
 
         // Filter / search buttons
@@ -8141,7 +8143,45 @@
       return v;
     }
 
+    var topnavMeasureFrame = 0;
+    function measureTopnavBottom() {
+      topnavMeasureFrame = 0;
+      try {
+        if (!document.body) return;
+        var shell = document.querySelector('.agnative-topnav-shell');
+        var dock = document.querySelector('.agnative-topnav-rightdock');
+        var bottom = 0;
+        var nodes = [shell, dock];
+        for (var i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          if (!n) continue;
+          var r = n.getBoundingClientRect();
+          if (r && r.height > 0 && r.bottom > bottom) bottom = r.bottom;
+        }
+        if (bottom > 0) {
+          // small gap under the bar
+          document.body.style.setProperty('--agnative-topnav-bottom', Math.ceil(bottom + 12) + 'px');
+          // Fallback for old WebViews without CSS max(): push the explorer head down directly if it overlaps.
+          var head = document.querySelector('.explorer__files-head');
+          if (head) {
+            head.style.removeProperty('padding-top');
+            var hr = head.getBoundingClientRect();
+            var pt = parseFloat(window.getComputedStyle(head).paddingTop) || 0;
+            var contentTop = hr.top + pt;
+            if (hr.height > 0 && contentTop < bottom + 8) {
+              head.style.setProperty('padding-top', Math.ceil(pt + (bottom + 12 - contentTop)) + 'px', 'important');
+            }
+          }
+        }
+      } catch (e) { }
+    }
+    function scheduleTopnavMeasure() {
+      if (topnavMeasureFrame || typeof requestAnimationFrame !== 'function') return;
+      topnavMeasureFrame = requestAnimationFrame(measureTopnavBottom);
+    }
+
     function syncTopnavSize() {
+      scheduleTopnavMeasure();
       if (!document.body) return;
       var size = 'md';
       try { size = Lampa.Storage.get(TOPNAV_SIZE_KEY, 'md'); } catch (e) { }
@@ -9218,6 +9258,7 @@
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
       patchTopnav();
+      scheduleTopnavMeasure();
       // Use Lampa's native menu. The custom left dock is intentionally disabled
       // so the original black menu keeps ownership of focus and Enter/OK.
       var leftdock = qs('.agnative-leftdock');
@@ -9259,6 +9300,9 @@
       bindNativeMenuKeyGuard();
       applyHiddenSettingsSectionsCSS();
       observeCards();
+      window.addEventListener('resize', scheduleTopnavMeasure);
+      setTimeout(scheduleTopnavMeasure, 400);
+      setTimeout(scheduleTopnavMeasure, 1500);
       bindInputModeDetector();
       initGlareRuntime();
       installModalCentering();
