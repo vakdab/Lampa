@@ -7895,6 +7895,8 @@
           },
           update: function () { },
           enter: function () {
+            var d = qs('.agnative-leftdock');
+            if (!d) return;
             var items = qsa('.agnative-leftdock__item.selector', d);
             if (!items.length) return;
             var index = -1;
