@@ -1998,6 +1998,7 @@
     var heroCurrentIndex = 0;
     var heroItems = [];
     var heroCurrentItem = null;
+    var heroRenderToken = 0;
     var heroIdleTimer = null;
     var heroTrailerActive = false;
     var heroTrailerCache = {};
@@ -2876,6 +2877,8 @@
 
     function removeHeroBanner() {
       stopHeroRotation();
+      if (heroTransitionTimer) { clearTimeout(heroTransitionTimer); heroTransitionTimer = null; }
+      heroRenderToken++;
       if (heroIdleTimer) { clearTimeout(heroIdleTimer); heroIdleTimer = null; }
       heroTrailerActive = false;
       var hero = document.querySelector('.agnative-hero');
@@ -2937,6 +2940,7 @@
     function renderHeroSlide(item) {
       var hero = document.querySelector('.agnative-hero');
       if (!hero || !item) return;
+      var renderToken = ++heroRenderToken;
       heroCurrentItem = item;
       updateHeroIndicators();
       applyHeroInstantClass(item);
@@ -2966,7 +2970,8 @@
         if (metaEl) metaEl.textContent = genres;
 
         var overviewEl = hero.querySelector('.agnative-hero__overview');
-        if (overviewEl) overviewEl.textContent = item.overview || '';
+        if (overviewEl) overviewEl.textContent = item.overview || '…';
+        if (!item.overview && id) loadHeroOverview(item, renderToken);
 
         var titleEl = hero.querySelector('.agnative-hero__title');
         var logoEl = hero.querySelector('.agnative-hero__logo');
@@ -2977,7 +2982,7 @@
           var requestedId = id;
           var logoType = item.name ? 'tv' : 'movie';
           fetchLogo(id, logoType, function (logo) {
-            if (!heroCurrentItem || heroCurrentItem.id !== requestedId) return;
+            if (renderToken !== heroRenderToken || !heroCurrentItem || heroCurrentItem.id !== requestedId) return;
             var h = document.querySelector('.agnative-hero');
             if (!h) return;
             var lEl = h.querySelector('.agnative-hero__logo');
@@ -2989,7 +2994,7 @@
             }
             var logoUrl = logoImgUrl(logo.path);
             imgLoad(logoUrl, function (src) {
-              if (!heroCurrentItem || heroCurrentItem.id !== requestedId) {
+              if (renderToken !== heroRenderToken || !heroCurrentItem || heroCurrentItem.id !== requestedId) {
                 if (src !== logoUrl) { try { URL.revokeObjectURL(src); } catch (e) {} }
                 return;
               }
@@ -3010,6 +3015,27 @@
       } catch (e) { }
     }
 
+    function loadHeroOverview(item, renderToken) {
+      if (!item || !item.id || !window.Lampa || !Lampa.TMDB || !window.$) return;
+      var type = detectHeroItemType(item);
+      var lang = (Lampa.Storage && Lampa.Storage.get) ? (Lampa.Storage.get('language', 'ru') || 'ru') : 'ru';
+      var key = type + ':' + item.id + ':' + lang;
+      if (item._heroOverviewLoading === key || item._heroOverviewLoaded === key) return;
+      item._heroOverviewLoading = key;
+      var apiKey = typeof Lampa.TMDB.key === 'function' ? Lampa.TMDB.key() : '';
+      var url = Lampa.TMDB.api(type + '/' + item.id + '?api_key=' + encodeURIComponent(apiKey) + '&language=' + encodeURIComponent(lang));
+      $.get(url, function (details) {
+        if (!details || !details.overview) return;
+        item.overview = details.overview;
+        item._heroOverviewLoaded = key;
+        if (renderToken !== heroRenderToken || heroCurrentItem !== item) return;
+        var currentHero = document.querySelector('.agnative-hero');
+        var overview = currentHero && currentHero.querySelector('.agnative-hero__overview');
+        if (overview) overview.textContent = details.overview;
+      }).fail(function () {
+        item._heroOverviewLoading = '';
+      });
+    }
     function openHeroCurrentItem() {
       try {
         var item = heroCurrentItem;
@@ -5024,10 +5050,12 @@
             try {
               var comp = e.object && e.object.component;
               if (comp === 'main') {
+                // A new main Activity is a new content session. Never keep the
+                // previous hero while its cards are being replaced.
+                removeHeroBanner();
                 if (document.body) document.body.classList.add('agnative-has-hero');
-                if (!document.querySelector('.agnative-hero')) {
-                  setTimeout(buildHeroBanner, 900);
-                }
+                setTimeout(buildHeroBanner, 900);
+                setTimeout(buildHeroBanner, 1800);
               } else {
                 if (document.body) document.body.classList.remove('agnative-has-hero');
                 removeHeroBanner();
