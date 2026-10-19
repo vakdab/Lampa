@@ -6648,7 +6648,7 @@
       text += '\n' + [
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__inner, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__body { background:rgba(25,36,52,.74) !important; background-image:none !important; border-color:rgba(255,255,255,.16) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 10px 28px rgba(0,0,0,.24) !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel__tile.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .simple-button, body.' + BODY_CLASS + '.' + TV_CLASS + ' .button.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__left .menu__item.selector { background:rgba(255,255,255,.08) !important; background-image:none !important; border-color:rgba(255,255,255,.14) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.08) !important; }',
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile { background:rgba(25,36,52,.42) !important; background-image:none !important; border-color:rgba(255,255,255,.12) !important; box-shadow:none !important; }',
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile { background:transparent !important; background-image:none !important; border-color:transparent !important; box-shadow:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.selector.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile.hover { background:#fff !important; color:#000 !important; border-color:#fff !important; outline:2px solid #fff !important; outline-offset:-2px !important; box-shadow:none !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.selector.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__left .menu__item.selector.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .wrap__left .menu__item.selector.hover { background:rgba(255,255,255,.22) !important; color:#fff !important; border-color:rgba(255,255,255,.72) !important; outline:2px solid rgba(255,255,255,.9) !important; outline-offset:-2px !important; box-shadow:none !important; }'
       ].join('\n');
@@ -8407,33 +8407,51 @@
 
       var tmdbType = data.name ? 'tv' : 'movie';
 
-      if (!isUltra) {
-        fetchLogo(data.id, tmdbType, function (logo) {
-          if (!logo) return;
-          var titleDiv = overlay.querySelector('.nfx-card-overlay__title');
-          if (titleDiv) {
-            var img = document.createElement('img');
-            img.className = 'nfx-card-overlay__logo';
-            img.alt = title;
-            img.loading = 'lazy';
-            var logoUrl = logoImgUrl(logo.path);
-            imgLoad(logoUrl, function (src) {
-              img.onload = function () { if (src !== logoUrl) URL.revokeObjectURL(src); };
-              img.onerror = function () { if (src !== logoUrl) URL.revokeObjectURL(src); img.style.display = 'none'; };
-              img.src = src;
-            });
-            titleDiv.replaceWith(img);
+      if (!isUltra || isTv) {
+        var loadCardLogo = function () {
+          if (!cardEl.parentNode || !overlay.parentNode) return;
+          fetchLogo(data.id, tmdbType, function (logo) {
+            if (!logo) return;
+            var titleDiv = overlay.querySelector('.nfx-card-overlay__title');
+            if (titleDiv) {
+              var img = document.createElement('img');
+              img.className = 'nfx-card-overlay__logo';
+              img.alt = title;
+              img.loading = 'lazy';
+              var logoUrl = logoImgUrl(logo.path);
+              imgLoad(logoUrl, function (src) {
+                img.onload = function () { if (src !== logoUrl) URL.revokeObjectURL(src); };
+                img.onerror = function () { if (src !== logoUrl) URL.revokeObjectURL(src); img.style.display = 'none'; };
+                img.src = src;
+              });
+              titleDiv.replaceWith(img);
 
-            var logoLang = getLogoLang();
-            var isNonLocalLogo = logoLang !== 'en' && logo.iso_639_1 && logo.iso_639_1 !== logoLang;
-            if (logoTitleEnabled() && isNonLocalLogo && title) {
-              var localTitle = document.createElement('div');
-              localTitle.className = 'nfx-card-overlay__local-title';
-              localTitle.textContent = title;
-              img.parentNode.insertBefore(localTitle, img.nextSibling);
+              var logoLang = getLogoLang();
+              var isNonLocalLogo = logoLang !== 'en' && logo.iso_639_1 && logo.iso_639_1 !== logoLang;
+              if (logoTitleEnabled() && isNonLocalLogo && title) {
+                var localTitle = document.createElement('div');
+                localTitle.className = 'nfx-card-overlay__local-title';
+                localTitle.textContent = title;
+                img.parentNode.insertBefore(localTitle, img.nextSibling);
+              }
             }
-          }
-        });
+          });
+        };
+
+        if (isTv && window.IntersectionObserver) {
+          var logoObserver = new window.IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+              if (entries[i].isIntersecting || entries[i].intersectionRatio > 0) {
+                logoObserver.disconnect();
+                loadCardLogo();
+                break;
+              }
+            }
+          }, { rootMargin: '100px' });
+          logoObserver.observe(cardEl);
+        } else {
+          loadCardLogo();
+        }
       }
 
       if (badgeEnabled() && (data.title || data.name)) {
