@@ -9128,7 +9128,26 @@
     function installModalCentering() {
       if (modalCenteringInstalled || !document.body || typeof MutationObserver !== 'function') return;
       modalCenteringInstalled = true;
-      var observer = new MutationObserver(function () { scheduleModalCentering(); });
+      var observer = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var mutation = mutations[i];
+          if (mutation.type === 'attributes') {
+            var target = mutation.target;
+            if (target && target.closest && target.closest('.modal, .selectbox__content')) {
+              scheduleModalCentering();
+              return;
+            }
+          } else if (mutation.type === 'childList') {
+            for (var j = 0; j < mutation.addedNodes.length; j++) {
+              var node = mutation.addedNodes[j];
+              if (node.nodeType === 1 && (node.matches('.modal, .selectbox__content') || node.querySelector('.modal, .selectbox__content'))) {
+                scheduleModalCentering();
+                return;
+              }
+            }
+          }
+        }
+      });
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
       window.addEventListener('resize', scheduleModalCentering);
       scheduleModalCentering();
