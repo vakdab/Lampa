@@ -7761,9 +7761,9 @@
             if (icoEl) {
               icoEl.innerHTML = pickLeftdockIcon(action, label || action);
             }
-            (function (sourceItem) {
+            (function (sourceItem, actionName) {
               bindAction(btn, function () {
-                var route = normalizeTopnavAction(action);
+                var route = normalizeTopnavAction(actionName);
                 // Category/home routes must not be sent through the hidden
                 // menu controller: on TV it can reuse the focused card and
                 // open its Play screen instead of the requested section.
@@ -7774,7 +7774,7 @@
                 // is also used by cards and may open the currently focused film.
                 if (sourceItem) clickNode(sourceItem);
               });
-            })(item);
+            })(item, action);
             caseEl.appendChild(btn);
           });
           if (caseEl.children.length) inner.appendChild(caseEl);
