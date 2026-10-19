@@ -2209,12 +2209,17 @@
     function clockSecondsEnabled() { return storageFlagOn(CLOCK_SECONDS_KEY, 'off'); }
     function controlPanelEnabled() { return storageFlagOn(CONTROL_PANEL_KEY, 'off'); }
 
+    var perfModeCache = null;
+    var perfModeCacheAt = 0;
     function getPerfMode() {
       try {
         if (!window.Lampa || !Lampa.Storage) return 'auto';
+        var now = Date.now();
+        if (perfModeCache !== null && now - perfModeCacheAt < 1500) return perfModeCache;
         var v = Lampa.Storage.get(PERF_MODE_KEY, 'auto') || 'auto';
-        if (v === 'high' || v === 'low' || v === 'ultra' || v === 'auto') return v;
-        return 'auto';
+        perfModeCache = (v === 'high' || v === 'low' || v === 'ultra' || v === 'auto') ? v : 'auto';
+        perfModeCacheAt = now;
+        return perfModeCache;
       } catch (e) { return 'auto'; }
     }
 
@@ -2579,6 +2584,7 @@
     }
 
     function syncPerfMode() {
+      perfModeCache = null;
       if (!document.body) return;
       // TV browsers have limited CPU/GPU; prefer predictable rendering.
       var level = isTvDevice() ? 'ultra' : resolvePerfLevel();
@@ -5153,6 +5159,7 @@
           }
 
           if (e.name === PERF_MODE_KEY) {
+            perfModeCache = null;
             syncPerfMode();
             initGlareRuntime();
             perfModeDirty = true;
@@ -5850,7 +5857,8 @@
         'body.' + BODY_CLASS + ' .card.focus .card__view { transform: translateY(-.08em) scale(1.06) !important; filter: saturate(1.06) brightness(1.02) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 2px rgba(86,141,255,.92), 0 18px 42px rgba(0,0,0,.26), 0 8px 20px rgba(0,0,0,.14) !important; }',
         'body.' + BODY_CLASS + ' .card.hover .card__view { transform: translateY(-.04em) scale(1.03) !important; filter: saturate(1.02) brightness(1.01) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 10px 24px rgba(0,0,0,.16) !important; }',
         'body.' + BODY_CLASS + ' .card.focus::after, body.' + BODY_CLASS + ' .card.hover::after, body.' + BODY_CLASS + ' .card__view::before, body.' + BODY_CLASS + ' .card__view::after { display:none !important; content:none !important; }',
-        'body.' + BODY_CLASS + ' .card { transition: transform .28s cubic-bezier(.34,1.4,.64,1) !important; will-change: transform !important; transform-style: preserve-3d !important; }',
+        'body.' + BODY_CLASS + ' .card { transition: transform .28s cubic-bezier(.34,1.4,.64,1) !important; transform-style: preserve-3d !important; }',
+        'body.' + BODY_CLASS + ' .card.focus, body.' + BODY_CLASS + ' .card.hover, body.' + BODY_CLASS + ' .card:hover { will-change: transform !important; }',
         'body.' + BODY_CLASS + ' .card.focus, body.' + BODY_CLASS + ' .card.hover, body.' + BODY_CLASS + ' .card.traverse { transform: scale(1.07) translateY(-6px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) !important; z-index: 10 !important; position: relative !important; }',
         'body.' + BODY_CLASS + ' .card.focus ~ .card, body.' + BODY_CLASS + ' .card.hover ~ .card { transform: translateX(4px) !important; transition: transform .22s ease !important; }',
         'body.' + BODY_CLASS + '[' + PERF_ATTR + '="low"] .card.focus, body.' + BODY_CLASS + '[' + PERF_ATTR + '="low"] .card.hover, body.' + BODY_CLASS + '[' + PERF_ATTR + '="low"] .card.traverse { transform: scale(1.05) translateY(-3px) !important; }',
@@ -5863,7 +5871,8 @@
         'body.' + BODY_CLASS + '[' + CARD_SIZE_ATTR + '="lg"] .card-episode { width:19.4em !important; }',
         'body.' + BODY_CLASS + '[' + CARD_SIZE_ATTR + '="xl"] .card-episode { width:21.2em !important; }',
         'body.' + BODY_CLASS + ' .card-episode.focus, body.' + BODY_CLASS + ' .card-episode.hover, body.' + BODY_CLASS + ' .card-episode.focus .card-episode__body, body.' + BODY_CLASS + ' .card-episode.hover .card-episode__body { border:0 !important; outline:0 !important; box-shadow:none !important; background:transparent !important; }',
-        'body.' + BODY_CLASS + ' .card-episode { transition: transform .28s cubic-bezier(.34,1.4,.64,1), box-shadow .28s ease !important; will-change: transform !important; }',
+        'body.' + BODY_CLASS + ' .card-episode { transition: transform .28s cubic-bezier(.34,1.4,.64,1), box-shadow .28s ease !important; }',
+        'body.' + BODY_CLASS + ' .card-episode.focus, body.' + BODY_CLASS + ' .card-episode.hover, body.' + BODY_CLASS + ' .card-episode:hover { will-change: transform !important; }',
         'body.' + BODY_CLASS + ' .card-episode.focus, body.' + BODY_CLASS + ' .card-episode.hover, body.' + BODY_CLASS + ' .card-episode.traverse { transform: scale(1.05) translateY(-4px) !important; box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 6px 16px rgba(0,0,0,.3) !important; z-index: 10 !important; position: relative !important; }',
         'body.' + BODY_CLASS + ' .card-episode__body { background:transparent !important; border:0 !important; outline:0 !important; box-shadow:none !important; padding:0 !important; margin:0 !important; display:block !important; overflow:visible !important; }',
         'body.' + BODY_CLASS + ' .card-episode .full-episode { position:relative !important; display:block !important; background:transparent !important; border:0 !important; box-shadow:none !important; padding:0 !important; margin:0 !important; overflow:visible !important; transform-origin:center center !important; transition: transform .28s cubic-bezier(.22,.61,.36,1) !important; }',
@@ -5884,7 +5893,8 @@
         'body.' + BODY_CLASS + ' .card-episode.hover .full-episode__img { filter: saturate(1.02) brightness(1.01) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 10px 24px rgba(0,0,0,.16) !important; }',
         'body.' + BODY_CLASS + ':not(.' + GLARE_CLASS + ') .card-episode.focus .full-episode { transform: translateY(-.08em) scale(1.06) !important; }',
         'body.' + BODY_CLASS + ':not(.' + GLARE_CLASS + ') .card-episode.hover .full-episode { transform: translateY(-.04em) scale(1.03) !important; }',
-        'body.' + GLARE_CLASS + ' .card, body.' + GLARE_CLASS + ' .card-episode, body.' + GLARE_CLASS + ' .full-start-new__poster { will-change: transform; transform-style: preserve-3d; }',
+        'body.' + GLARE_CLASS + ' .card, body.' + GLARE_CLASS + ' .card-episode, body.' + GLARE_CLASS + ' .full-start-new__poster { transform-style: preserve-3d; }',
+        'body.' + GLARE_CLASS + ' .card.focus, body.' + GLARE_CLASS + ' .card.hover, body.' + GLARE_CLASS + ' .card:hover, body.' + GLARE_CLASS + ' .card-episode.focus, body.' + GLARE_CLASS + ' .card-episode:hover, body.' + GLARE_CLASS + ' .full-start-new__poster.focus, body.' + GLARE_CLASS + ' .full-start-new__poster:hover { will-change: transform; }',
         'body.' + GLARE_CLASS + ' .card__view, body.' + GLARE_CLASS + ' .full-episode__img, body.' + GLARE_CLASS + ' .full-start-new__poster { position: relative; overflow: hidden; }',
         'body.' + GLARE_CLASS + ' .card .card__view::after, body.' + GLARE_CLASS + ' .card-episode .full-episode__img::after, body.' + GLARE_CLASS + ' .full-start-new__poster::after { content:"" !important; display:block !important; position:absolute; inset:-10%; border-radius:inherit; background: radial-gradient(ellipse at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.20) 0%, rgba(255,255,255,.16) 12%, rgba(255,255,255,.10) 26%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.02) 58%, rgba(255,255,255,0) 78%) !important; opacity:0; filter: blur(18px); transition: opacity .22s ease, transform .22s ease; pointer-events:none; z-index:8; mix-blend-mode: screen; }',
         'body.' + GLARE_CLASS + ' .card.focus .card__view::after, body.' + GLARE_CLASS + ' .card.hover .card__view::after, body.' + GLARE_CLASS + ' .card-episode.focus .full-episode__img::after, body.' + GLARE_CLASS + ' .card-episode.hover .full-episode__img::after, body.' + GLARE_CLASS + ' .full-start-new__poster.focus::after, body.' + GLARE_CLASS + ' .full-start-new__poster.hover::after { opacity: 1 !important; }',
@@ -8845,14 +8855,19 @@
       var pendingNodes = [];
       var flushing = false;
 
+      var flushStamp = 0;
       function flushPending() {
         flushing = false;
         cardPatchTimer = 0;
+        flushStamp++;
         var nodes = pendingNodes;
         pendingNodes = [];
         for (var i = 0; i < nodes.length; i++) {
           var node = nodes[i];
           if (!node || node.nodeType !== 1) continue;
+          if (node.__agnativeSeenFlush === flushStamp) continue;
+          node.__agnativeSeenFlush = flushStamp;
+          if (!node.isConnected) continue;
           if (node.classList && node.classList.contains('card')) {
             switchCardToBackdrop(node);
           } else if (node.classList && node.classList.contains('card-episode')) {
@@ -8877,7 +8892,10 @@
       new MutationObserver(function (mutations) {
         for (var i = 0; i < mutations.length; i++) {
           var added = mutations[i].addedNodes;
-          for (var j = 0; j < added.length; j++) pendingNodes.push(added[j]);
+          for (var j = 0; j < added.length; j++) {
+            var an = added[j];
+            if (an.nodeType === 1) pendingNodes.push(an);
+          }
         }
         if (flushing) return;
         flushing = true;
@@ -9087,7 +9105,8 @@
           if (!orbitActive() || inMouseMode()) { if (orbitCard) stopOrbit(); return; }
           for (var i = 0; i < muts.length; i++) {
             var target = muts[i].target;
-            if (!target || !target.classList || target.nodeType !== 1) continue;
+            if (!target || target.nodeType !== 1 || !target.classList) continue;
+            if (!target.classList.contains('card') && !target.classList.contains('card-episode') && !target.classList.contains('full-start-new__poster')) continue;
             if (!target.matches || !target.matches(GLARE_SEL)) continue;
             if (target.classList.contains('focus')) startOrbit(target);
             else if (orbitCard === target) stopOrbit();
@@ -9121,6 +9140,9 @@
         content.style.setProperty('transform', 'translate(' + correctionX.toFixed(2) + 'px,' + correctionY.toFixed(2) + 'px)', 'important');
       }
     }
+    function modalOrSelectboxOpen() {
+      return !!document.querySelector('.modal, .selectbox__content');
+    }
     function scheduleModalCentering() {
       if (modalCenteringFrame || typeof window.requestAnimationFrame !== 'function') return;
       modalCenteringFrame = window.requestAnimationFrame(centerVisibleModal);
@@ -9133,14 +9155,16 @@
           var mutation = mutations[i];
           if (mutation.type === 'attributes') {
             var target = mutation.target;
+            if (!modalOrSelectboxOpen()) continue;
             if (target && target.closest && target.closest('.modal, .selectbox__content')) {
               scheduleModalCentering();
               return;
             }
           } else if (mutation.type === 'childList') {
+            if (!mutation.addedNodes.length) continue;
             for (var j = 0; j < mutation.addedNodes.length; j++) {
               var node = mutation.addedNodes[j];
-              if (node.nodeType === 1 && (node.matches('.modal, .selectbox__content') || node.querySelector('.modal, .selectbox__content'))) {
+              if (node.nodeType === 1 && (node.matches('.modal, .selectbox__content') || (node.firstElementChild && node.querySelector('.modal, .selectbox__content')))) {
                 scheduleModalCentering();
                 return;
               }
@@ -9529,7 +9553,18 @@
         install();
         scan();
         try {
-            var mo = new MutationObserver(schedule);
+            var mo = new MutationObserver(function (muts) {
+                if (timer) return;
+                for (var i = 0; i < muts.length; i++) {
+                    var m = muts[i];
+                    if (m.type === 'childList') {
+                        if (m.addedNodes.length) { schedule(); return; }
+                        continue;
+                    }
+                    var t = m.target;
+                    if (t && t.nodeType === 1 && t.closest && t.closest('.full-start-new')) { schedule(); return; }
+                }
+            });
             mo.observe(document.body, {
                 childList: true,
                 subtree: true,
