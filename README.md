@@ -35,7 +35,7 @@ https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 
 ## Мобільна Apple-версія
 
-Окремий файл `lampa-mobile-apple.js` відновлює Apple-інтерфейс із коміту `c1e3351` — до додавання TV-режиму. Використовуйте його на телефоні замість `lampa-combined-fix.js`:
+Окремий файл `lampa-mobile-apple.js` відновлює Apple-інтерфейс із коміту `7b78923d` та примусово вмикає мобільну гілку на телефонах. Використовуйте його на телефоні замість `lampa-combined-fix.js`:
 
 ```text
 https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
