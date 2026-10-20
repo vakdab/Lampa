@@ -9281,12 +9281,8 @@
 
     function startPlugin() {
       registerSettings();
-      // Do not load the Apple TV shell on phones. This is intentionally checked
-      // before listeners, observers and custom navigation are installed.
-      if (isMobile() && !isTvDevice()) {
-        removePluginUi();
-        return;
-      }
+      // Load the Apple-style shell on phones too; isTvDevice() keeps the
+      // phone on the responsive mobile branch instead of the TV layout.
       bindRuntimeListeners();
       if (!pluginEnabled()) {
         removePluginUi();
