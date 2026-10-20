@@ -5063,7 +5063,12 @@
       var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
       var mobileUa = /iphone|ipod|ipad|android|windows phone|mobile/.test(ua);
       var tvUa = /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
-      return !tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa);
+      var maxTouch = Number((window.navigator && window.navigator.maxTouchPoints) || 0);
+      var screenW = window.screen && Number(window.screen.width) || 0;
+      var screenH = window.screen && Number(window.screen.height) || 0;
+      var phoneViewport = screenW > 0 && screenH > 0 && Math.min(screenW, screenH) <= 600 &&
+        (maxTouch > 0 || 'ontouchstart' in window || window.innerWidth <= 700);
+      return !tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa || phoneViewport);
     }
 
     function isTvDevice() {
@@ -8888,7 +8893,12 @@
             var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
             var mobileUa = /iphone|ipod|ipad|android|windows phone|mobile/.test(ua);
             var tvUa = /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
-            if (!tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa)) return false;
+            var maxTouch = Number((window.navigator && window.navigator.maxTouchPoints) || 0);
+            var screenW = window.screen && Number(window.screen.width) || 0;
+            var screenH = window.screen && Number(window.screen.height) || 0;
+            var phoneViewport = screenW > 0 && screenH > 0 && Math.min(screenW, screenH) <= 600 &&
+                (maxTouch > 0 || 'ontouchstart' in window || window.innerWidth <= 700);
+            if (!tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa || phoneViewport)) return false;
             if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
             return tvUa;
         } catch (e) { return false; }
