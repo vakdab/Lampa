@@ -5209,6 +5209,9 @@
 
     function isTvDevice() {
       try {
+        // A phone must always use Lampa's native mobile UI. Some WebViews report
+        // themselves as a TV platform, so the mobile check has priority.
+        if (isMobile()) return false;
         if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
         var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
         return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua) ||
@@ -9278,6 +9281,12 @@
 
     function startPlugin() {
       registerSettings();
+      // Do not load the Apple TV shell on phones. This is intentionally checked
+      // before listeners, observers and custom navigation are installed.
+      if (isMobile() && !isTvDevice()) {
+        removePluginUi();
+        return;
+      }
       bindRuntimeListeners();
       if (!pluginEnabled()) {
         removePluginUi();
@@ -9354,6 +9363,8 @@
 
     function isTvScreen() {
         try {
+            // WebViews on phones can expose a TV platform flag; mobile wins.
+            if (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window)) return false;
             if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
             var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
             return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
