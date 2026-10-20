@@ -10837,9 +10837,17 @@
     }
     return sid;
   }
+  // HEVC is not automatically safe on Android TV. Many older WebViews report
+  // support while decoding 1080p HEVC in software, which causes stutter.
+  // Prefer AVC/H.264 there. The UAKino master playlist still keeps adaptive
+  // 1080p available, so quality is selected by the player instead of forcing a
+  // heavy codec on a slow device.
   function uakinoHevc() {
     try {
-      if (Lampa.Platform && Lampa.Platform.is('android')) return 1;
+      var ua = String(navigator.userAgent || '').toLowerCase();
+      var android = /android/.test(ua) || Lampa.Platform && Lampa.Platform.is && Lampa.Platform.is('android');
+      var tv = /android tv|google tv|bravia|aft|smart-tv|smarttv|netcast|web0s|tizen/.test(ua);
+      if (android || tv) return 0;
       var codec = 'video/mp4; codecs="hvc1.1.6.L153.90"';
       if (window.MediaSource && MediaSource.isTypeSupported && MediaSource.isTypeSupported(codec)) return 1;
       if (document.createElement('video').canPlayType(codec)) return 1;
@@ -13375,4 +13383,39 @@
   }
   if (Lampa.Manifest.app_digital >= 155 && !window.prismak_uakino_v001) { window.prismak_uakino_v001 = true; startPlugin(); }
 
+})();
+/* Low-end Android TV playback guard. Keep adaptive HLS enabled and reduce
+ * unnecessary decoder work. This intentionally never forces 1080p: on a poor
+ * connection the master playlist must be allowed to step down temporarily. */
+(function () {
+  'use strict';
+  if (window.__LampaLowEndPlaybackGuard) return;
+  window.__LampaLowEndPlaybackGuard = true;
+  var lastVideo = null;
+  function tune(video) {
+    if (!video || video === lastVideo) return;
+    lastVideo = video;
+    try {
+      video.preload = 'auto';
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      // Avoid an expensive compositor path on old WebViews.
+      video.style.transform = 'translateZ(0)';
+      video.style.backfaceVisibility = 'hidden';
+    } catch (e) {}
+  }
+  function scan() {
+    var video = null;
+    try {
+      if (window.Lampa && Lampa.PlayerVideo && typeof Lampa.PlayerVideo.video === 'function') video = Lampa.PlayerVideo.video();
+      if (!video) video = document.querySelector('.player-video__video, video');
+    } catch (e) {}
+    if (video) tune(video);
+  }
+  function hook() {
+    if (!window.Lampa || !Lampa.Player || !Lampa.Player.listener) return setTimeout(hook, 1000);
+    try { Lampa.Player.listener.follow('start', function () { setTimeout(scan, 0); }); } catch (e) {}
+    setInterval(scan, 1500);
+  }
+  hook();
 })();
