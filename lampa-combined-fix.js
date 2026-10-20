@@ -9763,8 +9763,10 @@
 
   function isInnerPlayer() {
     var player = Lampa.Storage.field ? Lampa.Storage.field('player') : Lampa.Storage.get('player');
+    // An unset player must mean Lampa's own player. The old Android fallback
+    // treated every Android TV as external, which caused a delay and then sent
+    // the HLS URL to an external app that usually cannot open it.
     if (player) return player === 'inner';
-    if (Lampa.Platform && Lampa.Platform.is('android')) return false;
     return true;
   }
   function isProxyEnabled() {
