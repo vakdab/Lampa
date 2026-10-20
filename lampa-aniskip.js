@@ -1,7 +1,7 @@
 /* Lampa AniSkip — manual opening skip button powered by AniSkip */
 (function () {
     'use strict';
-    var pluginVersion = '2026-10-13-all-in-one-9';
+    var pluginVersion = '2026-10-15-all-in-one-10';
     if (window.LampaAniSkipPluginVersion === pluginVersion) return;
     window.LampaAniSkipPluginVersion = pluginVersion;
     window.LampaAniSkipPlugin = true;
@@ -21,6 +21,8 @@
     var boundTimeUpdate = null;
     var boundLoadedMetadata = null;
     var lastVisibilityLog = null;
+    var SEGMENT_LABELS = { op: 'Пропустити опенінг', ed: 'Пропустити ендінг', recap: 'Пропустити рекап' };
+    var SEGMENT_NOTICES = { op: 'Опенінг пропущено', ed: 'Ендінг пропущено', recap: 'Рекап пропущено' };
     function debugLog() {}
 
     function installStyles() {
@@ -168,6 +170,31 @@
     function normalizeTitle(value) {
         return String(value || '').toLowerCase().replace(/[^a-z0-9а-яёіїєґ]+/gi, ' ').trim();
     }
+    function levenshtein(a, b) {
+        if (a === b) return 0;
+        if (!a.length) return b.length;
+        if (!b.length) return a.length;
+        var previous = [];
+        for (var j = 0; j <= b.length; j++) previous[j] = j;
+        for (var i = 1; i <= a.length; i++) {
+            var current = [i];
+            for (var k = 1; k <= b.length; k++) {
+                current[k] = Math.min(previous[k] + 1, current[k - 1] + 1, previous[k - 1] + (a[i - 1] === b[k - 1] ? 0 : 1));
+            }
+            previous = current;
+        }
+        return previous[b.length];
+    }
+    function titleSimilarity(a, b) {
+        var na = normalizeTitle(a);
+        var nb = normalizeTitle(b);
+        if (!na || !nb) return 0;
+        if (na === nb) return 1;
+        var long = na.length >= nb.length ? na : nb;
+        var short = na.length >= nb.length ? nb : na;
+        if (short.length >= 6 && long.indexOf(short) !== -1) return 0.85;
+        return 1 - levenshtein(na, nb) / Math.max(na.length, nb.length);
+    }
     function knownAnimeMalId(value) {
         var text = String(value || '');
         if (/(?:\bfrieren\b|sousou[\s._\-/]*no[\s._\-/]*frieren|フリーレン|リーレン|芙莉莲|芙莉蓮|фрирен|фрирэн)/i.test(text)) {
@@ -187,16 +214,24 @@
         if (knownId) return Promise.resolve(knownId);
         var candidates = titleCandidates(objects);
         if (title && candidates.indexOf(title) === -1) candidates.unshift(title);
-        candidates = candidates.slice(0, 2);
+        candidates = candidates.slice(0, 4);
         if (!candidates.length) return Promise.resolve(0);
         var key = candidates.map(normalizeTitle).join('|');
         if (malIdCache.has(key)) return malIdCache.get(key);
         var promise = (async function () {
-            var graph = 'query($search:String!){Media(search:$search,type:ANIME){idMal title{romaji english native}}}';
+            function bestScore(query, names) {
+                var best = 0;
+                (names || []).forEach(function (name) {
+                    if (!name) return;
+                    best = Math.max(best, titleSimilarity(query, name));
+                });
+                return best;
+            }
+            var graph = 'query($search:String!){Media(search:$search,type:ANIME){idMal title{romaji english native} synonyms}}';
             for (var i = 0; i < candidates.length; i++) {
                 var query = candidates[i];
                 var controller = new AbortController();
-                var timer = setTimeout(function () { controller.abort(); }, 1800);
+                var timer = setTimeout(function () { controller.abort(); }, 2500);
                 try {
                     var response = await fetch('https://graphql.anilist.co', {
                         method: 'POST', signal: controller.signal,
@@ -206,27 +241,37 @@
                     if (response.ok) {
                         var payload = await response.json();
                         var media = payload && payload.data && payload.data.Media;
-                        var names = media && media.title ? [media.title.romaji, media.title.english, media.title.native] : [];
-                        if (media && media.idMal && (names.some(function (name) { return normalizeTitle(name) === normalizeTitle(query); }) || normalizeTitle(query).length > 5)) return Number(media.idMal);
+                        if (media && media.idMal) {
+                            var names = media.title ? [media.title.romaji, media.title.english, media.title.native] : [];
+                            names = names.concat(media.synonyms || []);
+                            if (bestScore(query, names) >= 0.75) return Number(media.idMal);
+                        }
                     }
                 } catch (error) {} finally { clearTimeout(timer); }
             }
-            for (var j = 0; j < Math.min(1, candidates.length); j++) {
+            for (var j = 0; j < candidates.length; j++) {
                 var jikanController = new AbortController();
-                var jikanTimer = setTimeout(function () { jikanController.abort(); }, 1800);
+                var jikanTimer = setTimeout(function () { jikanController.abort(); }, 2500);
                 try {
-                    var jikanResponse = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(candidates[j]) + '&limit=10', { signal: jikanController.signal, headers: { Accept: 'application/json' } });
+                    var jikanResponse = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(candidates[j]) + '&limit=20', { signal: jikanController.signal, headers: { Accept: 'application/json' } });
                     if (!jikanResponse.ok) continue;
                     var jikanPayload = await jikanResponse.json();
                     var jikanResults = Array.isArray(jikanPayload && jikanPayload.data) ? jikanPayload.data : [];
-                    var normalized = normalizeTitle(candidates[j]);
-                    var exact = jikanResults.find(function (anime) { return [anime.title, anime.title_english, anime.title_japanese].some(function (name) { return normalizeTitle(name) === normalized; }); });
-                    if (exact && exact.mal_id) return Number(exact.mal_id);
+                    var bestId = 0;
+                    var bestJikan = 0;
+                    jikanResults.forEach(function (anime) {
+                        var names = [anime.title, anime.title_english, anime.title_japanese];
+                        if (Array.isArray(anime.titles)) anime.titles.forEach(function (entry) { if (entry && entry.title) names.push(entry.title); });
+                        var current = bestScore(candidates[j], names);
+                        if (current > bestJikan) { bestJikan = current; bestId = Number(anime.mal_id) || 0; }
+                    });
+                    if (bestId && bestJikan >= 0.75) return bestId;
                 } catch (error) {} finally { clearTimeout(jikanTimer); }
             }
             return 0;
         })();
         malIdCache.set(key, promise);
+        promise.catch(function () { malIdCache.delete(key); });
         return promise;
     }
     function episodeFromString(value) {
@@ -355,11 +400,16 @@
             var target = Number(currentSegment.end);
             if (!Number.isFinite(target)) return;
             try {
+                var skipType = currentSegment.type;
                 currentVideo.currentTime = target;
                 currentSegment = null;
                 syncButton();
                 if (!currentVideo.paused && currentVideo.play) currentVideo.play().catch(function () {});
-                if (window.Lampa && Lampa.Notice && typeof Lampa.Notice.show === 'function') Lampa.Notice.show('Опенінг пропущено');
+                if (window.Lampa && Lampa.Notice && typeof Lampa.Notice.show === 'function') {
+                    var noticeText = SEGMENT_NOTICES[skipType] || 'Пропущено';
+                    try { Lampa.Notice.show({ title: noticeText }); }
+                    catch (noticeError) { try { Lampa.Notice.show(noticeText); } catch (noticeError2) {} }
+                }
             } catch (error) {}
         });
         root.appendChild(button);
@@ -374,6 +424,12 @@
         var now = Number(currentVideo.currentTime);
         currentSegment = currentSegments.find(function (segment) { return now >= segment.start && now < segment.end; }) || null;
         var visible = !!currentSegment;
+        if (currentSegment) {
+            var label = SEGMENT_LABELS[currentSegment.type] || 'Пропустити';
+            var textElement = currentButton.querySelector('.player-skip__text');
+            if (textElement && textElement.textContent !== label) textElement.textContent = label;
+            currentButton.setAttribute('aria-label', label);
+        }
         currentButton.classList.toggle('hide', !visible);
         currentButton.setAttribute('aria-hidden', visible ? 'false' : 'true');
         if (lastVisibilityLog !== visible) {
@@ -392,6 +448,7 @@
                 var response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
                 if (!response.ok) {
                     debugLog('[Lampa AniSkip] API error:', response.status);
+                    segmentCache.delete(cacheKey);
                     return [];
                 }
                 var payload = await response.json();
@@ -401,18 +458,22 @@
                 }
                 var segments = payload.results.map(function (item) {
                     var interval = item.interval || item;
+                    var rawType = String(item.skipType || item.skip_type || '').toLowerCase();
+                    if (rawType === 'opening') rawType = 'op';
+                    if (rawType === 'ending') rawType = 'ed';
                     return {
                         start: Number(interval.startTime !== undefined ? interval.startTime : interval.start_time),
                         end: Number(interval.endTime !== undefined ? interval.endTime : interval.end_time),
-                        type: String(item.skipType || item.skip_type || '').toLowerCase()
+                        type: rawType
                     };
                 }).filter(function (item) {
-                    return ['op', 'opening'].indexOf(item.type) !== -1 && Number.isFinite(item.start) && Number.isFinite(item.end) && item.start >= 0 && item.end > item.start;
+                    return ['op', 'ed', 'recap'].indexOf(item.type) !== -1 && Number.isFinite(item.start) && Number.isFinite(item.end) && item.start >= 0 && item.end > item.start;
                 });
                 debugLog('[Lampa AniSkip] Segments:', malId, episode, segments.length);
                 return segments;
             } catch (error) {
                 debugLog('[Lampa AniSkip] Request failed:', error && error.name ? error.name : error);
+                segmentCache.delete(cacheKey);
                 return [];
             } finally {
                 clearTimeout(timer);
@@ -449,8 +510,8 @@
         if (!video || !episode || (!title && !malId)) {
             pollCount++;
             if (pollCount === 1) debugLog('[Lampa AniSkip] Waiting for video metadata:', { video: !!video, episode: episode, title: !!title, malId: malId });
-            if (pollCount === 60) debugLog('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
-            if (pollCount < 20) retryTimer = setTimeout(function () { loadForCurrent(token); }, 750);
+            if (pollCount === 80) debugLog('[Lampa AniSkip] Stopped: video, episode or anime title could not be detected');
+            if (pollCount < 40) retryTimer = setTimeout(function () { loadForCurrent(token); }, 750);
             return;
         }
         debugLog('[Lampa AniSkip] Looking up:', { episode: episode, malId: malId || 'title lookup' });
