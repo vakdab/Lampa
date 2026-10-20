@@ -44,13 +44,13 @@ https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
 Зафіксована версія мобільного плагіна:
 
 ```text
-https://cdn.jsdelivr.net/gh/vakdab/Lampa@7b9e340c924ad9fb1a231cae38494c247cdbbf5b/lampa-mobile-apple.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@dc240d1baafc2c7bdf032a797f84be56edd31f87/lampa-mobile-apple.js
 ```
 
 Для автоматичного вибору режиму на одному посиланні використовуйте `lampa-combined-fix.js`: він сам вибирає мобільну або TV-гілку.
 
 ```text
-https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 ```
 
 Не встановлюйте `lampa-mobile-apple.js` одночасно з універсальним файлом: залиште тільки один плагін.
