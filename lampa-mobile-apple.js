@@ -40,6 +40,22 @@
         document.documentElement.classList.add('lampa-mx-mobile-fix');
         document.body.classList.add('lampa-mx-mobile-fix');
     }
+    function installAbortSafePlay() {
+        if (!window.HTMLMediaElement || !HTMLMediaElement.prototype || HTMLMediaElement.prototype.__lampaAbortSafePlay) return;
+        var nativePlay = HTMLMediaElement.prototype.play;
+        if (typeof nativePlay !== 'function') return;
+        var safePlay = function () {
+            var result = nativePlay.apply(this, arguments);
+            if (!result || typeof result.then !== 'function') return result;
+            return result.catch(function (error) {
+                if (error && (error.name === 'AbortError' || /operation was aborted/i.test(String(error.message || '')))) return undefined;
+                return Promise.reject(error);
+            });
+        };
+        safePlay.__lampaAbortSafePlay = true;
+        HTMLMediaElement.prototype.play = safePlay;
+        HTMLMediaElement.prototype.__lampaAbortSafePlay = true;
+    }
     function findVisibleMenuPanel() {
         var selectors = ['.agnative-leftdock.is-visible', '.menu__content', '.menu__list', '.menu__body', '.menu__container', '.menu'];
         var candidates = [];
@@ -124,6 +140,7 @@
         if (!isMobile()) return;
         installViewportFix();
         installStyles();
+        installAbortSafePlay();
         if (window.PointerEvent) {
             document.addEventListener('pointerdown', onPointerDown, { passive: true, capture: true });
             document.addEventListener('pointerup', onPointerUp, { passive: true, capture: true });
