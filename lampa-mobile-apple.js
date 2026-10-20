@@ -43,16 +43,37 @@
     function installAbortSafePlay() {
         if (!window.HTMLMediaElement || !HTMLMediaElement.prototype || HTMLMediaElement.prototype.__lampaAbortSafePlay) return;
         var nativePlay = HTMLMediaElement.prototype.play;
+        var nativePause = HTMLMediaElement.prototype.pause;
         if (typeof nativePlay !== 'function') return;
         var safePlay = function () {
+            var video = this;
+            video.__lampaPlayRequested = true;
             var result = nativePlay.apply(this, arguments);
             if (!result || typeof result.then !== 'function') return result;
             return result.catch(function (error) {
-                if (error && (error.name === 'AbortError' || /operation was aborted/i.test(String(error.message || '')))) return undefined;
+                if (error && (error.name === 'AbortError' || /operation was aborted/i.test(String(error.message || '')))) {
+                    if (!video.__lampaPlayRetryPending) {
+                        video.__lampaPlayRetryPending = true;
+                        var retry = function () {
+                            video.__lampaPlayRetryPending = false;
+                            if (!video.__lampaPlayRequested || video.ended || video.isConnected === false) return;
+                            nativePlay.call(video).catch(function (retryError) {
+                                if (!(retryError && retryError.name === 'AbortError')) video.__lampaLastPlayError = retryError;
+                            });
+                        };
+                        if (video.readyState >= 2) setTimeout(retry, 350);
+                        else video.addEventListener('canplay', retry, { once: true });
+                    }
+                    return undefined;
+                }
                 return Promise.reject(error);
             });
         };
         safePlay.__lampaAbortSafePlay = true;
+        HTMLMediaElement.prototype.pause = function () {
+            this.__lampaPlayRequested = false;
+            return nativePause.apply(this, arguments);
+        };
         HTMLMediaElement.prototype.play = safePlay;
         HTMLMediaElement.prototype.__lampaAbortSafePlay = true;
     }
