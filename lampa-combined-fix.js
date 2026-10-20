@@ -5204,7 +5204,10 @@
     }
 
     function isMobile() {
-      return window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window);
+      var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
+      var mobileUa = /iphone|ipod|ipad|android|windows phone|mobile/.test(ua);
+      var tvUa = /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
+      return !tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa);
     }
 
     function isTvDevice() {
@@ -9359,10 +9362,12 @@
 
     function isTvScreen() {
         try {
-            // WebViews on phones can expose a TV platform flag; mobile wins.
-            if (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window)) return false;
-            if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
             var ua = String((window.navigator && window.navigator.userAgent) || '').toLowerCase();
+            var mobileUa = /iphone|ipod|ipad|android|windows phone|mobile/.test(ua);
+            var tvUa = /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
+            // WebViews on phones can expose a TV platform flag; mobile wins.
+            if (!tvUa && (window.innerWidth < 768 || (window.innerWidth < 1024 && 'ontouchstart' in window) || mobileUa)) return false;
+            if (window.Lampa && Lampa.Platform && typeof Lampa.Platform.screen === 'function' && Lampa.Platform.screen('tv')) return true;
             return /smart[- ]?tv|googletv|android ?tv|aftb|afts|webos|tizen|netcast|viera|bravia|hbbtv/.test(ua);
         } catch (e) { return false; }
     }
