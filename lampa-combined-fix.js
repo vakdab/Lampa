@@ -987,6 +987,7 @@
     LOGO_LANG_KEY: 'appletv_agnative_logo_lang',
     FONT_SIZE_KEY: 'appletv_agnative_font_size',
     UI_LANG_KEY: 'appletv_agnative_ui_lang',
+    BACKGROUND_COLOR_KEY: 'appletv_agnative_background_color',
     BACKDROP_KEY: 'appletv_agnative_backdrop',
     BADGE_KEY: 'appletv_agnative_badge',
     RATING_KEY: 'appletv_agnative_rating',
@@ -1000,6 +1001,7 @@
     TOPNAV_SETTINGS_COMPONENT: 'agnative_topnav',
     GLARE_CLASS: 'appletv-agnative-topnav-glare',
     FONT_SIZE_ATTR: 'data-agnative-font',
+    BACKGROUND_COLOR_ATTR: 'data-agnative-background-color',
     BACKDROP_ATTR: 'data-agnative-backdrop',
     BADGE_ATTR: 'data-agnative-badge',
     RATING_ATTR: 'data-agnative-rating',
@@ -1066,6 +1068,14 @@
     set_font_size_name: 'Размер шрифта',
     set_font_size_desc: 'Масштаб текста',
     set_ui_lang_desc: 'Язык плагина',
+    set_section_interface: 'Интерфейс',
+    set_background_color_name: 'Цвет фона',
+    set_background_color_desc: 'Применяется ко всем страницам, кроме видеоплеера',
+    val_bg_default: 'По умолчанию',
+    val_bg_black: 'Чёрный',
+    val_bg_graphite: 'Графитовый',
+    val_bg_blue: 'Тёмно-синий',
+    val_bg_purple: 'Тёмно-фиолетовый',
     val_on: 'Включить', val_off: 'Выключить',
     val_hide: 'Скрыть',
     val_auto: 'Автоматически',
@@ -1197,6 +1207,14 @@
     set_font_size_name: 'Font size',
     set_font_size_desc: 'Text scale',
     set_ui_lang_desc: 'Plugin language',
+    set_section_interface: 'Interface',
+    set_background_color_name: 'Background color',
+    set_background_color_desc: 'Applied to all pages except the video player',
+    val_bg_default: 'Default',
+    val_bg_black: 'Black',
+    val_bg_graphite: 'Graphite',
+    val_bg_blue: 'Dark blue',
+    val_bg_purple: 'Dark purple',
     val_on: 'Enable', val_off: 'Disable',
     val_hide: 'Hide',
     val_auto: 'Auto',
@@ -1932,6 +1950,7 @@
       LOGO_LANG_KEY,
       FONT_SIZE_KEY,
       UI_LANG_KEY,
+      BACKGROUND_COLOR_KEY,
       BACKDROP_KEY,
       BADGE_KEY,
       RATING_KEY,
@@ -1948,6 +1967,7 @@
       TOPNAV_SETTINGS_COMPONENT,
       GLARE_CLASS,
       FONT_SIZE_ATTR,
+      BACKGROUND_COLOR_ATTR,
       BACKDROP_ATTR,
       BADGE_ATTR,
       RATING_ATTR,
@@ -2576,6 +2596,27 @@
       document.body.setAttribute(CARD_IMAGE_MODE_ATTR, getCardImageMode());
     }
 
+    function getBackgroundColor() {
+      try {
+        var value = window.Lampa && Lampa.Storage ? Lampa.Storage.get(BACKGROUND_COLOR_KEY, 'default') : 'default';
+        return ['default', 'black', 'graphite', 'blue', 'purple'].indexOf(value) >= 0 ? value : 'default';
+      } catch (e) { return 'default'; }
+    }
+
+    function syncBackgroundColor() {
+      if (!document.body) return;
+      var value = getBackgroundColor();
+      document.body.setAttribute(BACKGROUND_COLOR_ATTR, value);
+      var colors = {
+        'default': '#0b0c10',
+        'black': '#000000',
+        'graphite': '#202328',
+        'blue': '#0b1628',
+        'purple': '#1a1024'
+      };
+      document.body.style.setProperty('--agnative-page-bg', colors[value] || colors.default);
+    }
+
     function syncPerfMode() {
       if (!document.body) return;
       // TV browsers have limited CPU/GPU; prefer predictable rendering.
@@ -2640,6 +2681,7 @@
         Lampa.Storage.set(CARD_ANIM_KEY, 'veoveo');
         Lampa.Storage.set(CARD_ANIM_ORBIT_KEY, 'false');
         Lampa.Storage.set(UI_LANG_KEY, 'auto');
+        Lampa.Storage.set(BACKGROUND_COLOR_KEY, 'default');
         Lampa.Storage.set(LOGO_LANG_KEY, 'auto');
         Lampa.Storage.set(FONT_SIZE_KEY, 'md');
         Lampa.Storage.set(CATEGORY_SIZE_KEY, 'md');
@@ -2670,6 +2712,7 @@
         syncFontSize();
         syncLogoSize();
         syncCardFlags();
+        syncBackgroundColor();
         syncPerfMode();
         syncOverlayAlign();
         syncTopnavSize();
@@ -3991,6 +4034,35 @@
           },
           onChange: function () {
             setTimeout(function () { schedulePatch(); }, 80);
+          }
+        });
+
+        Lampa.SettingsApi.addParam({
+          component: SETTINGS_COMPONENT,
+          param: { type: 'title' },
+          field: { name: t('set_section_interface') }
+        });
+
+        Lampa.SettingsApi.addParam({
+          component: SETTINGS_COMPONENT,
+          param: {
+            name: BACKGROUND_COLOR_KEY,
+            type: 'select',
+            values: {
+              'default': t('val_bg_default'),
+              'black': t('val_bg_black'),
+              'graphite': t('val_bg_graphite'),
+              'blue': t('val_bg_blue'),
+              'purple': t('val_bg_purple')
+            },
+            default: 'default'
+          },
+          field: {
+            name: t('set_background_color_name'),
+            description: t('set_background_color_desc')
+          },
+          onChange: function () {
+            syncBackgroundColor();
           }
         });
 
@@ -6643,7 +6715,10 @@
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock__item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item.hover, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param.focus, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder.focus { background:linear-gradient(180deg,rgba(65,65,70,.98) 0%,rgba(16,16,18,.99) 55%,#000 100%) !important; }',
         'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-hero { display:block !important; visibility:visible !important; opacity:1 !important; min-height:420px !important; }',
         // Final TV override: solid black everywhere, including focused controls.
-        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock *, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__inner, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel__tile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input--free, body.' + BODY_CLASS + '.' + TV_CLASS + ' .simple-button, body.' + BODY_CLASS + '.' + TV_CLASS + ' .button.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.selector { background:#000 !important; background-image:none !important; border-color:#000 !important; box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }'
+        'body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-leftdock *, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__inner, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-shell__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-rightdock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-clock, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-topnav-right__profile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel, body.' + BODY_CLASS + '.' + TV_CLASS + ' .agnative-control-panel__tile, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__body, body.' + BODY_CLASS + '.' + TV_CLASS + ' .navigation-bar__item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .selectbox-item, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-param, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-folder, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input__content, body.' + BODY_CLASS + '.' + TV_CLASS + ' .settings-input--free, body.' + BODY_CLASS + '.' + TV_CLASS + ' .simple-button, body.' + BODY_CLASS + '.' + TV_CLASS + ' .button.selector, body.' + BODY_CLASS + '.' + TV_CLASS + ' .menu__item.selector { background:#000 !important; background-image:none !important; border-color:#000 !important; box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }',
+        // User-selectable page background. The player is intentionally excluded.
+        'html, body.' + BODY_CLASS + ' { background-color:var(--agnative-page-bg, #0b0c10) !important; }',
+        'body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .wrap:not(.player), body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .wrap__content, body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .activity, body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .activity__body, body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .scroll:not(.player), body.' + BODY_CLASS + '[' + BACKGROUND_COLOR_ATTR + '] .settings__content { background-color:var(--agnative-page-bg, #0b0c10) !important; }'
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
@@ -8796,6 +8871,7 @@
       syncTvClass();
       syncFontSize();
       syncCardFlags();
+      syncBackgroundColor();
       syncPerfMode();
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
@@ -8832,6 +8908,7 @@
       syncCardSize();
       syncLogoSize();
       syncCardFlags();
+      syncBackgroundColor();
       syncPerfMode();
       syncFlexGapFlag();
       syncOverlayAlign();
