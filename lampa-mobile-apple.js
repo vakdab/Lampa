@@ -9046,6 +9046,13 @@
         try { el.click(); } catch (e3) {}
     }
 
+    var sourcePickerOpen = false;
+    var sourcePickerSuppressUntil = 0;
+    function releaseSourcePicker() {
+        sourcePickerOpen = false;
+        sourcePickerSuppressUntil = Date.now() + 700;
+    }
+
     function chooseSource(root, attempt) {
         var sources = collect(root);
         if (!sources.length) {
@@ -9055,6 +9062,7 @@
                 return;
             }
             try { Lampa.Noty.show('Плагіни джерел не знайдено'); } catch (e) {}
+            releaseSourcePicker();
             return;
         }
         var items = sources.map(function (el) {
@@ -9072,13 +9080,19 @@
             title: 'Виберіть плагін',
             items: items,
             onSelect: function (item) {
+                releaseSourcePicker();
                 try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
                 trigger(item.node);
             },
             onBack: function () {
+                releaseSourcePicker();
                 try { Lampa.Controller.toggle(controller || 'content'); } catch (e) {}
             }
         });
+        // Some Lampa builds close the selectbox without calling onBack.
+        setTimeout(function () {
+            if (sourcePickerOpen) sourcePickerOpen = false;
+        }, 1800);
     }
 
     function bind(root) {
@@ -9122,6 +9136,9 @@
             var handler = function (e) {
                 if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
                 if (e && e.preventDefault) e.preventDefault();
+                var now = Date.now();
+                if (sourcePickerOpen || now < sourcePickerSuppressUntil) return;
+                sourcePickerOpen = true;
                 chooseSource(root, 0);
             };
             if (window.$ && window.jQuery) {
