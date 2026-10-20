@@ -42,7 +42,7 @@ https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-aniskip.js
 Зафіксована версія:
 
 ```text
-https://cdn.jsdelivr.net/gh/vakdab/Lampa@dc240d1baafc2c7bdf032a797f84be56edd31f87/lampa-aniskip.js
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@25c99eba66678967e55d3781c5dd65743831e478/lampa-aniskip.js
 ```
 
 Він визначає назву аніме та епізод, отримує таймкоди з AniSkip і показує кнопку тільки під час відповідного сегмента. Якщо вже встановлений `lampa-combined-fix.js` або мобільний Apple-плагін, окремий AniSkip додавати не потрібно — він уже вбудований.
