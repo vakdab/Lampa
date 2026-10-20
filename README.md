@@ -35,7 +35,19 @@ https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 
 
 ## Мобільна Apple-версія
-Окремий файл `lampa-mobile-apple.js` є сумісною мобільною копією. Для звичайного встановлення він не потрібен: універсальний `lampa-combined-fix.js` сам вибирає мобільну або TV-гілку.
+Якщо потрібна тільки мобільна версія Apple-інтерфейсу для телефона, встановлюйте окремий файл `lampa-mobile-apple.js`:
+
+```text
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
+```
+
+Зафіксована версія мобільного плагіна:
+
+```text
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@7b9e340c924ad9fb1a231cae38494c247cdbbf5b/lampa-mobile-apple.js
+```
+
+Для автоматичного вибору режиму на одному посиланні використовуйте `lampa-combined-fix.js`: він сам вибирає мобільну або TV-гілку.
 
 ```text
 https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
