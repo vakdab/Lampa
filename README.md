@@ -32,6 +32,17 @@ https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 
 На телефонах Apple-стиль також увімкнений, але використовується адаптивна мобільна гілка без TV-розкладки. На Android TV, Smart TV та інших TV-пристроях залишається повний TV-режим.
 
+
+## Мобільна Apple-версія
+
+Окремий файл `lampa-mobile-apple.js` відновлює Apple-інтерфейс із коміту `c1e3351` — до додавання TV-режиму. Використовуйте його на телефоні замість `lampa-combined-fix.js`:
+
+```text
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-mobile-apple.js
+```
+
+Не встановлюйте одночасно мобільну та TV-версію: залиште тільки один із цих плагінів.
+
 Не додавайте окремо плагін Prismak: він уже вбудований у цей файл.
 
 Не додавайте одночасно окремі `player-size.js`, `lampa-anime4k.js` або `anime4k-upscale.js`, інакше меню може дублюватися.
