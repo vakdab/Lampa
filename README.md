@@ -31,6 +31,16 @@ https://fastly.jsdelivr.net/gh/vakdab/Lampa@main/lampa-combined-fix.js
 Після оновлення повністю закрийте й відкрийте Lampa: плагін кешується у пам'яті застосунку.
 Плагін автоматично визначає пристрій: на iPhone/Android використовується мобільний Apple-інтерфейс, а на Smart TV/Android TV — TV-інтерфейс. Встановлюйте тільки цей універсальний файл.
 
+## Окремий Prismak із онлайн-джерелами
+
+Це окрема копія вбудованого в TV-версію Prismak Online Sources v2.9.5. Він додає джерела UAKino, Eneyida та інші онлайн-балансери без встановлення TV-оболонки:
+
+```text
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/lampa-prismak.js
+```
+
+Якщо вже встановлений `lampa-combined-fix.js`, окремий Prismak додавати не потрібно — він уже вбудований.
+
 ## Окремий AniSkip
 
 AniSkip також доступний окремим плагіном для ручного пропуску опенінга, ендінга та рекапа:
