@@ -7,6 +7,66 @@
     window.LampaMxMobileFixVersion = version;
     window.LampaMxMobileFix = true;
 
+    (function installLampaBootSplash() {
+        var splashId = 'lampa-apple-boot-splash';
+        var styleId = 'lampa-apple-boot-splash-style';
+        var shownAt = Date.now();
+        var removed = false;
+
+        function mount() {
+            if (document.getElementById(splashId)) return;
+            var style = document.getElementById(styleId) || document.createElement('style');
+            style.id = styleId;
+            style.textContent = '' +
+                '@keyframes lampaSplashSpin{to{transform:rotate(360deg)}}' +
+                '@keyframes lampaSplashPulse{0%,100%{transform:scale(.92);opacity:.58}50%{transform:scale(1.06);opacity:1}}' +
+                '@keyframes lampaSplashSweep{0%{transform:translateX(-145%) rotate(18deg);opacity:0}22%{opacity:.9}58%,100%{transform:translateX(145%) rotate(18deg);opacity:0}}' +
+                '@keyframes lampaSplashFade{to{opacity:0;visibility:hidden;transform:scale(1.025)}}' +
+                '#' + splashId + '{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;color:#fff;opacity:1;visibility:visible;transition:opacity .42s ease,visibility .42s ease,transform .42s ease;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}' +
+                '#' + splashId + '.is-leaving{animation:lampaSplashFade .48s ease forwards;pointer-events:none}' +
+                '#' + splashId + ' .lampa-splash-core{position:relative;width:7.6em;height:7.6em;display:flex;align-items:center;justify-content:center;animation:lampaSplashPulse 2.2s ease-in-out infinite}' +
+                '#' + splashId + ' .lampa-splash-ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.95),rgba(255,255,255,.12),rgba(255,255,255,0));-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:lampaSplashSpin 1.35s linear infinite}' +
+                '#' + splashId + ' .lampa-splash-orbit{position:absolute;inset:.72em;border:1px solid rgba(255,255,255,.18);border-radius:50%;box-shadow:0 0 34px rgba(255,255,255,.08),inset 0 0 24px rgba(255,255,255,.06)}' +
+                '#' + splashId + ' .lampa-splash-orbit:after{content:"";position:absolute;left:50%;top:-.23em;width:.46em;height:.46em;border-radius:50%;background:#fff;box-shadow:0 0 13px 4px rgba(255,255,255,.8);transform-origin:0 calc(3.08em);animation:lampaSplashSpin 2.5s linear infinite}' +
+                '#' + splashId + ' .lampa-splash-mark{position:relative;z-index:2;font-size:1.08em;font-weight:800;letter-spacing:.16em;text-indent:.16em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.25)}' +
+                '#' + splashId + ' .lampa-splash-sweep{position:absolute;z-index:3;width:145%;height:.18em;left:-22%;top:48%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);filter:blur(2px);animation:lampaSplashSweep 2.1s ease-in-out infinite;pointer-events:none}' +
+                '#' + splashId + ' .lampa-splash-caption{position:absolute;top:calc(50% + 5.8em);font-size:.66em;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.48);text-indent:.28em}' +
+                '@media (prefers-reduced-motion:reduce){#' + splashId + ' .lampa-splash-core,#' + splashId + ' .lampa-splash-ring,#' + splashId + ' .lampa-splash-orbit:after,#' + splashId + ' .lampa-splash-sweep{animation:none!important}}';
+            if (!style.parentNode) (document.head || document.documentElement).appendChild(style);
+
+            var splash = document.createElement('div');
+            splash.id = splashId;
+            splash.setAttribute('aria-label', 'Lampa loading');
+            splash.innerHTML = '<div class="lampa-splash-core"><div class="lampa-splash-ring"></div><div class="lampa-splash-orbit"></div><div class="lampa-splash-mark">LAMPA</div><div class="lampa-splash-sweep"></div></div><div class="lampa-splash-caption">Loading</div>';
+            (document.body || document.documentElement).appendChild(splash);
+        }
+
+        function remove() {
+            if (removed) return;
+            var wait = Math.max(0, 720 - (Date.now() - shownAt));
+            setTimeout(function () {
+                if (removed) return;
+                removed = true;
+                var splash = document.getElementById(splashId);
+                if (!splash) return;
+                splash.classList.add('is-leaving');
+                setTimeout(function () {
+                    if (splash.parentNode) splash.parentNode.removeChild(splash);
+                    var style = document.getElementById(styleId);
+                    if (style && style.parentNode) style.parentNode.removeChild(style);
+                }, 520);
+            }, wait);
+        }
+
+        function ready() { remove(); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
+        else mount();
+        if (window.appready) ready();
+        else if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') ready(); });
+        window.addEventListener('load', ready, { once: true });
+        setTimeout(ready, 2600);
+    })();
+
     var STYLE_ID = 'lampa-mx-mobile-fix-style-v9';
     var touchStart = null;
 
