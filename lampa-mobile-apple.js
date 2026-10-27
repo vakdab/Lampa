@@ -5270,6 +5270,8 @@
         '  box-shadow: none !important;',
         '  filter: none !important;',
         '}',
+        'body.' + BODY_CLASS + ' .activity { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; transition: none !important; }',
+        'body.' + BODY_CLASS + ' .activity.activity--active { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; z-index: 1 !important; }',
         'body.' + BODY_CLASS + ' .activity__slides { padding-top:3.5em !important; }',
         'body.' + BODY_CLASS + ' .full-start__body, body.' + BODY_CLASS + ' .full-start-new__body { transform: translateY(3em) !important; }',
         'body.' + BODY_CLASS + ' .full-start-new ~ .items-line, body.' + BODY_CLASS + ' .full-start ~ .items-line, body.' + BODY_CLASS + ' .full-start-new + *, body.' + BODY_CLASS + ' .full-start + * { transform: translateY(3em) !important; }',
