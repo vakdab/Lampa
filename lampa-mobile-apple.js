@@ -6066,15 +6066,11 @@
         '  z-index: 25 !important;',
         '  width: max-content !important;',
         '  max-width: 16em !important;',
-        '  height: 80vh !important;',
+        '  height: auto !important;',
         '  max-height: 80vh !important;',
         '  min-height: 0 !important;',
-        '  overflow-y: auto !important;',
+        '  overflow-y: hidden !important;',
         '  overflow-x: hidden !important;',
-        '  overscroll-behavior: contain !important;',
-        '  -webkit-overflow-scrolling: touch !important;',
-        '  touch-action: pan-y !important;',
-        '  scrollbar-width: thin;',
         '  display: inline-flex !important;',
         '  flex-direction: column !important;',
         '  padding: .32em !important;',
@@ -6094,7 +6090,8 @@
         '  opacity: 1 !important;',
         '  pointer-events: auto !important;',
         '}',
-        'body.' + BODY_CLASS + ' .agnative-leftdock__inner { display: flex; flex: 0 0 auto; min-height: 0; flex-direction: column; gap: .12em; }',
+        'body.' + BODY_CLASS + ' .agnative-leftdock__inner { display: flex; flex: 0 0 auto; min-height: 0; max-height: calc(80vh - 1em); flex-direction: column; gap: .12em; }',
+        'body.' + BODY_CLASS + ' .agnative-leftdock__scrollcase { flex: 0 1 auto; min-height: 0; max-height: min(62vh, 31em); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__case { display: flex; flex-direction: column; gap: .04em; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__split { height: 1px; margin: .3em .4em; background: rgba(255,255,255,.10); }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__item.selector {',
@@ -7695,12 +7692,14 @@
 
       var inner = document.createElement('div');
       inner.className = 'agnative-leftdock__inner';
+      var menuCaseIndex = 0;
 
       Array.prototype.slice.call(sourceMenu.children).forEach(function (child) {
         if (!child || !child.classList) return;
         if (child.classList.contains('menu__case')) {
           var caseEl = document.createElement('div');
-          caseEl.className = 'agnative-leftdock__case';
+          caseEl.className = 'agnative-leftdock__case' + (menuCaseIndex === 0 ? ' agnative-leftdock__scrollcase' : '');
+          menuCaseIndex++;
           qsa('.menu__item.selector', child).forEach(function (item) {
             if (item.classList.contains('hidden')) return;
             var action = item.getAttribute('data-action');
