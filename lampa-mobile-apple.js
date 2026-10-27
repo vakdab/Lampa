@@ -2543,6 +2543,14 @@
       return ['feed', 'subscribe', 'subscriptions', 'subscription', 'notice', 'schedule', 'console', 'torrent', 'torrents'].indexOf(action) !== -1;
     }
 
+    function isRemovedTopnavLabel(label) {
+      var text = String(label || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      return text === 'стрічка' || text === 'лента' || text === 'feed' ||
+        text === 'підписки' || text === 'подписки' || text === 'subscriptions' ||
+        text === 'розклад' || text === 'расписание' || text === 'schedule' ||
+        text === 'торренти' || text === 'торренты' || text === 'torrents' || text === 'torrent';
+    }
+
     function getAvailableTopnavItems() {
       var defs = [];
       var seen = {};
@@ -2556,6 +2564,7 @@
         if (labelNode) label = (labelNode.textContent || '').trim();
         if (!label) label = (item.textContent || '').trim();
         if (!label) label = action;
+        if (isRemovedTopnavLabel(label)) return;
         seen[action] = true;
         defs.push({ action: action, label: label });
       });
@@ -7687,11 +7696,18 @@
           caseEl.className = 'agnative-leftdock__case';
           qsa('.menu__item.selector', child).forEach(function (item) {
             if (item.classList.contains('hidden')) return;
+            var action = item.getAttribute('data-action');
+            var sourceLabelNode = qs('.menu__text, .menu__item-name, .menu__item-text', item);
+            var sourceLabel = sourceLabelNode ? (sourceLabelNode.textContent || '').trim() : (item.textContent || '').trim();
+            if (isRemovedTopnavAction(action) || isRemovedTopnavLabel(sourceLabel)) {
+              item.style.setProperty('display', 'none', 'important');
+              item.setAttribute('data-agnative-removed-menu-item', 'true');
+              return;
+            }
             var btn = document.createElement('div');
             btn.className = 'agnative-leftdock__item selector';
             btn.setAttribute('data-selector', 'true');
             btn.setAttribute('tabindex', '0');
-            var action = item.getAttribute('data-action');
             if (action) btn.setAttribute('data-action', action);
             btn.innerHTML = item.innerHTML;
             var labelNode = qs('.menu__text, .menu__item-name, .menu__item-text', btn);
