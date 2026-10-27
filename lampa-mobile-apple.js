@@ -6091,7 +6091,7 @@
         '  pointer-events: auto !important;',
         '}',
         'body.' + BODY_CLASS + ' .agnative-leftdock__inner { display: flex; flex: 0 0 auto; min-height: 0; max-height: calc(80vh - 1em); flex-direction: column; gap: .12em; }',
-        'body.' + BODY_CLASS + ' .agnative-leftdock__scrollcase { flex: 0 1 auto; min-height: 0; max-height: min(62vh, 31em); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; }',
+        'body.' + BODY_CLASS + ' .agnative-leftdock__scrollcase { flex: 0 1 auto; min-height: 0; max-height: 22em; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__case { display: flex; flex-direction: column; gap: .04em; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__split { height: 1px; margin: .3em .4em; background: rgba(255,255,255,.10); }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__item.selector {',
