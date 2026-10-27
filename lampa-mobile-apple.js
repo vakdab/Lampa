@@ -12,8 +12,40 @@
         var styleId = 'lampa-apple-boot-splash-style';
         var shownAt = Date.now();
         var removed = false;
+        var readyBound = false;
+        var hiddenLoaders = [];
+        var loaderObserver = null;
+
+        function hideNativeLoaders() {
+            var selectors = '.loader, .loading-screen, .app-loader, #loader, #loading';
+            Array.prototype.forEach.call(document.querySelectorAll(selectors), function (loader) {
+                if (!loader || loader.id === splashId || loader.getAttribute('data-lampa-splash-hidden') === 'true') return;
+                var rect = loader.getBoundingClientRect();
+                var style = window.getComputedStyle(loader);
+                var fullScreen = rect.width >= window.innerWidth * .8 && rect.height >= window.innerHeight * .8;
+                if (!fullScreen && style.position !== 'fixed') return;
+                hiddenLoaders.push({ node: loader, css: loader.getAttribute('style') });
+                loader.setAttribute('data-lampa-splash-hidden', 'true');
+                loader.style.setProperty('display', 'none', 'important');
+            });
+        }
+
+        function restoreNativeLoaders() {
+            hiddenLoaders.forEach(function (entry) {
+                if (!entry.node || !entry.node.parentNode) return;
+                if (entry.css === null) entry.node.removeAttribute('style');
+                else entry.node.setAttribute('style', entry.css);
+                entry.node.removeAttribute('data-lampa-splash-hidden');
+            });
+            hiddenLoaders = [];
+            if (loaderObserver) {
+                loaderObserver.disconnect();
+                loaderObserver = null;
+            }
+        }
 
         function mount() {
+            if (removed) return;
             if (document.getElementById(splashId)) return;
             var style = document.getElementById(styleId) || document.createElement('style');
             style.id = styleId;
@@ -39,6 +71,11 @@
             splash.setAttribute('aria-label', 'Lampa loading');
             splash.innerHTML = '<div class="lampa-splash-core"><div class="lampa-splash-ring"></div><div class="lampa-splash-orbit"></div><div class="lampa-splash-mark">LAMPA</div><div class="lampa-splash-sweep"></div></div><div class="lampa-splash-caption">Loading</div>';
             (document.body || document.documentElement).appendChild(splash);
+            hideNativeLoaders();
+            if (typeof MutationObserver === 'function' && document.body) {
+                loaderObserver = new MutationObserver(hideNativeLoaders);
+                loaderObserver.observe(document.body, { childList: true, subtree: true });
+            }
         }
 
         function remove() {
@@ -47,6 +84,7 @@
             setTimeout(function () {
                 if (removed) return;
                 removed = true;
+                restoreNativeLoaders();
                 var splash = document.getElementById(splashId);
                 if (!splash) return;
                 splash.classList.add('is-leaving');
@@ -59,12 +97,30 @@
         }
 
         function ready() { remove(); }
+        function bindLampaReady() {
+            if (readyBound) return true;
+            if (window.appready) {
+                readyBound = true;
+                ready();
+                return true;
+            }
+            if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) {
+                readyBound = true;
+                Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') ready(); });
+                return true;
+            }
+            return false;
+        }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
         else mount();
-        if (window.appready) ready();
-        else if (window.Lampa && Lampa.Listener && Lampa.Listener.follow) Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') ready(); });
-        window.addEventListener('load', ready, { once: true });
-        setTimeout(ready, 2600);
+        if (!bindLampaReady()) {
+            var readyPoll = setInterval(function () {
+                if (bindLampaReady()) clearInterval(readyPoll);
+            }, 80);
+            setTimeout(function () { clearInterval(readyPoll); }, 12000);
+        }
+        // Safety fallback for broken/offline hosts; normal startup exits via app:ready.
+        setTimeout(ready, 15000);
     })();
 
     var STYLE_ID = 'lampa-mx-mobile-fix-style-v9';
