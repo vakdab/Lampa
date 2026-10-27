@@ -10471,7 +10471,10 @@
       try {
         if (themeOn() && this.rows && this.rows.length && rowName(this.rows[0]) === 'start') {
           var rows = this.rows.slice(), hide = !opt(K.react);
-          rows = rows.filter(function (x) { return !(hide && rowName(x) === 'discuss'); });
+          rows = rows.filter(function (x) {
+            var name = rowName(x);
+            return name !== 'metadata_chart' && name !== 'metadata_tags' && name !== 'description' && !(hide && name === 'discuss');
+          });
           rows = rows.map(function (x, i) { return [x, i]; }).sort(function (a, b) {
             var fa = FIRST[rowName(a[0])], fb = FIRST[rowName(b[0])];
             fa = fa === undefined ? 5 : fa; fb = fb === undefined ? 5 : fb;
