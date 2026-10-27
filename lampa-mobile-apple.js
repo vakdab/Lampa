@@ -2539,6 +2539,10 @@
       ];
     }
 
+    function isRemovedTopnavAction(action) {
+      return ['feed', 'subscribe', 'subscriptions', 'subscription', 'notice', 'schedule', 'console', 'torrent', 'torrents'].indexOf(action) !== -1;
+    }
+
     function getAvailableTopnavItems() {
       var defs = [];
       var seen = {};
@@ -2546,7 +2550,7 @@
       qsa('.menu .menu__item.selector[data-action]').forEach(function (item) {
         var action = item.getAttribute('data-action');
         if (!action || seen[action]) return;
-        if (action === 'search' || action === 'settings') return;
+        if (action === 'search' || action === 'settings' || isRemovedTopnavAction(action)) return;
         var label = '';
         var labelNode = qs('.menu__text, .menu__item-name, .menu__item-text', item);
         if (labelNode) label = (labelNode.textContent || '').trim();
@@ -2557,6 +2561,7 @@
       });
 
       getFallbackTopnavItems().forEach(function (item) {
+        if (isRemovedTopnavAction(item.action)) return;
         if (seen[item.action]) return;
         seen[item.action] = true;
         defs.push(item);
@@ -2577,7 +2582,9 @@
             raw = raw.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
           }
         }
-        return Array.isArray(raw) ? raw : ['main', 'movie', 'tv', 'cartoon'];
+        return (Array.isArray(raw) ? raw : ['main', 'movie', 'tv', 'cartoon']).filter(function (action) {
+          return !isRemovedTopnavAction(action);
+        });
       } catch (e) {
         return ['main', 'movie', 'tv', 'cartoon'];
       }
@@ -2586,7 +2593,9 @@
     function setStoredTopnavActions(actions) {
       try {
         if (!window.Lampa || !Lampa.Storage) return;
-        Lampa.Storage.set(TOPNAV_ITEMS_KEY, actions);
+        Lampa.Storage.set(TOPNAV_ITEMS_KEY, (Array.isArray(actions) ? actions : []).filter(function (action) {
+          return !isRemovedTopnavAction(action);
+        }));
       } catch (e) { }
     }
 
@@ -4973,6 +4982,30 @@
                'body.' + BODY_CLASS + ' .settings .settings__item[data-component="' + safe + '"] { display:none !important; }';
       });
       style.textContent = rules.join('\n');
+    }
+
+    function hideRemovedBackgroundSettings() {
+      var styleId = 'appletv-agnative-background-settings-hide-style';
+      var style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        (document.head || document.body || document.documentElement).appendChild(style);
+      }
+      style.textContent = 'body.' + BODY_CLASS + ' { background-color:#000 !important; }';
+
+      var labels = [
+        'показувати фон', 'показывать фон', 'show background',
+        'тип фону', 'тип фона', 'background type'
+      ];
+      qsa('.settings__item, .settings-param, .settings__field').forEach(function (item) {
+        var text = String(item.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!text) return;
+        if (labels.some(function (label) { return text.indexOf(label) !== -1; })) {
+          item.style.setProperty('display', 'none', 'important');
+          item.setAttribute('data-agnative-removed-background-setting', 'true');
+        }
+      });
     }
 
     function bindRuntimeListeners() {
@@ -7470,6 +7503,7 @@
         var sb = qs('.settings__body');
         if (!sb || sb.__agnativeSettingsScrollObserver) return;
         var inner = new MutationObserver(function (muts) {
+          hideRemovedBackgroundSettings();
           for (var i = 0; i < muts.length; i++) {
             var m = muts[i];
             if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
@@ -7481,6 +7515,7 @@
         inner.observe(sb, {
           attributes: true,
           attributeFilter: ['class'],
+          childList: true,
           subtree: true
         });
         sb.__agnativeSettingsScrollObserver = inner;
@@ -8839,6 +8874,7 @@
       syncFontSize();
       syncCardFlags();
       syncPerfMode();
+      hideRemovedBackgroundSettings();
 
       var content = qs('.activity--active .scroll__content') || qs('.scroll__content');
       patchTopnav();
@@ -8879,6 +8915,7 @@
       syncOverlayAlign();
       syncTopnavSize();
       applyHiddenSettingsSectionsCSS();
+      hideRemovedBackgroundSettings();
       observeCards();
       bindInputModeDetector();
       initGlareRuntime();
