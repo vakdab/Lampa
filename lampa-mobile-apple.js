@@ -54,7 +54,7 @@
                 '@keyframes lampaSplashPulse{0%,100%{transform:scale(.92);opacity:.58}50%{transform:scale(1.06);opacity:1}}' +
                 '@keyframes lampaSplashSweep{0%{transform:translateX(-145%) rotate(18deg);opacity:0}22%{opacity:.9}58%,100%{transform:translateX(145%) rotate(18deg);opacity:0}}' +
                 '@keyframes lampaSplashFade{to{opacity:0;visibility:hidden;transform:scale(1.025)}}' +
-                '#' + splashId + '{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;color:#fff;opacity:1;visibility:visible;transition:opacity .42s ease,visibility .42s ease,transform .42s ease;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}' +
+                '#' + splashId + '{position:fixed!important;inset:0!important;z-index:2147483647;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000!important;color:#fff;opacity:1;visibility:visible;padding:0!important;margin:0!important;text-align:center;transition:opacity .42s ease,visibility .42s ease,transform .42s ease;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}' +
                 '#' + splashId + '.is-leaving{animation:lampaSplashFade .48s ease forwards;pointer-events:none}' +
                 '#' + splashId + ' .lampa-splash-core{position:relative;width:7.6em;height:7.6em;display:flex;align-items:center;justify-content:center;animation:lampaSplashPulse 2.2s ease-in-out infinite}' +
                 '#' + splashId + ' .lampa-splash-ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.95),rgba(255,255,255,.12),rgba(255,255,255,0));-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:lampaSplashSpin 1.35s linear infinite}' +
@@ -66,11 +66,15 @@
                 '@media (prefers-reduced-motion:reduce){#' + splashId + ' .lampa-splash-core,#' + splashId + ' .lampa-splash-ring,#' + splashId + ' .lampa-splash-orbit:after,#' + splashId + ' .lampa-splash-sweep{animation:none!important}}';
             if (!style.parentNode) (document.head || document.documentElement).appendChild(style);
 
-            var splash = document.createElement('div');
+            var progressStep = document.querySelector('.lp-step');
+            var splash = progressStep && progressStep.parentElement;
+            if (!splash) {
+                splash = document.createElement('div');
+                (document.body || document.documentElement).appendChild(splash);
+            }
             splash.id = splashId;
             splash.setAttribute('aria-label', 'Lampa loading');
             splash.innerHTML = '<div class="lampa-splash-core"><div class="lampa-splash-ring"></div><div class="lampa-splash-orbit"></div><div class="lampa-splash-mark">LAMPA</div><div class="lampa-splash-sweep"></div></div><div class="lampa-splash-caption">Loading</div>';
-            (document.body || document.documentElement).appendChild(splash);
             hideNativeLoaders();
             if (typeof MutationObserver === 'function' && document.body) {
                 loaderObserver = new MutationObserver(hideNativeLoaders);
