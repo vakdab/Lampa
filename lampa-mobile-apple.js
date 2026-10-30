@@ -12192,7 +12192,7 @@
 (function () {
     'use strict';
 
-    var version = '2026-10-29-senplayer-bridge-v1';
+    var version = '2026-10-30-senplayer-bridge-v2';
     if (window.LampaSenBridgeVersion === version) return;
     window.LampaSenBridgeVersion = version;
 
@@ -12610,11 +12610,6 @@
         var pending = loadPending();
         if (!pending || !flag(K.estimate, true)) return;
 
-        if (pending.tab && TAB && pending.tab !== TAB) {
-            lsDel(PENDING_KEY);
-            return;
-        }
-
         var elapsed = Math.round((Date.now() - (pending.launched || 0)) / 1000);
         if (elapsed < 45) return;
 
@@ -12735,7 +12730,7 @@
             bindResume();
         }
 
-        readReturn();
+        if (!readReturn() && !document.hidden) setTimeout(estimate, 3000);
     }
 
     if (document.body) boot();
