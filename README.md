@@ -50,3 +50,13 @@ npm run start   # dev-сервер на http://localhost:3000
 npm run test    # тести
 npm run doc     # документація в build/doc
 ```
+
+**Публікація на GitHub Pages**
+
+Сайт: https://vakdab.github.io/Lampa/ — збирається з цього коду і лежить у гілці `gh-pages` (Pages → branch `gh-pages` / root).
+
+```
+GITHUB_TOKEN=<PAT зі scope repo> ./deploy-gh-pages.sh
+```
+
+Скрипт робить `pack_github`, додає `custom/lampa-mobile-apple.js` (кастомні патчі: SenPlayer, AppleTV AG Native, Snack TV, AniSkip, Smooth Player Size, мобільний фікс) і пушить результат у `gh-pages`. Щоб віддавати чисту збірку без патчів — прибери виклик `loadCustomLampa()` в `build/site/index.html` перед пушем.
