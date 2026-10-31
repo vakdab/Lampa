@@ -1,8 +1,9 @@
 {
   "name": "Lampa",
   "short_name": "Lampa",
-  "start_url": "./",
-  "scope": "./",
+  "id": "/Lampa/",
+  "start_url": "/Lampa/",
+  "scope": "/Lampa/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#1d1f20",

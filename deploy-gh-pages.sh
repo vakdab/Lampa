@@ -60,6 +60,24 @@ if vp in s:
 open(p, 'w', encoding='utf-8').write(s)
 PY
 
+python3 - << 'PY'
+p = 'build/site/index.html'
+s = open(p, encoding='utf-8').read()
+guard = '''    <script>
+        // PWA: на github.io застосунок живе тільки під /Lampa/, інакше GitHub Pages дає 404
+        (function(){
+            var p = location.pathname
+            if (location.hostname.slice(-10) === 'github.io' && p.toLowerCase().indexOf('/lampa') !== 0) {
+                location.replace('/Lampa/' + location.search + location.hash)
+            }
+        })()
+    </script>
+'''
+if 'PWA: на github.io' not in s:
+    s = s.replace('<title>', guard + '    <title>', 1)
+open(p, 'w', encoding='utf-8').write(s)
+PY
+
 cd build/site
 rm -rf .git
 git init -q -b gh-pages
