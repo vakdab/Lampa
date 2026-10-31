@@ -78,6 +78,25 @@ if 'PWA: на github.io' not in s:
 open(p, 'w', encoding='utf-8').write(s)
 PY
 
+python3 - << 'PY'
+p = 'build/site/index.html'
+s = open(p, encoding='utf-8').read()
+css = '''    <style id="pwa-fullscreen-fix">
+        /* iOS standalone: розтягуємо застосунок до самого низу, під home-індикатор */
+        html { height: 100%; background: #000; }
+        body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
+               min-height: -webkit-fill-available; background-color: #000; }
+        @supports (height: 100dvh) {
+            html, body { height: 100dvh; }
+        }
+        #app { min-height: 100%; }
+    </style>
+'''
+if 'pwa-fullscreen-fix' not in s:
+    s = s.replace('</head>', css + '</head>', 1)
+open(p, 'w', encoding='utf-8').write(s)
+PY
+
 cd build/site
 rm -rf .git
 git init -q -b gh-pages
