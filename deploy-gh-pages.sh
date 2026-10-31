@@ -47,6 +47,19 @@ if old in s:
     open(p, 'w', encoding='utf-8').write(s.replace(old, new))
 PY
 
+python3 - << 'PY'
+p = 'build/site/index.html'
+s = open(p, encoding='utf-8').read()
+s = s.replace('<link rel="manifest" href="icons/site.webmanifest" crossorigin="use-credentials">', '<link rel="manifest" href="icons/site.webmanifest">')
+s = s.replace('sizes="32x32" href="icons/favicon-32x32.png"', 'sizes="32x32" href="icons/icon-192.png"').replace('sizes="16x16" href="icons/favicon-16x16.png"', 'sizes="16x16" href="icons/icon-192.png"')
+for bad in ['<link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#5bbad5">', '<link rel="shortcut icon" href="icons/favicon.ico">', '<meta name="msapplication-config" content="icons/browserconfig.xml">']:
+    s = s.replace(bad, '')
+vp = '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">'
+if vp in s:
+    s = s.replace(vp, '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">\n    <meta name="apple-mobile-web-app-capable" content="yes">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n    <meta name="apple-mobile-web-app-title" content="Lampa">')
+open(p, 'w', encoding='utf-8').write(s)
+PY
+
 cd build/site
 rm -rf .git
 git init -q -b gh-pages
