@@ -7,6 +7,15 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Lampa">
+        <script>
+        // PWA: на github.io застосунок живе тільки під /Lampa/, інакше GitHub Pages дає 404
+        (function(){
+            var p = location.pathname
+            if (location.hostname.slice(-10) === 'github.io' && p.toLowerCase().indexOf('/lampa') !== 0) {
+                location.replace('/Lampa/' + location.search + location.hash)
+            }
+        })()
+    </script>
     <title>Lampa - Каталог фильмов и сериалов</title>
 
     <meta name="description" content="Приложение для просмотра каталога фильмов и сериалов на телевизорах, приставках и смартфонах." />
