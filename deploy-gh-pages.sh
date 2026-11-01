@@ -84,7 +84,7 @@ s = open(p, encoding='utf-8').read()
 css = '''    <style id="pwa-fullscreen-fix">
         /* iOS standalone PWA: fixed layers must reach the physical bottom edge (under the home indicator).
            height:100% there stops at the safe area, so pin every layer with top/bottom:0 and extend it. */
-        html { background: #000; height: 100%; }
+        html { background: #1e1e20; height: 100%; }
         body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: auto !important;
                margin: 0; overflow: hidden; }
         #app { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: auto !important; }
