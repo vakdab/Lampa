@@ -36,11 +36,11 @@ MSX версия тут: https://github.com/yumata/lampa
 - `index/` — точка входу для github / tizen / webos / doc
 - `docs/` — документація по архітектурі (ru + en)
 - `spec/` — тести (vitest)
-- `lampa-mobile-apple.js` — збережений у репозиторії старий кастомний бандл; публічна збірка його не підключає
+- `lampa-mobile-apple.js` — точна версія `6090fbd`, до Snack TV-банера та картки; містить AppleTV AG Native з текстовою кнопкою «Дивитися / Watch».
 
 **Власні модулі**
 
-- `plugins/senplayer` та інші власні файли збережені у репозиторії, але не активуються в публічній збірці. Опублікований інтерфейс відповідає upstream `yumata/lampa-source`; штатне ліве бургер-меню Lampa збережено.
+- `lampa-mobile-apple.js` підключається після ядра Lampa. Це стан до Snack TV; Snack TV-банер і сторінка/картка не включені.
 
 **Збірка**
 
@@ -59,4 +59,4 @@ npm run doc     # документація в build/doc
 GITHUB_TOKEN=<PAT зі scope repo> ./deploy-gh-pages.sh
 ```
 
-Скрипт збирає upstream-код, додає лише потрібне для GitHub Pages та iOS (PWA-метадані й safe-area стилі), після чого пушить результат у `gh-pages`. Кастомний `lampa-mobile-apple.js` не завантажується; ліве бургер-меню працює штатно з ядра Lampa.
+Скрипт збирає upstream-код, додає `custom/lampa-mobile-apple.js` з версії до Snack TV, PWA-метадані й safe-area стилі, після чого пушить результат у `gh-pages`.
