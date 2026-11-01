@@ -82,16 +82,20 @@ python3 - << 'PY'
 p = 'build/site/index.html'
 s = open(p, encoding='utf-8').read()
 css = '''    <style id="pwa-fullscreen-fix">
-        /* iOS standalone: keep the page background under the home indicator. */
-        html { height: 100%; min-height: 100%; background: #000 !important; }
-        body { position: fixed; inset: 0; width: 100%; height: 100%; min-height: 100%;
-               margin: 0; overflow: hidden; background: #000 !important; }
-        #app { min-height: 100%; height: 100%; }
-        @supports (height: 100dvh) {
-            html, body { height: 100dvh; min-height: 100dvh; }
-        }
+        /* iOS standalone PWA: fixed layers must reach the physical bottom edge (under the home indicator).
+           height:100% there stops at the safe area, so pin every layer with top/bottom:0 and extend it. */
+        html { background: #000; height: 100%; }
+        body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: auto !important;
+               margin: 0; overflow: hidden; }
+        #app { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: auto !important; }
+        .background, .background__one, .background__two, .background__fade { top: 0; left: 0; right: 0; bottom: 0; height: auto !important; }
+        .activitys, .activity { top: 0; left: 0; right: 0; bottom: 0; height: auto !important; min-height: 100%; }
         @supports (-webkit-touch-callout: none) {
-            html, body { min-height: -webkit-fill-available; }
+            /* only iOS: stretch past the safe area so no black strip is left under the home indicator */
+            body, #app, .background, .background__one, .background__two, .background__fade, .activitys, .activity {
+                bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+            }
+            .activity__body, .wrap { min-height: calc(100% + env(safe-area-inset-bottom, 0px)); }
         }
     </style>
 '''
