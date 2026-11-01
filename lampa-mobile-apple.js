@@ -2532,24 +2532,38 @@
       ];
     }
 
+    function isRemovedTopnavAction(action) {
+      return ['feed', 'subscribe', 'subscriptions', 'subscription', 'notice', 'schedule', 'console', 'torrent', 'torrents'].indexOf(action) !== -1;
+    }
+
+    function isRemovedTopnavLabel(label) {
+      var text = String(label || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      return text === 'стрічка' || text === 'лента' || text === 'feed' ||
+        text === 'підписки' || text === 'подписки' || text === 'subscriptions' ||
+        text === 'розклад' || text === 'расписание' || text === 'schedule' ||
+        text === 'торренти' || text === 'торренты' || text === 'torrents' || text === 'torrent';
+    }
+
     function getAvailableTopnavItems() {
       var defs = [];
       var seen = {};
 
       qsa('.menu .menu__item.selector[data-action]').forEach(function (item) {
         var action = item.getAttribute('data-action');
-        if (!action || seen[action]) return;
+        if (!action || seen[action] || isRemovedTopnavAction(action)) return;
         if (action === 'search' || action === 'settings') return;
         var label = '';
         var labelNode = qs('.menu__text, .menu__item-name, .menu__item-text', item);
         if (labelNode) label = (labelNode.textContent || '').trim();
         if (!label) label = (item.textContent || '').trim();
         if (!label) label = action;
+        if (isRemovedTopnavLabel(label)) return;
         seen[action] = true;
         defs.push({ action: action, label: label });
       });
 
       getFallbackTopnavItems().forEach(function (item) {
+        if (isRemovedTopnavAction(item.action)) return;
         if (seen[item.action]) return;
         seen[item.action] = true;
         defs.push(item);
@@ -2570,7 +2584,9 @@
             raw = raw.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
           }
         }
-        return Array.isArray(raw) ? raw : ['main', 'movie', 'tv', 'cartoon'];
+        return (Array.isArray(raw) ? raw : ['main', 'movie', 'tv', 'cartoon']).filter(function (action) {
+          return !isRemovedTopnavAction(action);
+        });
       } catch (e) {
         return ['main', 'movie', 'tv', 'cartoon'];
       }
@@ -2579,7 +2595,9 @@
     function setStoredTopnavActions(actions) {
       try {
         if (!window.Lampa || !Lampa.Storage) return;
-        Lampa.Storage.set(TOPNAV_ITEMS_KEY, actions);
+        Lampa.Storage.set(TOPNAV_ITEMS_KEY, (Array.isArray(actions) ? actions : []).filter(function (action) {
+          return !isRemovedTopnavAction(action);
+        }));
       } catch (e) { }
     }
 
@@ -6018,8 +6036,11 @@
         '  z-index: 25 !important;',
         '  width: max-content !important;',
         '  max-width: 16em !important;',
+        '  height: auto !important;',
         '  max-height: 80vh !important;',
-        '  overflow-y: auto !important;',
+        '  min-height: 0 !important;',
+        '  overflow-y: hidden !important;',
+        '  overflow-x: hidden !important;',
         '  display: inline-flex !important;',
         '  flex-direction: column !important;',
         '  padding: .32em !important;',
@@ -6039,7 +6060,8 @@
         '  opacity: 1 !important;',
         '  pointer-events: auto !important;',
         '}',
-        'body.' + BODY_CLASS + ' .agnative-leftdock__inner { display: flex; flex-direction: column; gap: .12em; }',
+        'body.' + BODY_CLASS + ' .agnative-leftdock__inner { display: flex; flex: 0 0 auto; min-height: 0; max-height: calc(80vh - 1em); flex-direction: column; gap: .12em; }',
+        'body.' + BODY_CLASS + ' .agnative-leftdock__scrollcase { flex: 0 1 auto; min-height: 0; max-height: 22em; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__case { display: flex; flex-direction: column; gap: .04em; }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__split { height: 1px; margin: .3em .4em; background: rgba(255,255,255,.10); }',
         'body.' + BODY_CLASS + ' .agnative-leftdock__item.selector {',
@@ -7638,14 +7660,24 @@
 
       var inner = document.createElement('div');
       inner.className = 'agnative-leftdock__inner';
+      var menuCaseIndex = 0;
 
       Array.prototype.slice.call(sourceMenu.children).forEach(function (child) {
         if (!child || !child.classList) return;
         if (child.classList.contains('menu__case')) {
           var caseEl = document.createElement('div');
-          caseEl.className = 'agnative-leftdock__case';
+          caseEl.className = 'agnative-leftdock__case' + (menuCaseIndex === 0 ? ' agnative-leftdock__scrollcase' : '');
+          menuCaseIndex++;
           qsa('.menu__item.selector', child).forEach(function (item) {
             if (item.classList.contains('hidden')) return;
+            var action = item.getAttribute('data-action');
+            var sourceLabelNode = qs('.menu__text, .menu__item-name, .menu__item-text', item);
+            var sourceLabel = sourceLabelNode ? (sourceLabelNode.textContent || '').trim() : (item.textContent || '').trim();
+            if (isRemovedTopnavAction(action) || isRemovedTopnavLabel(sourceLabel)) {
+              item.style.setProperty('display', 'none', 'important');
+              item.setAttribute('data-agnative-removed-menu-item', 'true');
+              return;
+            }
             var btn = document.createElement('div');
             btn.className = 'agnative-leftdock__item selector';
             btn.setAttribute('data-selector', 'true');
