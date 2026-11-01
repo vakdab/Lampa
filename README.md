@@ -36,11 +36,11 @@ MSX версия тут: https://github.com/yumata/lampa
 - `index/` — точка входу для github / tizen / webos / doc
 - `docs/` — документація по архітектурі (ru + en)
 - `spec/` — тести (vitest)
-- `lampa-mobile-apple.js` — зібраний мобільний бандл для Apple-пристроїв з усіма кастомними доповненнями
+- `lampa-mobile-apple.js` — збережений у репозиторії старий кастомний бандл; публічна збірка його не підключає
 
 **Власні модулі**
 
-- `plugins/senplayer` — міст таймкодів у SenPlayer (x-callback-url, 6.1.0+). У бандлі також присутні теми AppleTV AG Native, Snack TV, AniSkip, Smooth Player Size та мобільний фікс навігації.
+- `plugins/senplayer` та інші власні файли збережені у репозиторії, але не активуються в публічній збірці. Опублікований інтерфейс відповідає upstream `yumata/lampa-source`; штатне ліве бургер-меню Lampa збережено.
 
 **Збірка**
 
@@ -59,4 +59,4 @@ npm run doc     # документація в build/doc
 GITHUB_TOKEN=<PAT зі scope repo> ./deploy-gh-pages.sh
 ```
 
-Скрипт робить `pack_github`, додає `custom/lampa-mobile-apple.js` (кастомні патчі: SenPlayer, AppleTV AG Native, Snack TV, AniSkip, Smooth Player Size, мобільний фікс) і пушить результат у `gh-pages`. Щоб віддавати чисту збірку без патчів — прибери виклик `loadCustomLampa()` в `build/site/index.html` перед пушем.
+Скрипт збирає upstream-код, додає лише потрібне для GitHub Pages та iOS (PWA-метадані й safe-area стилі), після чого пушить результат у `gh-pages`. Кастомний `lampa-mobile-apple.js` не завантажується; ліве бургер-меню працює штатно з ядра Lampa.
