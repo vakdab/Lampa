@@ -73,6 +73,7 @@ body.moon--splash .lp-status{display:none}
     background: #fff;
     color: #1d1f20;
     overflow: hidden;
+    z-index: 200;
 
     &__bg{
         position:absolute;
@@ -80,8 +81,8 @@ body.moon--splash .lp-status{display:none}
         pointer-events:none;
         overflow:hidden;
         color:#1d1f20;
-        -webkit-mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.3),#000 78%);
-        mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.3),#000 78%);
+        -webkit-mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.35),#000 78%);
+        mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.35),#000 78%);
         animation:ms-bgin 1.6s ease both;
 
         svg{
@@ -91,7 +92,7 @@ body.moon--splash .lp-status{display:none}
             stroke-width:1.15;
             stroke-linecap:round;
             stroke-linejoin:round;
-            opacity:.075;
+            opacity:.16;
         }
     }
 

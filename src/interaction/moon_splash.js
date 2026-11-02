@@ -8,6 +8,10 @@ const MESSAGES = {
 }
 
 let timer, msg_timer
+let started = 0
+
+// Мінімальний час показу заставки, щоб анімація догравала повністю
+const MIN_TIME = 7000
 
 function messages(){
     let code = (window.localStorage.getItem('language') || (navigator.language || 'uk').slice(0, 2)).toLowerCase()
@@ -24,6 +28,8 @@ function init(){
     if(!welcome || welcome.getAttribute('data-moon')) return
 
     let list = messages()
+
+    started = Date.now()
 
     welcome.setAttribute('data-moon', 'true')
     welcome.setAttribute('data-splash', 'together')
@@ -53,6 +59,17 @@ function init(){
             }, 200)
         }, 1200)
     }, 1500)
+}
+
+/**
+ * Виконує callback, коли заставка показалась мінімально потрібний час
+ * @param {function} call
+ */
+function ready(call){
+    let wait = started ? MIN_TIME - (Date.now() - started) : 0
+
+    if(wait > 0) setTimeout(call, wait)
+    else call()
 }
 
 function destroy(){
@@ -94,6 +111,7 @@ function brand(){
 
 export default {
     init,
+    ready,
     destroy,
     background,
     brand

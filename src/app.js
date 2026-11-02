@@ -749,12 +749,14 @@ function showApp(){
 
         Screensaver.enable()
 
-        MoonSplash.destroy()
+        MoonSplash.ready(()=>{
+            MoonSplash.destroy()
 
-        $('.welcome').fadeOut(500,()=>{
-            $('body').removeClass('moon--splash')
+            $('.welcome').fadeOut(500,()=>{
+                $('body').removeClass('moon--splash')
 
-            $('.welcome').remove()
+                $('.welcome').remove()
+            })
         })
     },1000)
 
@@ -898,16 +900,21 @@ function loadApp(){
     }
     else{
         // Иначе предлагаем выбрать язык
-        LangChoice.open((code)=>{
-            Storage.set('language', code, true)
-            Storage.set('tmdb_lang',code, true)
-
-            Keypad.disable()
-
-            loadLang()
-        })
-
         Keypad.enable()
+
+        MoonSplash.ready(()=>{
+            LangChoice.open((code)=>{
+                Storage.set('language', code, true)
+                Storage.set('tmdb_lang',code, true)
+
+                Keypad.disable()
+
+                loadLang()
+            })
+
+            // Заставка вже не потрібна: далі видно екран вибору мови
+            $('.welcome').fadeOut(600)
+        })
     }
 }
 
