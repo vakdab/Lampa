@@ -184,7 +184,7 @@ function draw(data, item, noimage){
             fadeTo(item)
         }
 
-        if(!Player.opened()) theme(Storage.field('black_style') ? 'black' : (Storage.field('white_style') ? '#ffffff' : 'reset'))
+        if(!Player.opened()) theme(Storage.field('black_style') ? 'black' : 'reset')
     })
 }
 

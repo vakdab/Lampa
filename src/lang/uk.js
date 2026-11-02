@@ -1011,7 +1011,6 @@ export default {
     settings_interface_glass: 'Скло',
     settings_interface_glass_descr: 'Показувати інтерфейс у склоподібному стилі',
     settings_interface_black_style: 'Чорний стиль',
-    settings_interface_white_style: 'Білий стиль',
 
     plugins_remove: 'Видалити плагіни',
     plugins_add_success: 'Плагін успішно підключений',

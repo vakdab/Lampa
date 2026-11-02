@@ -37,7 +37,6 @@ function init(){
         'card_interfice_poster',
         'glass_style',
         'black_style',
-        'white_style',
         'glass_opacity',
         'card_interfice_cover',
         'advanced_animation',
@@ -53,12 +52,7 @@ function init(){
             update()
         }
 
-        if(follow.indexOf(event.name) >= 0){
-            if(event.name == 'black_style' && Storage.field('black_style') && Storage.field('white_style')) Storage.set('white_style', false)
-            if(event.name == 'white_style' && Storage.field('white_style') && Storage.field('black_style')) Storage.set('black_style', false)
-            toggleClasses()
-            update()
-        }
+        if(follow.indexOf(event.name) >= 0) toggleClasses(), update()
     })
     
     toggleClasses()
@@ -260,7 +254,6 @@ function toggleClasses(){
     $('body').toggleClass('no--poster', !Storage.field('card_interfice_poster'))
     $('body').toggleClass('glass--style', Storage.field('glass_style'))
     $('body').toggleClass('black--style', Storage.field('black_style'))
-    $('body').toggleClass('white--style', Storage.field('white_style'))
     $('body').toggleClass('card--no-cover', !Storage.field('card_interfice_cover'))
     $('body').toggleClass('advanced--animation', Storage.field('advanced_animation'))
     $('body').toggleClass('light--version',Storage.field('light_version'))
@@ -271,7 +264,7 @@ function toggleClasses(){
     
     if(Storage.field('glass_style')) $('body').addClass('glass--style-opacity--'+Storage.field('glass_opacity'))
 
-    Background.theme(Storage.field('black_style') ? 'black' : (Storage.field('white_style') ? '#ffffff' : 'reset'))
+    Background.theme(Storage.field('black_style') ? 'black' : 'reset')
 }
 
 function combineElements(find_class, elements, combine){

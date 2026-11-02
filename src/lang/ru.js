@@ -106,7 +106,6 @@ export default {
     settings_interface_glass_descr: 'Показывать интерфейс в стекловидном стиле',
     settings_interface_glass_opacity: 'Прозрачность стекла',
     settings_interface_black_style: 'Чёрный стиль',
-    settings_interface_white_style: 'Белый стиль',
     settings_interface_hide_outside_the_screen: 'Скрывать карточки за пределами экрана',
     settings_interface_hide_outside_the_screen_descr: 'Это ускорит рендер интерфейса и улучшит производительность',
 
