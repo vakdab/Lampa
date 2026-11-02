@@ -33,8 +33,10 @@ function init(){
 
     welcome.setAttribute('data-moon', 'true')
     welcome.setAttribute('data-splash', 'together')
-    welcome.innerHTML = '<div class="ms-stage"><div class="mw"><div class="ms-ring"></div>' + moon + '</div>' + studio +
+    welcome.innerHTML = '<div class="welcome__bg lang__bg"></div><div class="ms-stage"><div class="mw"><div class="ms-ring"></div>' + moon + '</div>' + studio +
         '<div class="ld"><div class="spin"></div><p class="msg fade"></p><div class="bar"><i></i></div></div></div>'
+
+    background(welcome.querySelector('.welcome__bg'))
 
     let msg = welcome.querySelector('.msg')
     let bar = welcome.querySelector('.bar i')
