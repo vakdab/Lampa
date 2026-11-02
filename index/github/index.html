@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="./vender/scrollbar/jquery.scrollbar.css">
     <link rel="stylesheet" href="./vender/keypad/style.css">
 
-    <link rel="stylesheet" href="css/app.css?v=4.56">
+    <link rel="stylesheet" href="css/app.css?v=4.57">
 </head>
 <body style="background: #1d1f20;">
     <script>
@@ -54,7 +54,7 @@
 
     <script>
         var lampa_url     = '';
-        var cache_version = Math.floor((new Date()).getTime() / 9e5); // Новое значение каждые 15 минут
+        var cache_version = Math.floor((new Date()).getTime() / 9e5) + '-3.4.5'; // Новое значение каждые 15 минут и при обновлении сборки
             
         function urlJoin(base, add) {
             if (base.charAt(base.length - 1) !== '/') {
