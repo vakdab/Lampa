@@ -49,7 +49,7 @@ for bad in ['<link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#5b
     s = s.replace(bad, '')
 vp = '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">'
 if vp in s:
-    s = s.replace(vp, '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">\n    <meta name="apple-mobile-web-app-capable" content="yes">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="black">\n    <meta name="apple-mobile-web-app-title" content="Lampa">')
+    s = s.replace(vp, '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">\n    <meta name="apple-mobile-web-app-capable" content="yes">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="black">\n    <meta name="apple-mobile-web-app-title" content="Moon">')
 open(p, 'w', encoding='utf-8').write(s)
 PY
 
