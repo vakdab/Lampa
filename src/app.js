@@ -63,6 +63,7 @@ import InteractionCategory from './interaction/items/old/category'
 import InteractionLine from './interaction/items/old/line'
 import Status from './utils/status'
 import LangChoice from './interaction/lang'
+import MoonSplash from './interaction/moon_splash'
 import Extensions from './interaction/extensions/extensions'
 import Iframe from './interaction/iframe'
 import Parser from './core/api/sources/parser'
@@ -748,8 +749,12 @@ function showApp(){
 
         Screensaver.enable()
 
+        MoonSplash.destroy()
+
         $('.welcome').fadeOut(500,()=>{
-            $(this).remove()
+            $('body').removeClass('moon--splash')
+
+            $('.welcome').remove()
         })
     },1000)
 
@@ -881,6 +886,10 @@ function loadLang(){
  */
 function loadApp(){
     prepareApp() // Готовим приложение
+
+    // Заставка Moon Studio
+    $('body').addClass('moon--splash')
+    MoonSplash.init()
 
     // Если язык уже установлен, то запускаем приложение
     if(window.localStorage.getItem('language') || !window.lampa_settings.lang_use){

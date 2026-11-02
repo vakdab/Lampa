@@ -3,6 +3,7 @@ import Controller from '../core/controller'
 import Template from './template'
 import Lang from '../core/lang'
 import Scroll from './scroll'
+import MoonSplash from './moon_splash'
 
 /**
  * Открывает окно выбора языка на начальном экране
@@ -16,7 +17,7 @@ function open(callSelected, callCancel){
     let codes  = Lang.codes()
 
     function selector(code){
-        let item = $('<div class="selector lang__selector-item" data-code="'+code+'">'+codes[code]+'</div>')
+        let item = $('<div class="selector lang__selector-item" data-code="'+code+'">'+codes[code]+'<small>'+code+'</small></div>')
 
         item.on('hover:enter click',(e)=>{
             if(callSelected) callSelected(code)
@@ -43,6 +44,12 @@ function open(callSelected, callCancel){
     }
 
     for(let code in codes) selector(code)
+
+    html.find('.lang__logo').html(MoonSplash.brand())
+    html.find('.lang__title').text(Lang.translate('lang_choice_title', Storage.get('language','ru')))
+    html.find('.lang__subtitle').text(Lang.translate('lang_choice_subtitle', Storage.get('language','ru')))
+
+    MoonSplash.background(html.find('.lang__bg')[0])
 
     html.find('.lang__selector').append(scroll.render())
 

@@ -1,0 +1,191 @@
+/* ===== Moon Studio: заставка + екран вибору мови ===== */
+
+.welcome{
+    background: #fff;
+    --ink: #1d1f20;
+    --o: 2.75s;
+    overflow: hidden;
+    transition: opacity .6s;
+}
+
+.ms-stage{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center}
+.ms-logo{position:absolute;fill:var(--ink, #1d1f20);overflow:visible;height:auto}
+.ms-logo path{transform-box:fill-box;transform-origin:50% 50%}
+.ms-moon{width:min(40vw,170px)}
+.ms-studio{width:min(82vw,460px)}
+
+.ms-ring{position:absolute;width:min(40vw,170px);aspect-ratio:1;border-radius:50%;
+  border:1.5px solid rgba(29,31,32,.16);opacity:0;animation:ms-ring 1.9s cubic-bezier(.2,.7,.2,1) .35s both}
+@keyframes ms-ring{0%{opacity:.9;transform:scale(.7)}100%{opacity:0;transform:scale(2.3)}}
+
+.ms-moon .cres{animation:ms-cres 1.1s cubic-bezier(.16,1,.3,1) .1s both}
+@keyframes ms-cres{from{opacity:0;transform:scale(.3) rotate(-80deg)}to{opacity:1;transform:none}}
+
+.ms-moon .st{animation:
+  ms-pop .75s cubic-bezier(.34,1.56,.64,1) var(--d) both,
+  ms-twinkle 2.2s ease-in-out calc(var(--d) + 1s) infinite}
+@keyframes ms-pop{from{opacity:0;transform:scale(0) rotate(-120deg)}to{opacity:1;transform:none}}
+@keyframes ms-twinkle{0%,100%{opacity:1;transform:none}50%{opacity:.5;transform:scale(.7) rotate(25deg)}}
+
+.ms-studio .main{transform-origin:50% 100%;animation:ms-rise .9s cubic-bezier(.16,1,.3,1) calc(var(--o) + var(--d)) both}
+@keyframes ms-rise{from{opacity:0;transform:translateY(45%) scaleY(.6)}to{opacity:1;transform:none}}
+
+.ms-studio .main.o{transform-origin:50% 50%;animation:ms-drop 1.1s cubic-bezier(.34,1.45,.64,1) calc(var(--o) + var(--d)) both}
+@keyframes ms-drop{from{opacity:0;transform:translateY(-110%) rotate(-240deg) scale(.4)}to{opacity:1;transform:none}}
+
+.ms-studio .ltr{animation:ms-ltr .6s cubic-bezier(.2,.9,.3,1.3) calc(var(--o) + var(--d)) both}
+@keyframes ms-ltr{from{opacity:0;transform:translateY(-35%) scale(.5)}to{opacity:1;transform:none}}
+
+.ms-studio{animation:ms-breathe 3.6s ease-in-out calc(var(--o) + 1.8s) infinite}
+@keyframes ms-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+
+@media (prefers-reduced-motion:reduce){
+  .welcome *{animation:none !important}
+  .ms-ring{display:none}
+}
+
+/* разом: місяць + менший напис під ним */
+.welcome[data-splash="together"]{--o:.25s}
+.welcome[data-splash="together"] .ms-stage{flex-direction:column;gap:clamp(10px,2vh,16px)}
+.welcome[data-splash="together"] .ms-logo{position:static;display:block}
+.welcome[data-splash="together"] .ms-moon{width:100%;animation:none !important}
+.welcome[data-splash="together"] .ms-studio{width:min(40vw,160px)}
+.mw{position:relative;width:min(24vw,92px);display:flex;justify-content:center}
+.mw .ms-ring{inset:0;width:100%}
+
+.ld{display:flex;flex-direction:column;align-items:center;width:min(56vw,210px);opacity:0;animation:ms-rise-in .8s cubic-bezier(.16,1,.3,1) 1.4s both}
+.ld .msg{margin:10px 0 12px}
+.spin{width:22px;height:22px;border-radius:50%;border:2px solid #e6e7e7;border-top-color:#1d1f20;animation:ms-spin .9s linear infinite}
+@keyframes ms-spin{to{transform:rotate(360deg)}}
+.welcome .msg{margin:10px 0 12px;min-height:34px;max-width:230px;font-weight:700;font-size:12.5px;line-height:1.35;color:#4a4d50;text-align:center}
+.welcome .bar{width:100%;max-width:210px;height:3px;border-radius:2px;background:#e6e7e7;overflow:hidden}
+.welcome .bar i{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,#1d1f20,#6b6f73)}
+.welcome .fade{transition:opacity .2s}
+.welcome .fade.x{opacity:0 !important}
+@keyframes ms-rise-in{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* стандартний текст прогресу Lampa на білій заставці не потрібен */
+body.moon--splash .lp-step,
+body.moon--splash .lp-status{display:none}
+
+/* ===== Екран вибору мови ===== */
+.lang{
+    background: #fff;
+    color: #1d1f20;
+    overflow: hidden;
+
+    &__bg{
+        position:absolute;
+        top:0;left:0;right:0;bottom:0;
+        pointer-events:none;
+        overflow:hidden;
+        color:#1d1f20;
+        -webkit-mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.3),#000 78%);
+        mask-image:radial-gradient(circle at 50% 52%,rgba(0,0,0,.3),#000 78%);
+        animation:ms-bgin 1.6s ease both;
+
+        svg{
+            position:absolute;
+            fill:none;
+            stroke:currentColor;
+            stroke-width:1.15;
+            stroke-linecap:round;
+            stroke-linejoin:round;
+            opacity:.075;
+        }
+    }
+
+    &__body{
+        position:relative;
+        z-index:1;
+        width:100%;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+    }
+
+    &__logo{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:9px;
+        margin-bottom:20px;
+        animation:ms-rise-in .9s cubic-bezier(.16,1,.3,1) 0s both;
+
+        .ms-logo{position:static;display:block;animation:none !important}
+        .ms-logo path{animation:none !important}
+        .ms-moon{width:44px}
+        .ms-studio{width:96px}
+    }
+
+    &__title{
+        margin-top:0;
+        font-size:22px;
+        font-weight:600;
+        letter-spacing:-.01em;
+        text-align:center;
+        animation:ms-rise-in .9s cubic-bezier(.16,1,.3,1) .1s both;
+    }
+
+    &__subtitle{
+        margin-top:5px;
+        font-size:13px;
+        color:#8a8d90;
+        text-align:center;
+        animation:ms-rise-in .9s cubic-bezier(.16,1,.3,1) .22s both;
+    }
+
+    &__selector{
+        width:100%;
+        max-width:272px;
+        margin:20px auto 0;
+
+        &-item{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            font-size:14px;
+            font-weight:700;
+            height:40px;
+            padding:0 14px;
+            margin-bottom:7px;
+            border:1.5px solid transparent;
+            border-radius:11px;
+            background:#f3f4f4;
+            color:#1d1f20;
+            transition:border-color .25s,transform .15s;
+            animation:ms-rise-in .8s cubic-bezier(.16,1,.3,1) .4s both;
+
+            small{
+                font-size:11px;
+                font-weight:700;
+                letter-spacing:.08em;
+                color:#8a8d90;
+                text-transform:uppercase;
+            }
+
+            &:active{transform:scale(.98)}
+
+            &.last-focus{
+                background:#f3f4f4;
+                border-color:#1d1f20;
+
+                small{color:#1d1f20}
+            }
+
+            &.focus{
+                background:#1d1f20;
+                border-color:#1d1f20;
+                color:#fff;
+
+                small{color:#fff}
+            }
+        }
+
+        > .scroll{
+            max-height:18em !important;
+        }
+    }
+}
+
+@keyframes ms-bgin{from{opacity:0}to{opacity:1}}
