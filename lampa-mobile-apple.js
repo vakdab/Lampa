@@ -9003,6 +9003,14 @@
             B + '.full-start-new__buttons svg{width:1.4em;height:1.4em;margin:0!important}',
             /* every source/plugin button is hidden: they live in the menu behind "Дивитися" */
             B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
+            /* card page: no blurred canvas background (it flickered between blurred and empty) */
+            'body.appletv-agnative-topnav:has(.full-start-new) .background{background:#1d1f20!important}',
+            'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:none!important;opacity:0!important}',
+            B + '.full-start__background{filter:none!important;-webkit-filter:none!important;opacity:1!important}',
+            B + '.full-start__background.loaded,' + B + '.full-start__background.dim{opacity:1!important}',
+            B + '.full-start-new__right{background:linear-gradient(to bottom,rgba(29,31,32,0) 0,rgba(29,31,32,.78) 7em,rgba(29,31,32,.92) 100%)!important;border-radius:0!important}',
+            B + '.full-start-new__buttons .full-start__button{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(40,42,46,.78)!important}',
+            B + '.full-start-new__rate-line .full-start__rate{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
             '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-15em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
         ].join('');
     }
