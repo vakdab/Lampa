@@ -34,6 +34,8 @@
             'body.lampa-mx-mobile-fix .head{top:env(safe-area-inset-top,0px)!important;} ',
             'body.lampa-mx-mobile-fix .wrap__content{padding-top:calc(4em + env(safe-area-inset-top,0px));} ',
             'body.lampa-mx-mobile-fix .scroll,body.lampa-mx-mobile-fix [class*="short" i]{touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;} ',
+            'body.settings--open .navigation-bar,body.selectbox--open .navigation-bar,body.search--open .navigation-bar,body.menu--open .navigation-bar{opacity:0!important;visibility:hidden!important;pointer-events:none!important;translate:0 100%!important;} ',
+            'body.lampa-mx-mobile-fix .navigation-bar{transition:opacity .2s,translate .2s;} ',
             'body.lampa-mx-mobile-fix .menu__item,body.lampa-mx-mobile-fix .navigation-bar__item,body.lampa-mx-mobile-fix .head__action,body.lampa-mx-mobile-fix .player__button,body.lampa-mx-mobile-fix .button{min-height:44px;touch-action:manipulation;}'
         ].join('');
         document.head.appendChild(style);
