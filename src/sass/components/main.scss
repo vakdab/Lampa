@@ -102,8 +102,8 @@ body{
 	user-select: none !important;
 	-webkit-touch-callout: none !important;
 
-	&.black--style{
-		background: #000 !important;
+		&.black--style{
+			background: #000 !important;
 
 		@media screen and (max-width: $media_xm) {
 			.selectbox__content,
@@ -112,42 +112,42 @@ body{
 				background-color: #000 !important;
 			}
 		}
-	}
 
-	&.white--style{
-		background: #fff !important;
-		color: #171717 !important;
-
-		.background{
-			display: none !important;
-		}
-
-		.items-line__title,
-		.items-line__more,
-		.items-line__head,
-		.settings-param__name,
-		.settings-param__value,
-		.head__action,
-		.bottom__action{
-			color: #171717 !important;
-		}
-
-		.settings__content,
-		.selectbox__content,
-		.modal__content{
+		&.white--style{
+			background: #fff !important;
 			color: #171717 !important;
 
-			*:not(.selector){
+			.background{
+				display: none !important;
+			}
+
+			.items-line__title,
+			.items-line__more,
+			.items-line__head,
+			.settings-param__name,
+			.settings-param__value,
+			.head__action,
+			.bottom__action{
 				color: #171717 !important;
 			}
-		}
 
-		@media screen and (max-width: $media_xm) {
+			.settings__content,
 			.selectbox__content,
-			.modal__content,
-			.settings__content{
-				background-color: #fff !important;
+			.modal__content{
 				color: #171717 !important;
+
+				*:not(.selector){
+					color: #171717 !important;
+				}
+			}
+
+			@media screen and (max-width: $media_xm) {
+				.selectbox__content,
+				.modal__content,
+				.settings__content{
+					background-color: #fff !important;
+					color: #171717 !important;
+				}
 			}
 		}
 	}
