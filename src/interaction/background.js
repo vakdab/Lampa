@@ -362,7 +362,11 @@ function change(url = ''){
  * @param {string} url
  */
 function immediately(url = ''){
-    if(Storage.field('light_version') || immed_time + 1000 > Date.now() || !Storage.field('background')) return
+    if(Storage.field('light_version') || !Storage.field('background')) return
+
+    // Moon: раніше виклик частіше ніж раз на секунду ігнорувався, і фон картки то малювався, то ні.
+    // Тепер завжди беремо останній запит; якщо це та сама картинка, нічого не робимо.
+    if(url && url == src && loaded[url]) return
 
     if(url) src = url
 
