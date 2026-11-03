@@ -28,13 +28,14 @@ cp -r build/github/lampa/. build/site/
 rm -f build/site/Dockerfile build/site/README.md build/site/SECURITY.md build/site/LICENSE
 mkdir -p build/site/custom
 cp lampa-mobile-apple.js build/site/custom/lampa-mobile-apple.js
+cp custom/vakdab-hero.js build/site/custom/vakdab-hero.js
 touch build/site/.nojekyll
 
 python3 - << 'PY'
 p = 'build/site/index.html'
 s = open(p, encoding='utf-8').read()
 old = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {})\n        }"""
-new = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {\n                putScript('custom/lampa-mobile-apple.js?v=' + cache_version, function () {})\n            })\n        }"""
+new = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {\n                putScript('custom/lampa-mobile-apple.js?v=' + cache_version, function () {\n                    putScript('custom/vakdab-hero.js?v=' + cache_version, function () {})\n                })\n            })\n        }"""
 if old not in s:
     raise SystemExit('Could not locate loadCurrentLampa in generated index')
 open(p, 'w', encoding='utf-8').write(s.replace(old, new))
