@@ -146,6 +146,24 @@
         }
     }
 
+    &__original-title {
+        color: #fff;
+        font-size: 1.8em;
+        font-weight: 700;
+        line-height: 1.15;
+        margin-top: -0.15em;
+        margin-bottom: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        @media screen and (max-width: $media_xm) {
+            font-size: 1.35em;
+        }
+    }
+
     &__tagline{
         font-size: 1.8em;
         line-height: 1.2;
@@ -159,6 +177,7 @@
 
     &__details {
         color: #fff;
+        font-weight: 700;
         margin: -0.45em;
         margin-bottom: 1em;
         display: flex;
