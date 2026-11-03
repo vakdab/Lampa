@@ -3,6 +3,20 @@ import Color from '../../../utils/color'
 
 export default {
     onCreate: function(){
+        document.body.classList.add('lampa-detail-active')
+
+        let applyPosterTheme = (image)=>{
+            try{
+                let palette = Color.palette(Color.get(image))
+                let hsl = Color.rgbToHsl(palette.average[0], palette.average[1], palette.average[2])
+                let bg = Color.hslToRgb(hsl[0], Math.min(hsl[1], 65), Math.min(24, Math.max(14, hsl[2] * 0.32)))
+
+                document.documentElement.style.setProperty('--lampa-poster-bg', Color.rgbToHex(bg[0], bg[1], bg[2]))
+                document.documentElement.style.setProperty('--lampa-poster-nav', Color.rgba(palette.average, 0.78))
+            }
+            catch(e){}
+        }
+
         let im = this.html.find('.full--poster')
         let poster
 
@@ -33,14 +47,17 @@ export default {
                 }
         
                 this.img_poster.onload = (e)=>{
+                    applyPosterTheme(this.img_poster)
                     im.parent().addClass('loaded').addClass('with-out')
                 }
 
                 im[0].src = poster || this.card.img
             }
 
-            this.img_poster.onload = (e)=>{
-                let draw = ()=>{
+                this.img_poster.onload = (e)=>{
+                    applyPosterTheme(this.img_poster)
+
+                    let draw = ()=>{
                     im.parent().addClass('loaded')
 
                     setTimeout(()=>{
@@ -90,5 +107,11 @@ export default {
         if(poster) this.html.find('.full-start__poster').addClass('background--poster')
 
         this.img_poster.src = poster || this.card.img
+    },
+
+    onDestroy: function(){
+        document.body.classList.remove('lampa-detail-active')
+        document.documentElement.style.removeProperty('--lampa-poster-bg')
+        document.documentElement.style.removeProperty('--lampa-poster-nav')
     }
 }

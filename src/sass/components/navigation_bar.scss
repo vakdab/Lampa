@@ -9,7 +9,7 @@
 
     &__body{
         border-radius: 1.4em;
-        background: $bg_primary;
+        background: var(--lampa-poster-nav, $bg_primary);
         padding: 1.2em;
 
         display: flex;
