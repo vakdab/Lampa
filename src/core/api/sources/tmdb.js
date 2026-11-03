@@ -465,13 +465,14 @@ function main(params = {}, oncomplite, onerror){
         }
     ]
 
-    ContentRows.call('main', params, parts_data)
-
     let start_shuffle = parts_data.length + 2
 
     Arrays.insert(parts_data, 0, Api.partKeywords(parts_data, 'movie', start_shuffle))
 
     Arrays.insert(parts_data, 0, Api.partPersons(parts_data, parts_limit, 'movie', start_shuffle))
+
+    // Content rows at index 0 (including Snack TV's hero) must precede the built-in top rows.
+    ContentRows.call('main', params, parts_data)
 
     genres.movie.forEach(genre=>{
         let event = (call)=>{
