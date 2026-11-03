@@ -9003,11 +9003,13 @@
             B + '.full-start-new__buttons svg{width:1.4em;height:1.4em;margin:0!important}',
             /* every source/plugin button is hidden: they live in the menu behind "Дивитися" */
             B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
-            /* card page: coloured soft background from the poster (canvas .background), always visible */
-            'body.appletv-agnative-topnav:has(.full-start-new) .background{background:transparent!important}',
-            'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:block!important}',
-            B + '.full-start__background{filter:none!important;-webkit-filter:none!important}',
-                        B + '.full-start-new__right{background:transparent!important}',
+            /* card page: sharp full-screen backdrop, no blur anywhere (Moon) */
+            'body.appletv-agnative-topnav:has(.full-start-new) .background{background:#1e1f21!important}',
+            'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:none!important;opacity:0!important}',
+            'body.touch-device .full-start__background{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:100%!important;height:100%!important;object-fit:cover!important;z-index:0!important;filter:none!important;-webkit-filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;opacity:1!important}',
+            'body.touch-device .full-start__background.loaded,body.touch-device .full-start__background.dim{opacity:1!important}',
+            'body.touch-device .full-start-new{position:relative!important;z-index:1!important;background-image:linear-gradient(to bottom,rgba(0,0,0,0) 34%,rgba(0,0,0,.30) 62%,rgba(0,0,0,.62) 100%)!important}',
+            B + '.full-start-new__right{background:transparent!important}',
             B + '.full-start-new__buttons .full-start__button{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.22)!important}',
             B + '.full-start-new__rate-line .full-start__rate{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(0,0,0,.28)!important}',
             '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-15em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
