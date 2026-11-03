@@ -1823,7 +1823,7 @@
   function floatHead() {
     try {
       var a = pageNow(), b = document.body.classList;
-      var on = themeOn() && !!a && (a.component === 'full' || a.component === 'alc_auto_view' || !!heroSection(a.component, a));
+      var on = themeOn() && !!a && (a.component === 'alc_auto_view' || !!heroSection(a.component, a));
       if (b.contains('stv-float-head') === on) return;
       b.toggle('stv-float-head', on);
       if (Lampa.Layer && Lampa.Layer.update) Lampa.Layer.update();
@@ -3172,7 +3172,7 @@
     addHeroRow();
     Lampa.Listener.follow('full', guard(function (e) {
       if (e.type === 'start') reorderRows(e.link);
-      if (e.type === 'complite') themeFull(e);
+      // Keep Lampa's native full-card page. Snack TV still owns the home hero and episode rows.
       if (e.type === 'options') moreOptions(e);
       if (e.type === 'build' && e.name === 'episodes') themeEpisodes(e);
     }));
