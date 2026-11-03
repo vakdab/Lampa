@@ -1253,6 +1253,17 @@
   function agnative() { return false; }
 
   // ================= full card =================
+  function nativeFullLogo(e) {
+    try {
+      var render = e.object.activity.render(), movie = (e.data && e.data.movie) || e.object.card || {};
+      var box = render.find('.full-start-new__original-title').first();
+      if (!box.length || box.find('img.stv-native-logo').length || !movie.id) return;
+      var fallback = box.text().trim();
+      box.text('');
+      logoInto(box[0], movie, tmdbSize('logo', T[M].logoW * k), 'stv-native-logo');
+      setTimeout(function () { if (box.length && !box.find('img.stv-native-logo').length) box.text(fallback); }, 1800);
+    } catch (x) {}
+  }
   function metaLine(m, render) {
     var parts = [], serial = kindOf(m) === 'tv';
     parts.push('<span>' + esc(kindLabel(m)) + '</span>');
@@ -3172,6 +3183,7 @@
     addHeroRow();
     Lampa.Listener.follow('full', guard(function (e) {
       if (e.type === 'start') reorderRows(e.link);
+      if (e.type === 'complite') nativeFullLogo(e);
       // Keep Lampa's native full-card page. Snack TV still owns the home hero and episode rows.
       if (e.type === 'options') moreOptions(e);
       if (e.type === 'build' && e.name === 'episodes') themeEpisodes(e);
