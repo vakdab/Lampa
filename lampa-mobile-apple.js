@@ -9007,8 +9007,8 @@
             'body.appletv-agnative-topnav:has(.full-start-new) .background{background:transparent!important}',
             'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:block!important}',
             B + '.full-start__background{filter:none!important;-webkit-filter:none!important}',
-            B + '.full-start-new__right{background:linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,.55) 3.5em,rgba(0,0,0,.55) calc(100% - 3em),rgba(0,0,0,0) 100%)!important;border-radius:0!important}',
-            B + '.full-start-new__buttons .full-start__button{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(22,24,30,.45)!important}',
+                        B + '.full-start-new__right{background:transparent!important}',
+            B + '.full-start-new__buttons .full-start__button{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.22)!important}',
             B + '.full-start-new__rate-line .full-start__rate{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(0,0,0,.28)!important}',
             '@media(max-width:700px){' + B + '.full-start-new__right{margin-top:-15em!important}' + B + '.full-start-new__buttons .button--play{max-width:11em;padding:0 1.3em!important}}'
         ].join('');
