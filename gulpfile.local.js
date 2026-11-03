@@ -421,6 +421,7 @@ exports.default = parallel(watch, browser_sync);
 exports.debug = series(enable_debug_mode, this.default)
 exports.doc = series(sync_doc, buildDoc)
 exports.write_manifest = series(write_manifest)
+
 exports.merge_task = merge;
 exports.lang_task = lang_task;
 exports.sass_task = sass_task;
