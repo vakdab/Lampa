@@ -760,7 +760,7 @@ body.moon--splash .lp-status {
 }
 
 .background {
-  --moon-blur-opacity:.8;
+  --moon-blur-opacity:0;
 }
 
 .background__one.visible,
