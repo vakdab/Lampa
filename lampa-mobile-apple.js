@@ -9005,7 +9005,7 @@
             B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
             /* card page: sharp full-screen backdrop, no blur anywhere (Moon) */
             'body.appletv-agnative-topnav:has(.full-start-new) .background{background:#f2f3f4!important}',
-            'body.appletv-agnative-topnav:has(.full-start-new) .background canvas,body.appletv-agnative-topnav:has(.full-start-new) .background .moon-pattern{display:none!important;opacity:0!important}',
+            'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:none!important;opacity:0!important}',
             'body.touch-device .full-start__background{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:100%!important;height:100%!important;object-fit:cover!important;z-index:0!important;filter:none!important;-webkit-filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;opacity:1!important}',
             'body.touch-device .full-start__background.loaded,body.touch-device .full-start__background.dim{opacity:1!important}',
             'body.touch-device .full-start-new{position:relative!important;z-index:1!important;background-image:linear-gradient(to bottom,rgba(0,0,0,0) 34%,rgba(0,0,0,.30) 62%,rgba(0,0,0,.62) 100%)!important}',
