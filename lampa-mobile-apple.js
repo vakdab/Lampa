@@ -28,13 +28,12 @@
         style.id = STYLE_ID;
         style.textContent = [
             'html.lampa-mx-mobile-fix,body.lampa-mx-mobile-fix{min-height:100%;background:#f2f3f4!important;overscroll-behavior:none;} ',
-            'html.lampa-mx-mobile-fix.lampa-detail-active{background:var(--lampa-poster-bg,#1d1f20)!important;} ',
             'body.lampa-mx-mobile-fix .activity.application,body.lampa-mx-mobile-fix .activity.application .scroll,body.lampa-mx-mobile-fix .activity.application .scroll__content,body.lampa-mx-mobile-fix .activity.application .scroll__body{background:#fff!important;background-image:none!important;color:#17191d!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .wrap__content,body.lampa-mx-mobile-fix .activity.application .items-line,body.lampa-mx-mobile-fix .activity.application .items-line__body{background:transparent!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .card__title,body.lampa-mx-mobile-fix .activity.application .card__text,body.lampa-mx-mobile-fix .activity.application .items-line__title{color:#17191d!important;text-shadow:none!important;} ',
             'body.lampa-mx-mobile-fix.lampa-detail-active,body.lampa-mx-mobile-fix.lampa-detail-active .activity.application,body.lampa-mx-mobile-fix.lampa-detail-active .activity.application .scroll,body.lampa-mx-mobile-fix.lampa-detail-active .activity.application .scroll__content,body.lampa-mx-mobile-fix.lampa-detail-active .activity.application .scroll__body{background:var(--lampa-poster-bg,#1d1f20)!important;color:#fff!important;} ',
             'body.lampa-mx-mobile-fix.lampa-detail-active .activity.application .wrap__content{padding-top:0!important;} ',
-            'body.lampa-mx-mobile-fix.lampa-detail-active .full-start-new{padding-top:0!important;background:var(--lampa-poster-bg,#1d1f20)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-detail-active .full-start-new{padding-top:env(safe-area-inset-top,0px)!important;} ',
             'body.lampa-mx-mobile-fix .head{top:env(safe-area-inset-top,0px)!important;} ',
             'body.lampa-mx-mobile-fix .wrap__content{padding-top:calc(4em + env(safe-area-inset-top,0px));} ',
             'body.lampa-mx-mobile-fix .scroll,body.lampa-mx-mobile-fix [class*="short" i]{touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;} ',

@@ -4503,6 +4503,7 @@ body.touch-device.orientation--landscape .full-start__background {
   .full-start-new__left {
     width: auto;
     margin: -1.5em;
+    margin-top: env(safe-area-inset-top, 0px);
   }
 }
 .full-start-new__right {
