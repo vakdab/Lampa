@@ -637,14 +637,14 @@
     // the episode card (the card's episode row, the schedule)
     r.push(cssEpCard(c, '.stv-ep'));
     // the season pull-down at the head of the episode row
-    r.push(F + ' .stv-season-title{display:inline-flex!important;align-items:center;cursor:pointer;border-radius:' + px(12) + ';padding:' + px(2) + ' ' + px(8) + ';margin-left:-' + px(8) + ';transition:background-color .15s,color .15s;white-space:nowrap;flex-shrink:0}');
-    r.push(F + ' .stv-season-chev{display:inline-block;flex:0 0 auto;width:.5em!important;height:.8em!important;margin-left:.35em;opacity:.75}');
-    if (tv) r.push(F + ' .stv-season-title.focus{background:#fff;color:#000}');
-    else r.push(F + ' .stv-season-title:active{background:rgba(255,255,255,.15)}');
-    r.push(F + ' .stv-season{display:inline-flex;align-items:center;height:' + tp(56, 34) + ';padding:0 ' + tp(26, 16) + ';border-radius:' + px(40) + ';' + glass +
+    r.push(c.B + ' .stv-season-title{display:inline-flex!important;align-items:center;cursor:pointer;border-radius:' + px(12) + ';padding:' + px(2) + ' ' + px(8) + ';margin-left:-' + px(8) + ';transition:background-color .15s,color .15s;white-space:nowrap;flex-shrink:0}');
+    r.push(c.B + ' .stv-season-chev{display:inline-block;flex:0 0 auto;width:.5em!important;height:.8em!important;margin-left:.35em;opacity:.75}');
+    if (tv) r.push(c.B + ' .stv-season-title.focus{background:#fff;color:#000}');
+    else r.push(c.B + ' .stv-season-title:active{background:rgba(255,255,255,.15)}');
+    r.push(c.B + ' .stv-season{display:inline-flex;align-items:center;height:' + tp(56, 34) + ';padding:0 ' + tp(26, 16) + ';border-radius:' + px(40) + ';' + glass +
       'font-size:' + tp(27, 15) + ';font-weight:600;color:#fff;margin-right:' + px(t.gutter) + ';flex-shrink:0;vertical-align:top;transition:transform ' + t.dur + 'ms ' + ease + '}');
-    r.push(F + ' .stv-season:after{content:"";width:.45em;height:.45em;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-.25em 0 0 .55em}');
-    if (tv) r.push(F + ' .stv-season.focus{background:#fff;color:#000;transform:scale(1.06)}');
+    r.push(c.B + ' .stv-season:after{content:"";width:.45em;height:.45em;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-.25em 0 0 .55em}');
+    if (tv) r.push(c.B + ' .stv-season.focus{background:#fff;color:#000;transform:scale(1.06)}');
     r.push(F + ' .stv-eprow .scroll__body{display:flex;align-items:flex-start}');
     r.push(F + ' .stv-eprow .card-more,' + F + ' .stv-eprow .full-episode{display:none!important}');
     return r.join('\n');
