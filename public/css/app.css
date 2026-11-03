@@ -732,6 +732,43 @@ body.moon--splash .lp-status {
     opacity: 1;
   }
 }
+/* ===== Фон сторінок: візерунок іконок під розмитим шаром ===== */
+.background .moon-pattern {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #1d1f20;
+  color: #fff;
+}
+.background .moon-pattern svg {
+  position: absolute;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.14;
+}
+
+/* розмитий колірний шар поверх візерунка: напівпрозорий, щоб іконки проглядали */
+.background > canvas {
+  mix-blend-mode: normal;
+}
+
+.background {
+  --moon-blur-opacity:.8;
+}
+
+.background__one.visible,
+.background__two.visible,
+.background__fade {
+  opacity: var(--moon-blur-opacity) !important;
+}
+
 @font-face {
   font-family: "SegoeUI";
   font-display: swap;

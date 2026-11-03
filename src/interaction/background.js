@@ -4,6 +4,7 @@ import Arrays from '../utils/arrays'
 import Platform from '../core/platform'
 import Player from './player'
 import Manifest from '../core/manifest'
+import MoonSplash from './moon_splash'
 
 let html = $(`
     <div class="background">
@@ -88,6 +89,23 @@ function init(){
     })
 
     html[0].toggleClass('hide', !Storage.field('background'))
+
+    pattern()
+}
+
+/**
+ * Moon: візерунок з іконок (як на екрані завантаження) під розмитим фоном
+ */
+function pattern(){
+    let holder = html.find('.moon-pattern')
+
+    if(!holder.length){
+        holder = $('<div class="moon-pattern"></div>')
+
+        html.prepend(holder)
+    }
+
+    MoonSplash.background(holder[0])
 }
 
 /**
@@ -278,6 +296,8 @@ function resize(){
     background.fade.canvas.height(window.screen_height)
 
     html[0].toggleClass('hide', !Storage.field('background'))
+
+    pattern()
 
     if(loaded[src]) draw(loaded[src], background[view])
 }
