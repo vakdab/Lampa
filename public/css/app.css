@@ -1320,7 +1320,7 @@ body:not(.glass--style).keyboard-input--visible .head {
 .navigation-bar__body {
   -webkit-border-radius: 1.4em;
           border-radius: 1.4em;
-  background: var(--lampa-poster-nav, #262829);
+  background: #262829;
   padding: 1.2em;
   display: -webkit-box;
   display: -webkit-flex;
@@ -4503,7 +4503,6 @@ body.touch-device.orientation--landscape .full-start__background {
   .full-start-new__left {
     width: auto;
     margin: -1.5em;
-    margin-top: env(safe-area-inset-top, 0px);
   }
 }
 .full-start-new__right {
