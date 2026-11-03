@@ -28,7 +28,6 @@
         @media screen and (max-width: $media_xm) {
             width: auto;
             margin: 0 -$offset;
-            margin-top: env(safe-area-inset-top, 0px);
         }
     }
 

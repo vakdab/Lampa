@@ -4,6 +4,7 @@ import Color from '../../../utils/color'
 export default {
     onCreate: function(){
         document.body.classList.add('lampa-detail-active')
+        document.documentElement.classList.add('lampa-detail-active')
 
         let applyPosterTheme = (image)=>{
             try{
@@ -111,6 +112,7 @@ export default {
 
     onDestroy: function(){
         document.body.classList.remove('lampa-detail-active')
+        document.documentElement.classList.remove('lampa-detail-active')
         document.documentElement.style.removeProperty('--lampa-poster-bg')
         document.documentElement.style.removeProperty('--lampa-poster-nav')
     }
