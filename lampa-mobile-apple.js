@@ -37,7 +37,7 @@
             'body.lampa-mx-mobile-fix .full-start-new{position:relative!important;z-index:1!important;min-height:100vh!important;padding:calc(env(safe-area-inset-top,0px) + 3.5em) 1.2em calc(env(safe-area-inset-bottom,0px) + 9em)!important;background:transparent!important;} ',
             'body.lampa-mx-mobile-fix .full-start-new__body{display:block!important;min-height:0!important;} ',
             'body.lampa-mx-mobile-fix .full-start-new__left{display:none!important;} ',
-            'body.lampa-mx-mobile-fix .full-start-new__right{width:100%!important;margin:0!important;padding:50vh 0 0!important;background:none!important;border-radius:0!important;} ',
+            'body.lampa-mx-mobile-fix .full-start-new__right{width:100%!important;margin:0!important;padding:60vh 0 0!important;background:none!important;border-radius:0!important;} ',
             'body.lampa-mx-mobile-fix .full-start-new__head{display:none!important;} ',
             'body.lampa-mx-mobile-fix .full-start-new__title{max-width:100%!important;margin:0 0 .18em!important;color:#fff!important;font-size:2.65em!important;font-weight:800!important;line-height:1.08!important;text-shadow:0 2px 12px rgba(0,0,0,.55)!important;} ',
             'body.lampa-mx-mobile-fix .full-start-new__original-title{display:block!important;max-width:100%!important;margin:0 0 .65em!important;color:#fff!important;font-size:1.35em!important;font-weight:700!important;line-height:1.12!important;text-transform:uppercase!important;letter-spacing:.04em!important;} ',
