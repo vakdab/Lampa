@@ -741,8 +741,8 @@ body.moon--splash .lp-status {
   bottom: 0;
   pointer-events: none;
   overflow: hidden;
-  background: #1d1f20;
-  color: #fff;
+  background: #f2f3f4;
+  color: #1d1f20;
 }
 .background .moon-pattern svg {
   position: absolute;
@@ -751,7 +751,7 @@ body.moon--splash .lp-status {
   stroke-width: 1.15;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.14;
+  opacity: 0.1;
 }
 
 /* розмитий колірний шар поверх візерунка: напівпрозорий, щоб іконки проглядали */

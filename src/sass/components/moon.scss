@@ -199,8 +199,8 @@ body.moon--splash .lp-status{display:none}
     top:0;left:0;right:0;bottom:0;
     pointer-events:none;
     overflow:hidden;
-    background:#1d1f20;
-    color:#fff;
+    background:#f2f3f4;
+    color:#1d1f20;
 
     svg{
         position:absolute;
@@ -209,7 +209,7 @@ body.moon--splash .lp-status{display:none}
         stroke-width:1.15;
         stroke-linecap:round;
         stroke-linejoin:round;
-        opacity:.14;
+        opacity:.10;
     }
 }
 

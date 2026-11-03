@@ -27,7 +27,7 @@
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            'html.lampa-mx-mobile-fix,body.lampa-mx-mobile-fix{min-height:100%;background:#000!important;overscroll-behavior:none;} ',
+            'html.lampa-mx-mobile-fix,body.lampa-mx-mobile-fix{min-height:100%;background:#f2f3f4!important;overscroll-behavior:none;} ',
             'body.lampa-mx-mobile-fix .activity.application,body.lampa-mx-mobile-fix .activity.application .scroll,body.lampa-mx-mobile-fix .activity.application .scroll__content,body.lampa-mx-mobile-fix .activity.application .scroll__body{background:#fff!important;background-image:none!important;color:#17191d!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .wrap__content,body.lampa-mx-mobile-fix .activity.application .items-line,body.lampa-mx-mobile-fix .activity.application .items-line__body{background:transparent!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .card__title,body.lampa-mx-mobile-fix .activity.application .card__text,body.lampa-mx-mobile-fix .activity.application .items-line__title{color:#17191d!important;text-shadow:none!important;} ',
@@ -9004,7 +9004,7 @@
             /* every source/plugin button is hidden: they live in the menu behind "Дивитися" */
             B + '.full-start-new__buttons .lampa-prisma-hidden{display:none!important}',
             /* card page: sharp full-screen backdrop, no blur anywhere (Moon) */
-            'body.appletv-agnative-topnav:has(.full-start-new) .background{background:#1e1f21!important}',
+            'body.appletv-agnative-topnav:has(.full-start-new) .background{background:#f2f3f4!important}',
             'body.appletv-agnative-topnav:has(.full-start-new) .background canvas{display:none!important;opacity:0!important}',
             'body.touch-device .full-start__background{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:100%!important;height:100%!important;object-fit:cover!important;z-index:0!important;filter:none!important;-webkit-filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;opacity:1!important}',
             'body.touch-device .full-start__background.loaded,body.touch-device .full-start__background.dim{opacity:1!important}',
