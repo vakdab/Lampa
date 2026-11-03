@@ -31,6 +31,24 @@
             'body.lampa-mx-mobile-fix .activity.application,body.lampa-mx-mobile-fix .activity.application .scroll,body.lampa-mx-mobile-fix .activity.application .scroll__content,body.lampa-mx-mobile-fix .activity.application .scroll__body{background:#fff!important;background-image:none!important;color:#17191d!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .wrap__content,body.lampa-mx-mobile-fix .activity.application .items-line,body.lampa-mx-mobile-fix .activity.application .items-line__body{background:transparent!important;} ',
             'body.lampa-mx-mobile-fix .activity.application .card__title,body.lampa-mx-mobile-fix .activity.application .card__text,body.lampa-mx-mobile-fix .activity.application .items-line__title{color:#17191d!important;text-shadow:none!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full,body.lampa-mx-mobile-fix.lampa-native-full .activity.application,body.lampa-mx-mobile-fix.lampa-native-full .activity.application .scroll,body.lampa-mx-mobile-fix.lampa-native-full .activity.application .scroll__content,body.lampa-mx-mobile-fix.lampa-native-full .activity.application .scroll__body{background:#101114!important;color:#fff!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .activity.application .wrap__content{padding-top:0!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start__background{position:fixed!important;left:0!important;top:0!important;width:100%!important;height:100%!important;object-fit:cover!important;z-index:0!important;opacity:.52!important;mask-image:none!important;-webkit-mask-image:none!important;filter:saturate(1.05)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new{position:relative!important;z-index:1!important;min-height:100vh!important;padding:calc(env(safe-area-inset-top,0px) + 3.5em) 1.2em calc(env(safe-area-inset-bottom,0px) + 9em)!important;background:linear-gradient(to bottom,rgba(8,9,12,.08) 0%,rgba(8,9,12,.12) 34%,rgba(8,9,12,.88) 76%,#101114 100%)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__body{display:block!important;min-height:0!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__left{display:none!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__right{width:100%!important;margin:0!important;padding:42vh 0 0!important;background:none!important;border-radius:0!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__head{display:none!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__title{max-width:100%!important;margin:0 0 .18em!important;color:#fff!important;font-size:2.65em!important;font-weight:800!important;line-height:1.08!important;text-shadow:0 2px 12px rgba(0,0,0,.55)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__original-title{display:block!important;max-width:100%!important;margin:0 0 .65em!important;color:rgba(255,255,255,.82)!important;font-size:1.25em!important;font-weight:700!important;line-height:1.12!important;text-transform:uppercase!important;letter-spacing:.04em!important;text-shadow:0 2px 10px rgba(0,0,0,.55)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__tagline{display:none!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__details{display:flex!important;margin:.35em 0 .7em!important;color:#fff!important;font-size:1em!important;font-weight:700!important;text-shadow:0 1px 8px rgba(0,0,0,.6)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__rate-line{margin:.25em 0 1.25em!important;color:#fff!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__buttons{display:grid!important;grid-template-columns:1fr 1fr!important;gap:.7em!important;margin-top:1em!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__buttons > .full-start__button{width:auto!important;min-width:0!important;margin:0!important;justify-content:center!important;border:1px solid rgba(255,255,255,.35)!important;background:rgba(35,38,43,.58)!important;box-shadow:0 8px 24px rgba(0,0,0,.2)!important;color:#fff!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__buttons > .button--play{grid-column:1 / -1!important;width:100%!important;background:rgba(255,255,255,.16)!important;font-weight:700!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__buttons > .full-start__button:not(.button--play){height:3.2em!important;padding:0!important;border-radius:50%!important;} ',
+            'body.lampa-mx-mobile-fix.lampa-native-full .full-start-new__buttons > .full-start__button:not(.button--play) span{display:none!important;} ',
             'body.lampa-mx-mobile-fix .head{top:env(safe-area-inset-top,0px)!important;} ',
             'body.lampa-mx-mobile-fix .wrap__content{padding-top:calc(4em + env(safe-area-inset-top,0px));} ',
             'body.lampa-mx-mobile-fix .scroll,body.lampa-mx-mobile-fix [class*="short" i]{touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;} ',
@@ -41,6 +59,15 @@
         document.head.appendChild(style);
         document.documentElement.classList.add('lampa-mx-mobile-fix');
         document.body.classList.add('lampa-mx-mobile-fix');
+        var app = document.getElementById('app');
+        if (app && window.MutationObserver) {
+            var syncFull = function () {
+                var active = app.querySelector('.activity--active .full-start-new');
+                document.body.classList.toggle('lampa-native-full', !!active);
+            };
+            new MutationObserver(syncFull).observe(app, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+            syncFull();
+        }
     }
     function installAbortSafePlay() {
         if (!window.HTMLMediaElement || !HTMLMediaElement.prototype || HTMLMediaElement.prototype.__lampaAbortSafePlay) return;
