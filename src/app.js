@@ -243,7 +243,8 @@ Arrays.extend(window.lampa_settings,{
     },
 
     // Размывать постер для мобильных устройств, эффект стекла
-    blur_poster: true,
+    // Moon: вимкнено, постер чіткий, без блюру
+    blur_poster: false,
 
     // Скрывать важные параметры в приложении
     hide_important_params: true,
