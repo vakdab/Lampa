@@ -732,7 +732,7 @@ body.moon--splash .lp-status {
     opacity: 1;
   }
 }
-/* ===== Фон сторінок: візерунок іконок під розмитим шаром ===== */
+/* ===== Фон сторінок: розмитий колір + тонкий візерунок іконок поверх ===== */
 .background .moon-pattern {
   position: fixed;
   top: 0;
@@ -741,8 +741,9 @@ body.moon--splash .lp-status {
   bottom: 0;
   pointer-events: none;
   overflow: hidden;
-  background: #f2f3f4;
-  color: #1d1f20;
+  background: transparent;
+  color: #fff;
+  z-index: 2;
 }
 .background .moon-pattern svg {
   position: absolute;
@@ -751,22 +752,19 @@ body.moon--splash .lp-status {
   stroke-width: 1.15;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.1;
+  opacity: 0.07;
 }
 
-/* розмитий колірний шар поверх візерунка: напівпрозорий, щоб іконки проглядали */
-.background > canvas {
-  mix-blend-mode: normal;
-}
-
-.background {
-  --moon-blur-opacity:.8;
-}
-
+/* розмитий шар повністю непрозорий: нижня світла підкладка не просвічує і не дає плям */
 .background__one.visible,
 .background__two.visible,
 .background__fade {
-  opacity: var(--moon-blur-opacity) !important;
+  opacity: 1 !important;
+}
+
+/* підкладка каталогу: темна, щоб до/після відкриття картки фон виглядав однаково */
+.background {
+  background: #1d1f20;
 }
 
 @font-face {
