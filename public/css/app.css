@@ -2997,6 +2997,12 @@ body.settings--open .settings__layer {
 .items-line__title {
   font-size: 1.6em;
   font-weight: 400;
+  display: inline-block;
+  padding: 0.35em 0.75em;
+  -webkit-border-radius: 1.2em;
+          border-radius: 1.2em;
+  background: rgba(74, 78, 82, 0.72);
+  color: #fff;
 }
 .items-line__title .full-person__name {
   font-size: 1em;
@@ -9903,7 +9909,9 @@ body.true--mobile .notice {
 }
 
 .torrent-item {
-  background-color: rgba(0, 0, 0, 0.3);
+  background: rgba(78, 78, 84, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   -webkit-border-radius: 0.3em;
           border-radius: 0.3em;
   padding: 1em;
@@ -10133,7 +10141,9 @@ body.true--mobile .notice {
   display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(78, 78, 84, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   -webkit-border-radius: 0.3em;
           border-radius: 0.3em;
   padding: 1em;
@@ -10258,7 +10268,9 @@ body.true--mobile .notice {
   position: relative;
   -webkit-border-radius: 0.3em;
           border-radius: 0.3em;
-  background: #1d1f20;
+  background: rgba(78, 78, 84, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   display: -webkit-box;
   display: -webkit-flex;
   display: -ms-flexbox;
