@@ -6742,6 +6742,10 @@
         'body.' + BODY_CLASS + ' .selectbox-item.selector .selectbox-item__title, body.' + BODY_CLASS + ' .selectbox-item.selector .selectbox-item__subtitle { color:#fff !important; text-shadow:0 1px 2px rgba(0,0,0,.35) !important; }',
         'body.' + BODY_CLASS + ' .selectbox-item.selector .selectbox-item__icon, body.' + BODY_CLASS + ' .selectbox-item.selector .selectbox-item__icon svg { color:#fff !important; fill:currentColor !important; }',
         'body.' + BODY_CLASS + ' .selectbox-item.selector.focus, body.' + BODY_CLASS + ' .selectbox-item.selector.hover { background:rgba(112,112,120,.98) !important; border-color:rgba(255,255,255,.70) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 8px 20px rgba(0,0,0,.22) !important; }',
+        // L-vid results page: gray underlay behind each result row and its labels.
+        'body.' + BODY_CLASS + ' .online-prestige.selector { background:rgba(78,78,84,.90) !important; background-image:none !important; border:1px solid rgba(255,255,255,.24) !important; border-radius:1.05em !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 7px 18px rgba(0,0,0,.18) !important; color:#fff !important; }',
+        'body.' + BODY_CLASS + ' .online-prestige.selector .online-prestige__title, body.' + BODY_CLASS + ' .online-prestige.selector .online-prestige__info, body.' + BODY_CLASS + ' .online-prestige.selector .online-prestige__time, body.' + BODY_CLASS + ' .online-prestige.selector .online-prestige__quality { color:#fff !important; text-shadow:0 1px 2px rgba(0,0,0,.35) !important; }',
+        'body.' + BODY_CLASS + ' .online-prestige.selector.focus, body.' + BODY_CLASS + ' .online-prestige.selector.hover { background:rgba(112,112,120,.98) !important; border-color:rgba(255,255,255,.68) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 8px 20px rgba(0,0,0,.22) !important; }',
       ].join('\n');
       if (style.textContent !== text) style.textContent = text;
       if (!style.parentNode) {
