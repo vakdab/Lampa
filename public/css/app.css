@@ -7142,6 +7142,14 @@ body.selectbox--open .selectbox__layer {
   position: relative;
   will-change: transform;
 }
+body.stv.selectbox--open .selectbox-item {
+  margin: 0.45em 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  -webkit-border-radius: 0.7em;
+          border-radius: 0.7em;
+  background: rgba(78, 78, 84, 0.9);
+  color: #fff;
+}
 .selectbox-item__title {
   font-size: 1.3em;
   line-height: 1.3;
