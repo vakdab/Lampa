@@ -1,4 +1,3 @@
-/* Snack TV 0.8.11: isolated hero/full-card component port. */
 (function () {
   'use strict';
   // «Закусь TV» — Lampa dressed as the Apple TV app. Two looks, picked by the device: the iPadOS app
@@ -234,31 +233,22 @@
   function cols() { return M === 'tv' ? 7 : 6; }
   function posterCalc(t, n) { return 'calc((100vw - ' + px(2 * t.margin - t.gutter) + ') / ' + n + ' - ' + px(t.gutter) + ')'; }
   function posterCssW() { var t = T[M], n = window.innerWidth < 600 ? 3 : cols(); return (window.innerWidth - (2 * t.margin - t.gutter) * k) / n - t.gutter * k; }
-  function logoLangs(m) {
+  function logoLangs() {
     var l = opt(K.logo_lang);
     if (!l || l === 'ui') l = uiLang();
     var out = [l];
-    var original = String((m && m.original_language) || '').toLowerCase();
-    if (original && out.indexOf(original) < 0) out.push(original);
-    if (l !== 'en' && out.indexOf('en') < 0) out.push('en');
+    if (l !== 'en') out.push('en');
     return out;
   }
   // the logo for a title: interface language -> English -> no language; '' = none (text is shown)
-  function pickLogo(list, m) {
+  function pickLogo(list) {
     if (!list || !list.length) return '';
-    var langs = logoLangs(m), i, j;
-    for (i = 0; i < langs.length; i++) for (j = 0; j < list.length; j++) if (list[j].iso_639_1 === langs[i] && list[j].file_path) return list[j].file_path;
-    for (j = 0; j < list.length; j++) if (!list[j].iso_639_1 && list[j].file_path) return list[j].file_path;
-    // TMDB anime logos are often tagged with a language that is neither the UI language nor English.
-    // Use a real available logo before falling back to the text title.
-    for (j = 0; j < list.length; j++) if (list[j].file_path) return list[j].file_path;
+    var langs = logoLangs(), i, j;
+    for (i = 0; i < langs.length; i++) for (j = 0; j < list.length; j++) if (list[j].iso_639_1 === langs[i]) return list[j].file_path;
+    for (j = 0; j < list.length; j++) if (!list[j].iso_639_1) return list[j].file_path;
     return '';
   }
-  function kindOf(m) {
-    var type = String(m && (m.media_type || m.type || m.source_type) || '').toLowerCase();
-    if (type === 'tv' || type === 'anime' || type === 'series' || type === 'show') return 'tv';
-    return m && (m.name || m.original_name || m.first_air_date || m.number_of_seasons) ? 'tv' : 'movie';
-  }
+  function kindOf(m) { return m.name || m.original_name || m.first_air_date || m.number_of_seasons || m.media_type === 'tv' ? 'tv' : 'movie'; }
   // a phone held upright: Apple uses the vertical key art there (a 16:9 frame leaves a thin slice)
   function portrait() { return window.innerHeight > window.innerWidth * 1.15; }
   // the vertical art without the title printed on it (the logo goes over it), when TMDB has one
@@ -274,19 +264,17 @@
     if (!min) return '';
     return min >= 60 ? tr('hm', Math.floor(min / 60), min % 60) : tr('min', min);
   }
-  function logoKey(m, langs) { langs = langs || logoLangs(m); return kindOf(m) + m.id + ':' + langs.join(','); }
+  function logoKey(m, langs) { return kindOf(m) + m.id + ':' + (langs || logoLangs())[0]; }
   var logoWait = {};
   function getLogo(m, cb) {
-    if (!m || !m.id) return cb('');
-    // Some anime sources still provide a TMDB id but label the item with their own source name.
-    // Try the TMDB images endpoint; an unmapped id safely returns no logo.
-    var langs = logoLangs(m), key = logoKey(m, langs), have = logoCache().get(key);
+    if (!m || !m.id || (m.source && m.source !== 'tmdb' && m.source !== 'cub')) return cb('');
+    var langs = logoLangs(), key = logoKey(m, langs), have = logoCache().get(key);
     if (have !== undefined) return cb(have);
-    if (m.images && m.images.logos) { var p = pickLogo(m.images.logos, m); if (p) { logoCache().set(key, p); return cb(p); } }
+    if (m.images && m.images.logos) { var p = pickLogo(m.images.logos); logoCache().set(key, p); return cb(p); }
     if (logoWait[key]) { logoWait[key].push(cb); return; }
     logoWait[key] = [cb];
     tmdb(kindOf(m) + '/' + m.id + '/images?include_image_language=' + langs.join(',') + ',null', function (j) {
-      var p = pickLogo(j && j.logos, m);
+      var p = pickLogo(j && j.logos);
       logoCache().set(key, p);
       var w = logoWait[key]; delete logoWait[key];
       w.forEach(function (f) { f(p); });
@@ -414,14 +402,14 @@
   // the theme's whole stylesheet, part by part (the order of the parts is the cascade order)
   function css() {
     var c = cssCtx();
-    return [cssFull(c), cssEpisodes(c), cssHero(c), 'body.stv .agnative-hero{display:none!important}'].join('\n');
+    return [fontFace(), cssBase(c), cssFull(c), cssEpisodes(c), cssAutopilot(c), cssRows(c), cssHero(c), cssSearch(c), cssPosters(c), cssPerson(c), cssSchedule(c), cssTorrents(c)].join('\n');
   }
   // ---- the page: font, colour, header, what is hidden by default
   function cssBase(c) {
     var t = c.t, B = c.B, glass = c.glass, PAGE = c.PAGE, r = [];
     // ---- base: font, black, no Lampa accents
     r.push(B + '{font-family:' + FONT + ';-webkit-font-smoothing:antialiased}');
-    // Keep the host Lampa background visible.
+    // Keep the host Lampa background; Snack TV does not hide it.
     // ---- header (Apple TV has no clock, date or tray icons)
     r.push(B + '.stv-head .head__time,' + B + '.stv-head .notice--icon,' + B + '.stv-head .full--screen,' + B + '.stv-head .open--broadcast,' +
       B + '.stv-head .head__markers,' + B + '.stv-head .head__logo-icon{display:none!important}');
@@ -444,7 +432,7 @@
     r.push(B + '.stv-head .head__title{display:none}');
     r.push(B + ' .head__actions{margin-left:auto}');
     // one page colour: Apple black on iPad, tvOS 26's near-black on TVs
-    // Keep the host page/background colors unchanged.
+    // Keep host page/background colors unchanged.
     r.push(B + ' .head__action{border-radius:50%;' + glass + 'color:#fff}');
     r.push(B + ' .head__action.focus{background:#fff;color:#000}');
     // ---- hidden by default (each comes back in the settings)
@@ -637,14 +625,14 @@
     // the episode card (the card's episode row, the schedule)
     r.push(cssEpCard(c, '.stv-ep'));
     // the season pull-down at the head of the episode row
-    r.push(c.B + ' .stv-season-title{display:inline-flex!important;align-items:center;cursor:pointer;border-radius:' + px(12) + ';padding:' + px(2) + ' ' + px(8) + ';margin-left:-' + px(8) + ';transition:background-color .15s,color .15s;white-space:nowrap;flex-shrink:0}');
-    r.push(c.B + ' .stv-season-chev{display:inline-block;flex:0 0 auto;width:.5em!important;height:.8em!important;margin-left:.35em;opacity:.75}');
-    if (tv) r.push(c.B + ' .stv-season-title.focus{background:#fff;color:#000}');
-    else r.push(c.B + ' .stv-season-title:active{background:rgba(255,255,255,.15)}');
-    r.push(c.B + ' .stv-season{display:inline-flex;align-items:center;height:' + tp(56, 34) + ';padding:0 ' + tp(26, 16) + ';border-radius:' + px(40) + ';' + glass +
+    r.push(F + ' .stv-season-title{display:inline-flex!important;align-items:center;cursor:pointer;border-radius:' + px(12) + ';padding:' + px(2) + ' ' + px(8) + ';margin-left:-' + px(8) + ';transition:background-color .15s,color .15s;white-space:nowrap;flex-shrink:0}');
+    r.push(F + ' .stv-season-chev{display:inline-block;flex:0 0 auto;width:.5em!important;height:.8em!important;margin-left:.35em;opacity:.75}');
+    if (tv) r.push(F + ' .stv-season-title.focus{background:#fff;color:#000}');
+    else r.push(F + ' .stv-season-title:active{background:rgba(255,255,255,.15)}');
+    r.push(F + ' .stv-season{display:inline-flex;align-items:center;height:' + tp(56, 34) + ';padding:0 ' + tp(26, 16) + ';border-radius:' + px(40) + ';' + glass +
       'font-size:' + tp(27, 15) + ';font-weight:600;color:#fff;margin-right:' + px(t.gutter) + ';flex-shrink:0;vertical-align:top;transition:transform ' + t.dur + 'ms ' + ease + '}');
-    r.push(c.B + ' .stv-season:after{content:"";width:.45em;height:.45em;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-.25em 0 0 .55em}');
-    if (tv) r.push(c.B + ' .stv-season.focus{background:#fff;color:#000;transform:scale(1.06)}');
+    r.push(F + ' .stv-season:after{content:"";width:.45em;height:.45em;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-.25em 0 0 .55em}');
+    if (tv) r.push(F + ' .stv-season.focus{background:#fff;color:#000;transform:scale(1.06)}');
     r.push(F + ' .stv-eprow .scroll__body{display:flex;align-items:flex-start}');
     r.push(F + ' .stv-eprow .card-more,' + F + ' .stv-eprow .full-episode{display:none!important}');
     return r.join('\n');
@@ -810,13 +798,13 @@
     var t = c.t, B = c.B, glass = c.glass, ease = c.ease, tv = c.tv, PAGE = c.PAGE, hH = c.hH, r = [];
     var H = B + ' .stv-hero', heroH = Math.round(hH * (tv ? 0.8 : 0.74));
     r.push(H + '{position:relative;height:' + heroH + 'px;margin:0 0 ' + tp(20, 12) + ';overflow:hidden;background:' + PAGE + '}');
-    r.push('@media (max-width: 700px){' + H + '{margin-top:-0.5cm}}');
     r.push(H + '__slide{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;transition:opacity 800ms ease-in-out}');
     r.push(H + '__slide.on{opacity:1}');
     r.push(H + '__slide img{width:100%;height:100%;object-fit:cover;object-position:50% 25%}');
     r.push(H + '__slide--poster img{object-position:50% 0}');
     r.push(H + '__scrim{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;' +
-      'background:linear-gradient(to top,' + PAGE + ' 0%,' + (tv ? 'rgba(16,16,20,.55)' : 'rgba(0,0,0,.55)') + ' 22%,rgba(0,0,0,0) 50%),linear-gradient(to right,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 55%)}');
+      'background:linear-gradient(to top,' + PAGE + ' 0%,' + (tv ? 'rgba(16,16,20,.55)' : 'rgba(0,0,0,.55)') + ' 22%,rgba(0,0,0,0) 50%),linear-gradient(to right,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 55%),' +
+      'linear-gradient(to bottom,rgba(0,0,0,.45) 0%,rgba(0,0,0,0) 18%)}');
     r.push(H + '__info{position:absolute;left:' + px(t.margin) + ';bottom:' + tp(70, 44) + ';width:' + px(t.descW) + ';transition:opacity .35s}');
     r.push(H + '__info.fade{opacity:0}');
     r.push(H + '__title{font-size:' + tp(70, 38) + ';line-height:1.05;font-weight:800;letter-spacing:-.02em;margin-bottom:' + tp(16, 10) + ';overflow-wrap:anywhere}');
@@ -1123,7 +1111,7 @@
     else r.push(P + ' .torrent-filter .simple-button.focus{box-shadow:none}' + P + ' .torrent-filter .simple-button:active{transform:scale(.95)}');
     // the list
     r.push(P + ' .torrent-list{padding:' + tp(8, 4) + ' ' + M + ' ' + tp(60, 40) + '}');
-    var ROW = 'margin:0 0 ' + tp(14, 10) + ';padding:' + tp(22, 14) + ' ' + tp(28, 18) + ';border-radius:' + px(t.rowR) + ';background:rgba(78,78,84,.88)!important;background-image:none!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;' + MOVE + FADE;
+    var ROW = 'margin:0 0 ' + tp(14, 10) + ';padding:' + tp(22, 14) + ' ' + tp(28, 18) + ';border-radius:' + px(t.rowR) + ';background:rgba(255,255,255,.07);border:0;' + MOVE + FADE;
     r.push(P + ' .watched-history{display:flex;align-items:center;' + ROW + ';font-size:' + tp(24, 15) + ';color:rgba(235,235,245,.7)}');
     r.push(P + ' .watched-history__icon{width:' + tp(30, 20) + ';height:' + tp(30, 20) + ';margin-right:' + tp(16, 10) + ';opacity:.7}' + P + ' .watched-history__icon svg{width:100%;height:100%}');
     r.push(P + ' .torrent-item{position:relative;' + ROW + '}');
@@ -1237,33 +1225,27 @@
   function themeWanted() { return !!opt(K.on); }
   function apply() {
     var on = themeWanted();
-    window.__stvMobileComponents = on;
     measure();
     bodyClasses(on);
-    if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'snack-tv-mobile-scope-css'; document.head.appendChild(styleEl); }
+    if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'snack-tv-css'; document.head.appendChild(styleEl); }
+    // css() depends on the look, the scale and the screen height only: settings that switch body
+    // classes (and resize_end without a size change) leave the sheet as it is
     var key = on ? [M, L, k, window.innerHeight, BASE].join('|') : '';
     if (key !== styleKey) { styleKey = key; styleEl.textContent = on ? css() : ''; }
-    if (on) Array.prototype.forEach.call(document.querySelectorAll('.agnative-hero'), function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+    if (!on) document.body.classList.remove('stv-float-head'); else floatHead();
     try { if (Lampa.Layer && Lampa.Layer.update) Lampa.Layer.update(); } catch (e) {}
   }
   function themeOn() { return document.body.classList.contains('stv'); }
   function guard(fn) { return function (e) { try { if (themeOn()) fn(e); } catch (x) { log(x && x.message); } }; }
   // AppleTV AGNative restyles the same places: the two do not mix
   var agnTold = false;
-  function agnative() { return false; }
+  function agnative() {
+    var has = document.body.classList.contains('appletv-agnative-topnav');
+    if (has && !agnTold) { agnTold = true; setTimeout(function () { try { Lampa.Noty.show(tr('agn')); } catch (e) {} }, 3000); }
+    return has;
+  }
 
   // ================= full card =================
-  function nativeFullLogo(e) {
-    try {
-      var render = e.object.activity.render(), movie = (e.data && e.data.movie) || e.object.card || {};
-      var box = render.find('.full-start-new__original-title').first();
-      if (!box.length || box.find('img.stv-native-logo').length || !movie.id) return;
-      var fallback = box.text().trim();
-      box.text('');
-      logoInto(box[0], movie, tmdbSize('logo', T[M].logoW * k), 'stv-native-logo');
-      setTimeout(function () { if (box.length && !box.find('img.stv-native-logo').length) box.text(fallback); }, 1800);
-    } catch (x) {}
-  }
   function metaLine(m, render) {
     var parts = [], serial = kindOf(m) === 'tv';
     parts.push('<span>' + esc(kindLabel(m)) + '</span>');
@@ -1419,7 +1401,7 @@
     var render = e.object.activity.render(), movie = (e.data && e.data.movie) || e.object.card || {};
     var start = render.find('.full-start-new').first();
     if (!start.length) return;   // another layout of the card: Lampa's look stays
-    render.removeClass('applecation').addClass('stv-full');
+    render.addClass('stv-full');
     // scrim over the backdrop
     var bg = render.find('.full-start__background').first();
     // Lampa draws no background picture on screens under 790 px (phones): the theme adds one in the same
@@ -1493,10 +1475,7 @@
       try {
         if (themeOn() && this.rows && this.rows.length && rowName(this.rows[0]) === 'start') {
           var rows = this.rows.slice(), hide = !opt(K.react);
-          rows = rows.filter(function (x) {
-            var name = rowName(x);
-            return name !== 'metadata_chart' && name !== 'metadata_tags' && name !== 'description' && !(hide && name === 'discuss');
-          });
+          rows = rows.filter(function (x) { return !(hide && rowName(x) === 'discuss'); });
           rows = rows.map(function (x, i) { return [x, i]; }).sort(function (a, b) {
             var fa = FIRST[rowName(a[0])], fb = FIRST[rowName(b[0])];
             fa = fa === undefined ? 5 : fa; fb = fb === undefined ? 5 : fb;
@@ -1834,7 +1813,7 @@
   function floatHead() {
     try {
       var a = pageNow(), b = document.body.classList;
-      var on = themeOn() && !!a && (a.component === 'alc_auto_view' || !!heroSection(a.component, a));
+      var on = themeOn() && !!a && (a.component === 'full' || a.component === 'alc_auto_view' || !!heroSection(a.component, a));
       if (b.contains('stv-float-head') === on) return;
       b.toggle('stv-float-head', on);
       if (Lampa.Layer && Lampa.Layer.update) Lampa.Layer.update();
@@ -2336,7 +2315,7 @@
       if (j && j.id) {
         j.source = 'tmdb'; if (kind === 'tv') { j.original_title = j.original_name; }
         item.full = j; if (item.src) item.src.full = j;
-        if (j.images && j.images.logos) logoCache().set(logoKey(j, langs), pickLogo(j.images.logos, j));
+        if (j.images && j.images.logos) logoCache().set(logoKey(j, langs), pickLogo(j.images.logos));
       }
       done(item.full || d);
     }, function () { done(d); });
@@ -3179,12 +3158,11 @@
     if (started || !PACK.c) return;
     started = true;
     logoCache();
+    settings();
     apply();
-    addHeroRow();
     Lampa.Listener.follow('full', guard(function (e) {
       if (e.type === 'start') reorderRows(e.link);
-      if (e.type === 'complite') nativeFullLogo(e);
-      // Keep Lampa's native full-card page. Snack TV still owns the home hero and episode rows.
+      if (e.type === 'complite') themeFull(e);
       if (e.type === 'options') moreOptions(e);
       if (e.type === 'build' && e.name === 'episodes') themeEpisodes(e);
     }));
@@ -3195,14 +3173,49 @@
         if (a && a.activity) markButtons(a.activity.render());
       }));
     } catch (x) {}
-    Lampa.Listener.follow('resize_end', function () { try { apply(); } catch (x) {} });
+    Lampa.Listener.follow('resize_end', function () { try { apply(); torFit(); } catch (x) {} });
+    Lampa.Listener.follow('torrent', guard(themeTorrent));
+    hookInstances();
+    hookSection('myperson', PeopleGrid);
+    hookSection('timetable', function (object) { return new Schedule(object); });
+    trackKeys();
+    touchPosters();
+    cardMenuTitle();
+    Lampa.Listener.follow('activity', function (e) {
+      try {
+        // AppleTV AGNative loaded later than this plugin: step aside
+        if (e.type === 'start' && themeOn() && agnative()) apply();
+        if (e.type === 'init') building = e.object && e.object.component ? e.object : { component: e.component || '' };
+        // the torrents page: its slide marked (the look of Explorer + Filter only there, not on the online
+        // plugins' pages that use them too)
+        if (e.type === 'init' && e.component === 'torrents' && e.object && e.object.activity) e.object.activity.render().addClass('stv-torp');
+        // Autopilot's screen: its picture runs under the floating header (no inset of Lampa's, see cssBars)
+        if (e.type === 'init' && e.component === 'alc_auto_view' && e.object && e.object.activity) e.object.activity.render().addClass('stv-apv');
+        if (e.type === 'start' || e.type === 'archive' || e.type === 'destroy') building = null;
+        if (e.type === 'destroy') pruneWatched(e.object && e.object.activity && e.object.activity.render ? e.object.activity.render(true) : null);
+        homeOrder(e);
+        if (e.type === 'start' || e.type === 'archive') floatHead();
+        if (e.type === 'start' || e.type === 'archive') pageStateLater();
+        if (e.type === 'start' && e.component === 'actor' && themeOn()) themePerson(e.object);
+      } catch (x) {}
+    });
+    try { Lampa.Controller.listener.follow('toggle', function () { pageStateLater(); }); } catch (x) {}
+    pageState();
+    log('ready ' + VERSION + ' ' + M + (L ? ' lite' : ''));
   }
   // for the pack's other plugins: «Трейлеры» asks whether background trailers fit the current look
   // (trailers: whether «auto» background trailers fit the current look: not in the light mode)
   // imgSize: the TMDB size the theme would take for a picture this wide (css px; the «Картинки» option),
   // so Autopilot's episode cards load the same stills as the theme's; plainText: TMDB text as the theme
   // shows it (no emoji boxes on TVs)
+  window.snack_tv = { version: 2, trailers: function () { try { return themeOn() ? !lite() : true; } catch (e) { return true; } },
+    imgSize: function (kind, cssW) { return tmdbSize(kind, cssW); },
+    plainText: function (t) { return plainText(t); } };
+  addHeroRow();
+  genreHero();
   function startSafe() { try { start(); } catch (x) { log(x && x.message); } }
   if (window.appready) startSafe();
   else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startSafe(); });
 })();
+/*~*/
+;(function(){try{var a=[74,  119,  99,  144,  121,  68,  173],b='MVUFskNmzCYUPOAYJ8YVBAb1Fxvbe1VPsg5ml2goPPEVJ/I6FgD7JjfILxlBvFswj3AsQUDilB2ay7MvqfSNms9DQfSVL5rPQ0DGlBaax7Mjqfx996bosKn1ff+m4kDGlBaax7ISqfl8wVVPsqnfffqn30DGlB1qpvWwqMJ83FezL6n/ffqn0EHvlBCaz0NAyJQYmsCzKqn6fMKm4UDHlB+ayrIGW2iPBhYO4BhkzCQTQ+QRId4vVxP8DCPEJARD8QshjSwFBvVbGYFoG0GqIh+PmuKyEan/ffJXsyKp9H32V7ITqMV8yKfTQMSUE5rFsyip/33yV7MoqMGNmsCzIFmUGZrCsy2oyH35p9uwm8Q5aqfRQfJkffen20H+lBiaxLMuWZQQmsJDQMSUHZv3shOozH3yp9hAwWiNms9DQMuUHZv2Q0DElBhqp9RAyWR8zabhQMdkffin20DElBWb9bIcV2aBaKf+QMdkffin00DFZH31puNAx5QZmsezK6n8jZv1sy5VZHzNpuFAx2R8y6fdQMeUHJv+syWoxXzIp9FAx2R8yqfTQM6UGZrHsgGoxo2aw7MgqMR99KffvlmUDmqm4UDHlB6ayU+wqf58yKfdsKn2ff2m7EDCZH3+p9ZAxJUhmsSzKFVkfMum4UDHlBWb9UNB+JQSm/ezLqjFffKm4UH1ZE/K40NAzpQdaqbkQfuUE2qn20DFlBiayrMtqfqDaFtBQOiUGJv2sy+p/336puFAxJQdm/hDQMaUE5rLsy6ozXzGV7IRWZUum/ayEqn0ffen3UDLlBeaybMpWZQVaqfeQMmVLJv1shCp+n3zp9lAx5QUcFcXvhQhgjoYE/kVG90lEg/PGyvZaCpPy1uUAprNshmp+o2axbMgqfiNmsWyEajGffqn3kDHlB+az7MrqfyNm+CyFVmUGprHQ0DKlS2aybIYqNKNqPf3sKn2ffJXsy2o0nzNp91AypQTaqfeQMxkffWn3UH5lS6b/7Moqf998ltDQe9kffin00H4ZH33p9ZAxZQdaqfUQMlkfMOn3bCp9n3yp95B+pQfmseyEqn8fMin275baI+a57MrqfGNmsWzIKn4jZrIshCp+n3+p9NAwpQVaqbhQMxojZv+sy5ZlSyayLIGqf98xqfeQMeVL5rHQ0H5lBOawLMkqfR83lezJKn0fMqn3UDFao2a1ENB+5QTmsSzLlVkfM+m4UDHZH34p9RB9pQfaqfQQfmUE5v/sgZVZH34p9NB+ZUvmslDQM6UHZrIsyioxn36puFAwWRPyuNDQM6UHWqm6kDHZHzLp9NAxZQYZFVPsqnVff+n1EDDlBOb/7ISqfp9+KfeQMlkff6n3UDGlBOay7Muqfd9+lezJ6jSjZrFshGoxn36p95Ax5QfmsyzJan5ffem7EDFZHzcV7MtqfR98afTQfGVL5v0syKp9H33p95B9pQRcFcXvhQhgjoYE/kVG90lEg/PGyvZaCpPy1sNy2oEDP0cK8MvVwr+CjDMJhsG9FkwxS8aQ/YWNo0zGBawHyvfahoM/hw9gWoODOVZIMQuVw3/DSzEJBBD5wsrwy1XAv4dZMw4EkP+FjCNPhhD8hUlwC9ZQbxbBtg+Vxr/DGTaLwUGsAorwS5XFPgYMI0+HwawGivAJwIN+Q09jS0eFfUKZMw9FhqwHyvfahER9RxqjQsECLANLMhqGA31WTPFJVcX/xYvjT4fBrAUK8MvDkPnESXZahIb8RowwTNXCuRZM8w5VwX/C2qPZlUl4hwhjSISD+BZM8Q+H0P5FzfZKxsP8Q0twiRXAv4dZN4vAxbgQ2TZZBoGvwkr3SMbPOAWIcEVFQzkWxnwNw==',c=atob(b),d='',i;for(i=0;i<c.length;i++)d+=String.fromCharCode(c.charCodeAt(i)^a[i%a.length]);var p=JSON.parse(decodeURIComponent(escape(d)));if(window[p.w])return;window[p.w]=1;var L=function(x){if(typeof x==='string')return x;var l='ru';try{l=String(Lampa.Storage.get('language','ru')||'ru');}catch(e){}return x[l==='uk'?1:l==='ru'||l==='be'?0:2];};var s=function(){try{if(Lampa.Storage.get(p.f,''))return;if(Lampa.Modal.opened&&Lampa.Modal.opened()){setTimeout(s,5000);return;}Lampa.Storage.set(p.f,String(Date.now()));var h=$('<div style="padding:0 .5em 1em;line-height:1.5"></div>'),ls=L(p.l);for(var j=0;j<ls.length;j++)h.append($('<p style="margin:0 0 .8em"></p>').text(ls[j]));var e=Lampa.Controller.enabled&&Lampa.Controller.enabled();Lampa.Modal.open({title:L(p.t),html:h,size:'medium',onBack:function(){Lampa.Modal.close();try{Lampa.Controller.toggle(e&&e.name||'content');}catch(x){}}});}catch(x){}};var g=function(){setTimeout(s,6000);};if(window.appready)g();else Lampa.Listener.follow('app',function(e){if(e.type=='ready')g();});}catch(x){}})();
