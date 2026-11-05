@@ -28,7 +28,7 @@ cp -r build/github/lampa/. build/site/
 rm -f build/site/Dockerfile build/site/README.md build/site/SECURITY.md build/site/LICENSE
 mkdir -p build/site/custom
 cp lampa-mobile-apple.js build/site/custom/lampa-mobile-apple-v20.js
-cat custom/snack-tv.js custom/snack-header.js >> build/site/custom/lampa-mobile-apple-v20.js
+cat custom/snack-tv.js custom/snack-header.js custom/snack-leftdock.js >> build/site/custom/lampa-mobile-apple-v20.js
 # Keep the previous asset name available for already-installed iOS PWAs.
 cp build/site/custom/lampa-mobile-apple-v20.js build/site/custom/lampa-mobile-apple-v19.js
 cp build/site/custom/lampa-mobile-apple-v20.js build/site/custom/lampa-mobile-apple-v18.js
