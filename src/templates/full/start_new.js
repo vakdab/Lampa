@@ -9,7 +9,6 @@ let html = `<div class="full-start-new">
 
         <div class="full-start-new__right">
             <div class="full-start-new__head"></div>
-            <div class="full-start-new__original-title">{original_title}</div>
             <div class="full-start-new__title">{title}</div>
             <div class="full-start-new__tagline full--tagline">{tagline}</div>
             <div class="full-start-new__rate-line">

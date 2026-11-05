@@ -4,7 +4,6 @@ import Arrays from '../utils/arrays'
 import Platform from '../core/platform'
 import Player from './player'
 import Manifest from '../core/manifest'
-import MoonSplash from './moon_splash'
 
 let html = $(`
     <div class="background">
@@ -89,23 +88,6 @@ function init(){
     })
 
     html[0].toggleClass('hide', !Storage.field('background'))
-
-    pattern()
-}
-
-/**
- * Moon: візерунок з іконок (як на екрані завантаження) під розмитим фоном
- */
-function pattern(){
-    let holder = html.find('.moon-pattern')
-
-    if(!holder.length){
-        holder = $('<div class="moon-pattern"></div>')
-
-        html.prepend(holder)
-    }
-
-    MoonSplash.background(holder[0])
 }
 
 /**
@@ -297,8 +279,6 @@ function resize(){
 
     html[0].toggleClass('hide', !Storage.field('background'))
 
-    pattern()
-
     if(loaded[src]) draw(loaded[src], background[view])
 }
 
@@ -382,11 +362,7 @@ function change(url = ''){
  * @param {string} url
  */
 function immediately(url = ''){
-    if(Storage.field('light_version') || !Storage.field('background')) return
-
-    // Moon: раніше виклик частіше ніж раз на секунду ігнорувався, і фон картки то малювався, то ні.
-    // Тепер завжди беремо останній запит; якщо це та сама картинка, нічого не робимо.
-    if(url && url == src && loaded[url]) return
+    if(Storage.field('light_version') || immed_time + 1000 > Date.now() || !Storage.field('background')) return
 
     if(url) src = url
 

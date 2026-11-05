@@ -3,15 +3,6 @@
     position: relative;
     will-change: transform;
 
-    // Source cards opened after Play must remain readable on light backdrops.
-    body.stv.selectbox--open &{
-        margin: 0.45em 0;
-        border: 1px solid rgba(255,255,255,0.24);
-        border-radius: 0.7em;
-        background: rgba(78,78,84,0.9);
-        color: #fff;
-    }
-
     &__title{
         font-size: 1.3em;
         line-height: 1.3;
