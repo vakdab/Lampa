@@ -421,7 +421,7 @@
     var t = c.t, B = c.B, glass = c.glass, PAGE = c.PAGE, r = [];
     // ---- base: font, black, no Lampa accents
     r.push(B + '{font-family:' + FONT + ';-webkit-font-smoothing:antialiased}');
-    r.push(B + ' .background{display:none}');
+    // Keep the host Lampa background visible.
     // ---- header (Apple TV has no clock, date or tray icons)
     r.push(B + '.stv-head .head__time,' + B + '.stv-head .notice--icon,' + B + '.stv-head .full--screen,' + B + '.stv-head .open--broadcast,' +
       B + '.stv-head .head__markers,' + B + '.stv-head .head__logo-icon{display:none!important}');
@@ -444,7 +444,7 @@
     r.push(B + '.stv-head .head__title{display:none}');
     r.push(B + ' .head__actions{margin-left:auto}');
     // one page colour: Apple black on iPad, tvOS 26's near-black on TVs
-    r.push(B + ',' + B + ' .wrap,' + B + ' .wrap__content,' + B + ' .activitys,' + B + ' .activity,' + B + ' .activity__body{background-color:' + PAGE + '}');
+    // Keep the host page/background colors unchanged.
     r.push(B + ' .head__action{border-radius:50%;' + glass + 'color:#fff}');
     r.push(B + ' .head__action.focus{background:#fff;color:#000}');
     // ---- hidden by default (each comes back in the settings)
@@ -1234,7 +1234,7 @@
     var f = parseFloat(window.getComputedStyle(document.body).fontSize) || T[M].base;
     k = f / T[M].base;
   }
-  function themeWanted() { return !!opt(K.on) && !agnative(); }
+  function themeWanted() { return !!opt(K.on); }
   function apply() {
     var on = themeWanted();
     window.__stvMobileComponents = on;
