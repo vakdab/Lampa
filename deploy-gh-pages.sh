@@ -27,18 +27,19 @@ mkdir -p build/site
 cp -r build/github/lampa/. build/site/
 rm -f build/site/Dockerfile build/site/README.md build/site/SECURITY.md build/site/LICENSE
 mkdir -p build/site/custom
-cp lampa-mobile-apple.js build/site/custom/lampa-mobile-apple-v15.js
-cat custom/snack-tv.js >> build/site/custom/lampa-mobile-apple-v15.js
+cp lampa-mobile-apple.js build/site/custom/lampa-mobile-apple-v16.js
+cat custom/snack-tv.js >> build/site/custom/lampa-mobile-apple-v16.js
 # Keep the previous asset name available for already-installed iOS PWAs.
-cp build/site/custom/lampa-mobile-apple-v15.js build/site/custom/lampa-mobile-apple-v14.js
-cp build/site/custom/lampa-mobile-apple-v15.js build/site/custom/lampa-mobile-apple-v13.js
+cp build/site/custom/lampa-mobile-apple-v16.js build/site/custom/lampa-mobile-apple-v14.js
+cp build/site/custom/lampa-mobile-apple-v16.js build/site/custom/lampa-mobile-apple-v15.js
+cp build/site/custom/lampa-mobile-apple-v16.js build/site/custom/lampa-mobile-apple-v13.js
 touch build/site/.nojekyll
 
 python3 - << 'PY'
 p = 'build/site/index.html'
 s = open(p, encoding='utf-8').read()
 old = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {})\n        }"""
-new = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {\n                putScript('custom/lampa-mobile-apple-v15.js?v=' + cache_version, function () {})\n            })\n        }"""
+new = """        function loadCurrentLampa() {\n            putScript('app.min.js?v=' + cache_version, function () {\n                putScript('custom/lampa-mobile-apple-v16.js?v=' + cache_version, function () {})\n            })\n        }"""
 if old not in s:
     raise SystemExit('Could not locate loadCurrentLampa in generated index')
 open(p, 'w', encoding='utf-8').write(s.replace(old, new))
@@ -103,7 +104,7 @@ PY
 
 # A separate filename bypasses stale index.html caches in installed iOS PWAs.
 cp build/site/index.html build/site/detail.html
-cp build/site/index.html build/site/detail-v15.html
+cp build/site/index.html build/site/detail-v16.html
 
 cd build/site
 rm -rf .git
