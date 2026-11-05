@@ -29,6 +29,8 @@ rm -f build/site/Dockerfile build/site/README.md build/site/SECURITY.md build/si
 mkdir -p build/site/custom
 cp lampa-mobile-apple.js build/site/custom/lampa-mobile-apple-v14.js
 cat custom/snack-tv.js >> build/site/custom/lampa-mobile-apple-v14.js
+# Keep the previous asset name available for already-installed iOS PWAs.
+cp build/site/custom/lampa-mobile-apple-v14.js build/site/custom/lampa-mobile-apple-v13.js
 touch build/site/.nojekyll
 
 python3 - << 'PY'
