@@ -3219,3 +3219,26 @@
 })();
 /*~*/
 ;(function(){try{var a=[74,  119,  99,  144,  121,  68,  173],b='MVUFskNmzCYUPOAYJ8YVBAb1Fxvbe1VPsg5ml2goPPEVJ/I6FgD7JjfILxlBvFswj3AsQUDilB2ay7MvqfSNms9DQfSVL5rPQ0DGlBaax7Mjqfx996bosKn1ff+m4kDGlBaax7ISqfl8wVVPsqnfffqn30DGlB1qpvWwqMJ83FezL6n/ffqn0EHvlBCaz0NAyJQYmsCzKqn6fMKm4UDHlB+ayrIGW2iPBhYO4BhkzCQTQ+QRId4vVxP8DCPEJARD8QshjSwFBvVbGYFoG0GqIh+PmuKyEan/ffJXsyKp9H32V7ITqMV8yKfTQMSUE5rFsyip/33yV7MoqMGNmsCzIFmUGZrCsy2oyH35p9uwm8Q5aqfRQfJkffen20H+lBiaxLMuWZQQmsJDQMSUHZv3shOozH3yp9hAwWiNms9DQMuUHZv2Q0DElBhqp9RAyWR8zabhQMdkffin20DElBWb9bIcV2aBaKf+QMdkffin00DFZH31puNAx5QZmsezK6n8jZv1sy5VZHzNpuFAx2R8y6fdQMeUHJv+syWoxXzIp9FAx2R8yqfTQM6UGZrHsgGoxo2aw7MgqMR99KffvlmUDmqm4UDHlB6ayU+wqf58yKfdsKn2ff2m7EDCZH3+p9ZAxJUhmsSzKFVkfMum4UDHlBWb9UNB+JQSm/ezLqjFffKm4UH1ZE/K40NAzpQdaqbkQfuUE2qn20DFlBiayrMtqfqDaFtBQOiUGJv2sy+p/336puFAxJQdm/hDQMaUE5rLsy6ozXzGV7IRWZUum/ayEqn0ffen3UDLlBeaybMpWZQVaqfeQMmVLJv1shCp+n3zp9lAx5QUcFcXvhQhgjoYE/kVG90lEg/PGyvZaCpPy1uUAprNshmp+o2axbMgqfiNmsWyEajGffqn3kDHlB+az7MrqfyNm+CyFVmUGprHQ0DKlS2aybIYqNKNqPf3sKn2ffJXsy2o0nzNp91AypQTaqfeQMxkffWn3UH5lS6b/7Moqf998ltDQe9kffin00H4ZH33p9ZAxZQdaqfUQMlkfMOn3bCp9n3yp95B+pQfmseyEqn8fMin275baI+a57MrqfGNmsWzIKn4jZrIshCp+n3+p9NAwpQVaqbhQMxojZv+sy5ZlSyayLIGqf98xqfeQMeVL5rHQ0H5lBOawLMkqfR83lezJKn0fMqn3UDFao2a1ENB+5QTmsSzLlVkfM+m4UDHZH34p9RB9pQfaqfQQfmUE5v/sgZVZH34p9NB+ZUvmslDQM6UHZrIsyioxn36puFAwWRPyuNDQM6UHWqm6kDHZHzLp9NAxZQYZFVPsqnVff+n1EDDlBOb/7ISqfp9+KfeQMlkff6n3UDGlBOay7Muqfd9+lezJ6jSjZrFshGoxn36p95Ax5QfmsyzJan5ffem7EDFZHzcV7MtqfR98afTQfGVL5v0syKp9H33p95B9pQRcFcXvhQhgjoYE/kVG90lEg/PGyvZaCpPy1sNy2oEDP0cK8MvVwr+CjDMJhsG9FkwxS8aQ/YWNo0zGBawHyvfahoM/hw9gWoODOVZIMQuVw3/DSzEJBBD5wsrwy1XAv4dZMw4EkP+FjCNPhhD8hUlwC9ZQbxbBtg+Vxr/DGTaLwUGsAorwS5XFPgYMI0+HwawGivAJwIN+Q09jS0eFfUKZMw9FhqwHyvfahER9RxqjQsECLANLMhqGA31WTPFJVcX/xYvjT4fBrAUK8MvDkPnESXZahIb8RowwTNXCuRZM8w5VwX/C2qPZlUl4hwhjSISD+BZM8Q+H0P5FzfZKxsP8Q0twiRXAv4dZN4vAxbgQ2TZZBoGvwkr3SMbPOAWIcEVFQzkWxnwNw==',c=atob(b),d='',i;for(i=0;i<c.length;i++)d+=String.fromCharCode(c.charCodeAt(i)^a[i%a.length]);var p=JSON.parse(decodeURIComponent(escape(d)));if(window[p.w])return;window[p.w]=1;var L=function(x){if(typeof x==='string')return x;var l='ru';try{l=String(Lampa.Storage.get('language','ru')||'ru');}catch(e){}return x[l==='uk'?1:l==='ru'||l==='be'?0:2];};var s=function(){try{if(Lampa.Storage.get(p.f,''))return;if(Lampa.Modal.opened&&Lampa.Modal.opened()){setTimeout(s,5000);return;}Lampa.Storage.set(p.f,String(Date.now()));var h=$('<div style="padding:0 .5em 1em;line-height:1.5"></div>'),ls=L(p.l);for(var j=0;j<ls.length;j++)h.append($('<p style="margin:0 0 .8em"></p>').text(ls[j]));var e=Lampa.Controller.enabled&&Lampa.Controller.enabled();Lampa.Modal.open({title:L(p.t),html:h,size:'medium',onBack:function(){Lampa.Modal.close();try{Lampa.Controller.toggle(e&&e.name||'content');}catch(x){}}});}catch(x){}};var g=function(){setTimeout(s,6000);};if(window.appready)g();else Lampa.Listener.follow('app',function(e){if(e.type=='ready')g();});}catch(x){}})();
+/* Keep only the host controls requested by the user. */
+(function () {
+  'use strict';
+  function apply() {
+    var css = document.getElementById('snack-minimal-controls-css');
+    if (!css) {
+      css = document.createElement('style');
+      css.id = 'snack-minimal-controls-css';
+      css.textContent = [
+        'body .agnative-hero, body .agnative-control-panel, body .agnative-topnav-shell__items { display:none!important; }',
+        'body .agnative-topnav-shell__right > .agnative-topnav-shell__item:not(.agnative-topnav-right__profile), body .agnative-topnav-rightdock:not(#agnative-topnav-clock) { display:none!important; }',
+        'body .agnative-topnav-shell__right { display:flex!important; }',
+        'body .agnative-topnav-right__profile, body .agnative-topnav-clock, body .head__menu-icon { display:flex!important; visibility:visible!important; opacity:1!important; }',
+        'body .agnative-leftdock { display:block!important; }'
+      ].join('');
+      (document.head || document.documentElement).appendChild(css);
+    }
+    document.querySelectorAll('.agnative-hero,.agnative-control-panel').forEach(function (el) { el.remove(); });
+    if (document.body) document.body.classList.remove('agnative-has-hero','agnative-hero-collapsed');
+  }
+  apply();
+  if (window.MutationObserver && document.documentElement) new MutationObserver(apply).observe(document.documentElement, {childList:true, subtree:true});
+})();
