@@ -1123,7 +1123,7 @@
     else r.push(P + ' .torrent-filter .simple-button.focus{box-shadow:none}' + P + ' .torrent-filter .simple-button:active{transform:scale(.95)}');
     // the list
     r.push(P + ' .torrent-list{padding:' + tp(8, 4) + ' ' + M + ' ' + tp(60, 40) + '}');
-    var ROW = 'margin:0 0 ' + tp(14, 10) + ';padding:' + tp(22, 14) + ' ' + tp(28, 18) + ';border-radius:' + px(t.rowR) + ';background:rgba(255,255,255,.07);border:0;' + MOVE + FADE;
+    var ROW = 'margin:0 0 ' + tp(14, 10) + ';padding:' + tp(22, 14) + ' ' + tp(28, 18) + ';border-radius:' + px(t.rowR) + ';background:rgba(92,92,98,.78);border:1px solid rgba(255,255,255,.16);' + MOVE + FADE;
     r.push(P + ' .watched-history{display:flex;align-items:center;' + ROW + ';font-size:' + tp(24, 15) + ';color:rgba(235,235,245,.7)}');
     r.push(P + ' .watched-history__icon{width:' + tp(30, 20) + ';height:' + tp(30, 20) + ';margin-right:' + tp(16, 10) + ';opacity:.7}' + P + ' .watched-history__icon svg{width:100%;height:100%}');
     r.push(P + ' .torrent-item{position:relative;' + ROW + '}');
