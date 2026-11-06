@@ -29,6 +29,18 @@
       'body.stv.true--mobile .head__menu-icon svg,body.stv .head__menu-icon svg,body.stv .head__menu-icon img{display:block!important;position:static!important;width:18px!important;height:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important;padding:0!important;transform:none!important;color:#fff;fill:#fff;flex:0 0 auto}',
       /* the header\'s own right-hand items stay out of the way */
       'body.stv .head__actions,body.stv .head__action{display:none!important}',
+      /* full card: the text title stays under the logo (both are shown) */
+      'body.stv .full-start-new__title.stv-has-logo{font-size:clamp(16px,4.6vw,22px)!important;line-height:1.2!important;color:#fff!important;font-weight:800!important;text-align:center;display:flex!important;flex-direction:column;align-items:center;gap:8px}',
+      'body.stv .full-start-new__title.stv-has-logo .stv-logo{margin:0 auto!important;object-position:center bottom!important}',
+      /* the size setting (Agnative > Top bar > size) scales the burger and the clock/profile pill */
+      'body.stv{--snack-hs:1}',
+      'body.stv[data-agnative-topnav-size="xs"]{--snack-hs:.8}',
+      'body.stv[data-agnative-topnav-size="sm"]{--snack-hs:.9}',
+      'body.stv[data-agnative-topnav-size="md"]{--snack-hs:1}',
+      'body.stv[data-agnative-topnav-size="lg"]{--snack-hs:1.15}',
+      'body.stv[data-agnative-topnav-size="xl"]{--snack-hs:1.3}',
+      '#' + DOCK_ID + '{transform:scale(var(--snack-hs,1));transform-origin:top right}',
+      'body.stv.true--mobile .head__menu-icon,body.stv .head__menu-icon{transform:scale(var(--snack-hs,1))!important;transform-origin:top left}',
       /* nothing from AgNative's own top bar may show next to Snack TV */
       'body.stv .agnative-topnav-shell,body.stv .agnative-topnav-rightdock,body.stv #agnative-topnav-clock,body.stv .agnative-control-panel,body.stv .agnative-hero{display:none!important}'
     ].join('\n');

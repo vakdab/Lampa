@@ -7069,6 +7069,13 @@
       bindHeadMenuIconClick();
       injectExplorerBackButton(document.body);
       syncCardSize(); syncLogoSize(); syncCardFlags(); syncOverlayAlign(); syncFontSize();
+      syncTopnavSize();
+      try {
+        Lampa.Storage.listener.follow('change', function (e) {
+          if (e && e.name === TOPNAV_SIZE_KEY) syncTopnavSize();
+        });
+      } catch (e) { }
+      setInterval(syncTopnavSize, 1500);
       try { processCards(document.body); } catch (e) { }
       try {
         var cardTimer = 0, cardQueue = [];
