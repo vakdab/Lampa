@@ -17,18 +17,20 @@
     var s = document.createElement('style');
     s.id = CSS_ID;
     s.textContent = [
-      '#' + DOCK_ID + '{position:absolute;right:12px;top:6px;z-index:20;display:flex;align-items:center;gap:0;height:38px;box-sizing:border-box;padding:0 4px 0 0;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}',
-      '#' + DOCK_ID + ' .snack-hbtn{display:inline-flex;align-items:center;justify-content:center;height:36px;box-sizing:border-box;border-radius:999px;color:#fff;background:transparent;border:0;box-shadow:none;cursor:pointer;-webkit-tap-highlight-color:transparent}',
-      '#' + CLOCK_ID + '{min-width:0;padding:0 10px 0 16px;font-size:16px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}',
-      '#' + PROFILE_ID + '{width:34px;padding:0;overflow:hidden}',
-      '#' + PROFILE_ID + ' svg{width:22px;height:22px}',
-      '#' + PROFILE_ID + ' img{width:28px;height:28px;border-radius:999px;object-fit:cover;display:block}',
+      '#' + DOCK_ID + '{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:20;display:flex;align-items:center;gap:0;height:32px;box-sizing:border-box;padding:0 4px 0 0;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}',
+      '#' + DOCK_ID + ' .snack-hbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;box-sizing:border-box;border-radius:999px;color:#fff;background:transparent;border:0;box-shadow:none;cursor:pointer;-webkit-tap-highlight-color:transparent}',
+      '#' + CLOCK_ID + '{min-width:0;padding:0 8px 0 13px;font-size:14px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}',
+      '#' + PROFILE_ID + '{width:28px;padding:0;overflow:hidden}',
+      '#' + PROFILE_ID + ' svg{width:18px;height:18px}',
+      '#' + PROFILE_ID + ' img{width:24px;height:24px;border-radius:999px;object-fit:cover;display:block}',
       '#' + DOCK_ID + ' .snack-hbtn.focus,#' + DOCK_ID + ' .snack-hbtn.hover{background:rgba(255,255,255,.22)}',
       /* the left menu button: same glass capsule */
-      'body.stv .head__menu-icon{display:flex!important;align-items:center;justify-content:center;position:absolute!important;left:12px;top:6px;width:38px!important;height:38px!important;margin:0!important;padding:0!important;box-sizing:border-box;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);z-index:20}',
-      'body.stv .head__menu-icon svg{width:22px!important;height:22px!important;color:#fff;fill:#fff}',
+      'body.stv.true--mobile .head__menu-icon,body.stv.mouse--controll .head__menu-icon,body.stv .head__menu-icon{display:flex!important;align-items:center;justify-content:center;position:absolute!important;left:12px!important;top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:auto!important;bottom:auto!important;transform:none!important;width:32px!important;height:32px!important;min-width:0!important;margin:0!important;padding:0!important;box-sizing:border-box;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);z-index:20;overflow:hidden}',
+      'body.stv.true--mobile .head__menu-icon svg,body.stv .head__menu-icon svg,body.stv .head__menu-icon img{display:block!important;position:static!important;width:18px!important;height:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important;padding:0!important;transform:none!important;color:#fff;fill:#fff;flex:0 0 auto}',
       /* the header\'s own right-hand items stay out of the way */
-      'body.stv .head__actions,body.stv .head__action{display:none!important}'
+      'body.stv .head__actions,body.stv .head__action{display:none!important}',
+      /* nothing from AgNative's own top bar may show next to Snack TV */
+      'body.stv .agnative-topnav-shell,body.stv .agnative-topnav-rightdock,body.stv #agnative-topnav-clock,body.stv .agnative-control-panel,body.stv .agnative-hero{display:none!important}'
     ].join('\n');
     (document.head || document.documentElement).appendChild(s);
   }
