@@ -15,6 +15,35 @@
 
   function lc(s) { return String(s || '').replace(/<[^>]*>/g, '').trim().toLowerCase(); }
 
+  /* no mention of the two names in what the viewer reads */
+  var WORDS = [
+    /\s*[«"]?\s*(?:AppleTV\s*)?AgNative\s*[»"]?/gi,
+    /\s*[«"]?\s*Закусь\s*TV\s*[»"]?/gi,
+    /\s*[«"]?\s*Zakus\s*TV\s*[»"]?/gi
+  ];
+  function scrub(t) {
+    if (typeof t !== 'string') return t;
+    var o = t;
+    WORDS.forEach(function (w) { o = o.replace(w, ''); });
+    o = o.replace(/Усі пункти(?=\s*(?:[,.]|$))/, 'Усі пункти налаштувань').replace(/Все пункты(?=\s*(?:[,.]|$))/, 'Все пункты настроек');
+    return o.replace(/\s{2,}/g, ' ').replace(/^\s*[:\-–—·]\s*/, '').replace(/\(\s*\)/g, '').trim();
+  }
+  function clean(d) {
+    var f = d && d.field;
+    if (!f) return d;
+    var name = scrub(f.name), descr = f.description;
+    if (!name && d.param && d.param.type !== 'title') name = 'Apple TV';
+    if (typeof descr === 'string') descr = scrub(descr);
+    if (name === f.name && descr === f.description) return d;
+    var c = {}, k;
+    for (k in d) c[k] = d[k];
+    c.field = {};
+    for (k in f) c.field[k] = f[k];
+    c.field.name = name;
+    if (descr !== undefined) c.field.description = descr;
+    return c;
+  }
+
   function patch() {
     var api = window.Lampa && Lampa.SettingsApi;
     if (!api || api.__snack_merge) return !!(api && api.__snack_merge);
@@ -35,10 +64,6 @@
       return ids;
     }
 
-    function titleItem(name) {
-      return { component: TARGET, param: { name: 'snack_merge_t_' + lc(name).replace(/\W+/g, '_'), type: 'title' }, field: { name: name } };
-    }
-
     /* the options of Interface = its own + every merged folder's options (in the order they are registered) */
     api.getParam = function (name) {
       var list = getParam.apply(api, arguments);
@@ -56,13 +81,12 @@
         var p = getParam.call(api, id);
         if (!p || !p.length) return;
         var folder = c[id] && c[id].name;
-        /* Закусь TV keeps its own group titles; add a title only when the folder starts without one */
-        if (!(p[0] && p[0].param && p[0].param.type === 'title')) out.push(titleItem(folder || id));
-        else if (NAMES.indexOf(lc(folder)) >= 0) out.push(titleItem(folder));
         p.forEach(function (d) {
           var n = d && d.param && d.param.name;
           if (n === 'agnative_open_topnav_settings' || n === 'agnative_open_hero_settings' || n === 'agnative_open_settings_hide') return;
-          out.push(d);
+          /* the name cards («Закусь TV 0.8.11», «AppleTV AgNative … Версия …») are not shown */
+          if (n === 'agnative_about_info' || n === 'stv_version') return;
+          out.push(clean(d));
         });
       });
       return out;
@@ -83,6 +107,18 @@
         Lampa.Settings.create = function (comp, params) {
           if (comp && comp !== TARGET && movedIds()[comp]) comp = TARGET;
           return open.call(this, comp, params);
+        };
+      }
+    } catch (e) {}
+
+    try {
+      if (Lampa.Noty && Lampa.Noty.show && !Lampa.Noty.__snack_merge) {
+        var show = Lampa.Noty.show;
+        Lampa.Noty.__snack_merge = true;
+        Lampa.Noty.show = function (text) {
+          var a = Array.prototype.slice.call(arguments);
+          if (typeof text === 'string') a[0] = scrub(text).replace(/^(Настройки|Налаштування|Налады|Settings)\s+/i, '$1 ') || text;
+          return show.apply(this, a);
         };
       }
     } catch (e) {}
