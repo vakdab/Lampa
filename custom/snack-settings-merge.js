@@ -117,7 +117,7 @@
         Lampa.Noty.__snack_merge = true;
         Lampa.Noty.show = function (text) {
           var a = Array.prototype.slice.call(arguments);
-          if (typeof text === 'string') a[0] = scrub(text).replace(/^(Настройки|Налаштування|Налады|Settings)\s+/i, '$1 ') || text;
+          if (typeof text === 'string') { var r = text.replace(/\s*[«"]?\s*(?:AppleTV\s*)?AgNative\s*[»"]?\s*/gi, ' ').replace(/\s*[«"]?\s*(?:Закусь|Zakus)\s*TV\s*[»"]?\s*/gi, ' ').replace(/\s{2,}/g, ' ').trim(); a[0] = r || text; }
           return show.apply(this, a);
         };
       }
