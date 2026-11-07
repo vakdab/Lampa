@@ -141,12 +141,49 @@
     if (pr && pr.getAttribute('data-h') !== html) { pr.innerHTML = html; pr.setAttribute('data-h', html); }
   }
 
+  /* full card: logo, then the text title under it, then ALL reactions in ONE row, then the rest.
+     Done in the DOM with inline styles, so no theme rule can reorder it again. */
+  function fixCard() {
+    if (!document.body || !document.body.classList.contains('stv')) return;
+    var cards = document.querySelectorAll('.full-start-new__right');
+    for (var i = 0; i < cards.length; i++) {
+      var right = cards[i];
+      var title = right.querySelector('.full-start-new__title');
+      var react = right.querySelector('.full-start-new__reactions');
+      if (!title) continue;
+      /* logo above, the text title under it */
+      var logo = title.querySelector('.stv-logo');
+      if (logo && title.classList.contains('stv-has-logo')) {
+        var txt = null;
+        for (var n = title.firstChild; n; n = n.nextSibling) { if (n.nodeType === 3 && n.nodeValue.trim()) { txt = n; break; } }
+        if (txt && !title.querySelector('.snack-title-text')) {
+          var sp = document.createElement('div');
+          sp.className = 'snack-title-text';
+          sp.textContent = txt.nodeValue.trim();
+          title.removeChild(txt);
+          title.appendChild(sp);
+        }
+        var st = title.querySelector('.snack-title-text');
+        if (st) { st.style.cssText = 'order:2;font-size:clamp(16px,4.6vw,22px);line-height:1.2;color:#fff;font-weight:800;text-align:center;margin-top:8px'; logo.style.order = '1'; }
+        title.style.cssText += ';display:flex;flex-direction:column;align-items:center;font-size:0';
+      }
+      if (!react) continue;
+      /* the reactions go right after the title block, in one row */
+      if (title.nextElementSibling !== react) right.insertBefore(react, title.nextSibling);
+      react.style.cssText = 'display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;gap:6px;margin:6px 0 12px;min-height:0;width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none';
+      var kids = react.children;
+      for (var k = 0; k < kids.length; k++) kids[k].style.cssText = 'flex:0 0 auto;padding:0;margin:0';
+    }
+  }
+
   function start() {
     ensure();
+    fixCard();
+    setInterval(function () { ensure(); fixCard(); }, 1000);
     setInterval(ensure, 5000);
     if (window.MutationObserver) {
       var t;
-      new MutationObserver(function () { clearTimeout(t); t = setTimeout(ensure, 300); })
+      new MutationObserver(function () { clearTimeout(t); t = setTimeout(function () { ensure(); fixCard(); }, 150); })
         .observe(document.body, { childList: true, attributes: true, attributeFilter: ['class'] });
     }
     if (window.Lampa && Lampa.Listener) Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') ensure(); });
