@@ -29,9 +29,19 @@
       'body.stv.true--mobile .head__menu-icon svg,body.stv .head__menu-icon svg,body.stv .head__menu-icon img{display:block!important;position:static!important;width:18px!important;height:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important;padding:0!important;transform:none!important;color:#fff;fill:#fff;flex:0 0 auto}',
       /* the header\'s own right-hand items stay out of the way */
       'body.stv .head__actions,body.stv .head__action{display:none!important}',
-      /* full card: the text title stays under the logo (both are shown) */
-      'body.stv .full-start-new__title.stv-has-logo{font-size:clamp(16px,4.6vw,22px)!important;line-height:1.2!important;color:#fff!important;font-weight:800!important;text-align:center;display:flex!important;flex-direction:column;align-items:center;gap:8px}',
+      /* full card order: logo, then the text title under it, then the reactions in ONE row, then the rest */
+      'body.stv .full-start-new__title.stv-has-logo{font-size:clamp(16px,4.6vw,22px)!important;line-height:1.2!important;color:#fff!important;font-weight:800!important;text-align:center;display:flex!important;flex-direction:column-reverse;align-items:center;gap:8px}',
       'body.stv .full-start-new__title.stv-has-logo .stv-logo{margin:0 auto!important;object-position:center bottom!important}',
+      /* the reactions come right after the title block (under logo + text), never above it */
+      'body.stv .full-start-new__right{display:flex!important;flex-direction:column}',
+      'body.stv .full-start-new__title{order:1!important}',
+      'body.stv .full-start-new__reactions{order:2!important;display:flex!important;flex-wrap:nowrap!important;justify-content:center;align-items:center;gap:6px;margin:0 0 12px!important;min-height:0!important;width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}',
+      'body.stv .full-start-new__reactions::-webkit-scrollbar{display:none}',
+      'body.stv .full-start-new__reactions > div{flex:0 0 auto;padding:0!important;margin:0!important}',
+      'body.stv .full-start-new__reactions .reaction{white-space:nowrap}',
+      'body.stv .stv-meta{order:3!important}',
+      'body.stv .full-start-new__buttons{order:4!important}',
+      'body.stv .stv-desc{order:5!important}',
       /* the size setting (Agnative > Top bar > size) scales the burger and the clock/profile pill */
       'body.stv{--snack-hs:1}',
       'body.stv[data-agnative-topnav-size="xs"]{--snack-hs:.8}',
