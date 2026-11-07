@@ -1,0 +1,199 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Moon">
+        <script>
+        // PWA: на github.io застосунок живе тільки під /Lampa/, інакше GitHub Pages дає 404
+        (function(){
+            var p = location.pathname
+            if (location.hostname.slice(-10) === 'github.io' && p.toLowerCase().indexOf('/lampa') !== 0) {
+                location.replace('/Lampa/' + location.search + location.hash)
+            }
+        })()
+    </script>
+    <title>Moon</title>
+
+    <meta name="description" content="Приложение для просмотра каталога фильмов и сериалов на телевизорах, приставках и смартфонах." />
+
+    <meta property="og:title" content="Lampa - Каталог фильмов и сериалов">
+    <meta property="og:description" content="Приложение для просмотра каталога фильмов и сериалов на телевизорах, приставках и смартфонах.">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image" content="og.png">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-192.png">
+    <link rel="manifest" href="icons/site.webmanifest">
+    
+    
+    <meta name="msapplication-TileColor" content="#1d1f20">
+    
+    <meta name="theme-color" content="#000000">
+
+    <meta name="referrer" content="never">
+    
+    <link rel="stylesheet" href="./vender/scrollbar/jquery.scrollbar.css">
+    <link rel="stylesheet" href="./vender/keypad/style.css">
+
+    <link rel="stylesheet" href="css/app.css?v=4.76">
+    <style id="pwa-fullscreen-fix">
+        /* iOS standalone PWA: fixed layers must reach the physical bottom edge (under the home indicator).
+           height:100% there stops at the safe area, so pin every layer with top/bottom:0 and extend it. */
+        html { background: #000; height: 100%; }
+        body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: auto !important;
+               margin: 0; overflow: hidden; }
+        #app { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: auto !important; }
+        .background, .background__one, .background__two, .background__fade { top: 0; left: 0; right: 0; bottom: 0; height: auto !important; }
+        .activitys, .activity { top: 0; left: 0; right: 0; bottom: 0; height: auto !important; min-height: 100%; }
+        @supports (-webkit-touch-callout: none) {
+            /* only iOS: stretch past the safe area so no black strip is left under the home indicator */
+            body, #app, .background, .background__one, .background__two, .background__fade, .activitys, .activity {
+                bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+            }
+            .activity__body, .wrap { min-height: calc(100% + env(safe-area-inset-bottom, 0px)); }
+        }
+    </style>
+</head>
+<body style="background: #000;">
+    <script>
+        window.youtube_lazy_load = true
+    </script>
+
+    <div class="welcome"></div>
+
+    <div id="app">
+
+    </div>
+
+    <div class="no-network hide">
+        <div class="no-network__title">Ошибка</div>
+        <div class="no-network__desc">Не удалось загрузить файл: <span class="no-network__file"></span></div>
+    </div>
+    
+    <script src="./webos/webOSTV.js"></script>
+    <script src="./vender/jquery/jquery.js"></script>
+    <script src="./vender/notify/notify.js"></script>
+    <script src="./vender/scrollbar/jquery.scrollbar.js"></script>
+    <script src="./vender/navigator/navigator.js"></script>
+    <script src="./vender/keypad/keypad.js"></script>
+
+    <script>
+        var lampa_url     = '';
+        var cache_version = Math.floor((new Date()).getTime() / 9e5) + '-3.4.34'; // Новое значение каждые 15 минут и при обновлении сборки
+            
+        function urlJoin(base, add) {
+            if (base.charAt(base.length - 1) !== '/') {
+                base += '/'
+            }
+
+            return base + add
+        }
+
+        function putScript(scripts, onload, onerror){
+            var add = function(src){
+                console.log('Loader', 'try-load-script', src)
+
+                var trys = 0
+
+                var sreateScript = function(){
+                    var script = document.createElement('script')
+
+                    script.type = 'text/javascript'
+
+                    script.onload = script.onreadystatechange = function(e) {
+                        console.log('Loader', 'Script loaded', e)
+
+                        if (!!onload) onload()
+                    };
+
+                    script.onerror = function(){
+                        trys++
+
+                        console.log('Loader', 'error-load-script', src)
+
+                        if(trys < 3){
+                            sreateScript()
+                        } else if (!!onerror) {
+                            onerror()
+                        } else{
+                            $('.no-network').removeClass('hide')
+
+                            $('.no-network__file').text(window.location.href + '/' + src)
+                        }
+                    }
+
+                    script.src = src
+
+                    document.getElementsByTagName('body')[0].appendChild(script)
+                }
+
+                sreateScript()
+            }
+
+            add(scripts)
+        }
+
+        function loadCurrentLampa() {
+            putScript('app.min.js?v=' + cache_version, function () {
+                putScript('custom/lampa-mobile-apple-v20.js?v=' + cache_version, function () {})
+            })
+        }
+
+        function loadLocalLampa(){
+            if(lampa_url !== '') window.local_lampa = true
+
+            loadCurrentLampa()
+        }
+
+        if (typeof AndroidJS !== "undefined"
+            && !!AndroidJS.getLampaURL
+            && /^https?:\/\//i.test(AndroidJS.getLampaURL())
+            && !/^https?:\/\//i.test(location.href)
+        ) {
+            lampa_url = urlJoin(AndroidJS.getLampaURL(),'')
+        }
+
+        if (lampa_url !== '') {
+            putScript(
+                urlJoin(lampa_url, 'lampainit.js?v=' + cache_version),
+                false,
+                function(){}
+            )
+
+            putScript(
+                urlJoin(lampa_url, 'app.min.js?v=' + cache_version),
+                function () {
+                    var css = urlJoin(lampa_url, 'css/app.css?v=' + cache_version)
+
+                    $('head').append('<link rel="stylesheet" href="' + css + '">')
+                },
+                function () {
+                    putScript(
+                        urlJoin(lampa_url, 'lampa-main/app.min.js?v=' + cache_version),
+                        function () {
+                            var css = urlJoin(lampa_url, 'lampa-main/css/app.css?v=' + cache_version)
+
+                            $('head').append('<link rel="stylesheet" href="' + css + '">')
+
+                            putScript(
+                                urlJoin(lampa_url, 'lampainit.js?v=' + cache_version),
+                                false,
+                                function(){}
+                            )
+                        },
+                        loadLocalLampa
+                    )
+                }
+            )
+        }
+        else{
+            loadCurrentLampa()
+        }
+    </script>
+</body>
+</html>
