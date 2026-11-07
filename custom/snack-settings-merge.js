@@ -84,8 +84,8 @@
         p.forEach(function (d) {
           var n = d && d.param && d.param.name;
           if (n === 'agnative_open_topnav_settings' || n === 'agnative_open_hero_settings' || n === 'agnative_open_settings_hide') return;
-          /* the name cards («Закусь TV 0.8.11», «AppleTV AgNative … Версия …») are not shown */
-          if (n === 'agnative_about_info' || n === 'stv_version') return;
+          /* the name cards and the support line (Telegram) are not shown */
+          if (n === 'agnative_about_info' || n === 'stv_version' || n === 'stv_support') return;
           out.push(clean(d));
         });
       });
