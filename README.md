@@ -1,62 +1,32 @@
-# Lampa
+# Moon / Snack TV: інтерфейс-плагін для Lampa
 
-Все исходники приложения **lampa**, всем желающим прошу до хаты :)
+Це не форк Lampa. Тут лише мій інтерфейс (Snack TV, шапка, ліве меню, налаштування, Showy online, контраст рядків джерел) як **один плагін**. Саму Lampa беремо з офіційного джерела.
 
-Приветствуется ваши идеи и правки в коде, сделаем вместе приложение еще лучше!
-
-MSX версия тут: https://github.com/yumata/lampa
-
-## Как запустить
-
-Открываем CMD и запускаем команду `npm install`
-
-Затем запускаем команду `npm run start`
-
-Открываем браузер и вводим адрес `http://localhost:3000`
-
-## Документация
-
-В приложении появилась документация, которая будет постоянно обновляться и дополняться. Выполните команду `npm run doc` затем перейдите в папку `build/doc` и откройте файл `index.html`
-
-И техническая документация от ИИ с обновлением раз в неделю [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yumata/lampa-source)
-
-## Переход на версию 3.0
-В версии 3.0 произошли значительные изменения в структуре проекта и кодовой базе. Пожалуйста, ознакомьтесь с [руководством по миграции](UPGRADE.md), чтобы узнать, как обновить ваше приложение до новой версии.
----
-
-## Про цей репозиторий
-
-Це повний вихідний код Lampa, перенесений з [yumata/lampa-source](https://github.com/yumata/lampa-source) (коміт `3c658ff`), плюс власні модулі vakdab.
-
-**Що всередині**
-
-- `src/` — ядро, інтерфейс, плеєр, сервіси, шаблони, локалізації, стилі
-- `plugins/` — усі модулі-плагіни: `collections`, `dlna`, `etor`, `halloween`, `iptv`, `online`, `online_prestige`, `radio`, `record`, `senplayer`, `shots`, `snow`, `tmdb_proxy`, `tracks`, `twolines`, `view_plugin`, `womens-day`
-- `public/` — статика (шрифти, іконки, звуки, мови, вендорні бібліотеки)
-- `index/` — точка входу для github / tizen / webos / doc
-- `docs/` — документація по архітектурі (ru + en)
-- `spec/` — тести (vitest)
-- `lampa-mobile-apple.js` — точна версія `6090fbd`, до Snack TV-банера та картки; містить AppleTV AG Native з текстовою кнопкою «Дивитися / Watch».
-
-**Власні модулі**
-
-- `lampa-mobile-apple.js` підключається після ядра Lampa. Це стан до Snack TV; Snack TV-банер і сторінка/картка не включені.
-
-**Збірка**
+## CDN-посилання плагіна
 
 ```
-npm install
-npm run start   # dev-сервер на http://localhost:3000
-npm run test    # тести
-npm run doc     # документація в build/doc
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/dist/moon-interface.js
 ```
 
-**Публікація на GitHub Pages**
-
-Сайт: https://vakdab.github.io/Lampa/ — збирається з цього коду і лежить у гілці `gh-pages` (Pages → branch `gh-pages` / root).
+Запасні:
 
 ```
-GITHUB_TOKEN=<PAT зі scope repo> ./deploy-gh-pages.sh
+https://raw.githack.com/vakdab/Lampa/main/dist/moon-interface.js
+https://rawcdn.githack.com/vakdab/Lampa/main/dist/moon-interface.js
 ```
 
-Скрипт збирає upstream-код, додає `custom/lampa-mobile-apple.js` з версії до Snack TV, PWA-метадані й safe-area стилі, після чого пушить результат у `gh-pages`.
+## Як підключити
+
+Lampa → Налаштування → Розширення → Додати плагін → вставити посилання вище → перезапустити Lampa.
+
+## Структура
+
+- `dist/moon-interface.js` — готовий плагін (його віддає CDN)
+- `src-modules/` — окремі модулі, з яких він складається
+- `build.sh` — збирає `dist/` з `src-modules/` (`./build.sh`)
+
+## Оновлення
+
+Змінюєш файл у `src-modules/`, запускаєш `./build.sh`, коміт і push. jsDelivr кешує гілку до 12 годин; щоб оновити одразу: `https://purge.jsdelivr.net/gh/vakdab/Lampa@main/dist/moon-interface.js`.
+
+Telegram Mini App: `src-modules/snack-telegram.js` вставляється окремо в `<head>` сторінки, де Lampa відкривається в Telegram (як плагін він не потрібен).
