@@ -106,6 +106,18 @@ if 'pwa-fullscreen-fix' not in s:
 open(p, 'w', encoding='utf-8').write(s)
 PY
 
+
+# Telegram Mini App: run first, in <head>, before the app: black header/background/bottom bar (no grey strip)
+python3 - << 'PY'
+p = 'build/site/index.html'
+s = open(p, encoding='utf-8').read()
+tg = open('custom/snack-telegram.js', encoding='utf-8').read()
+block = '    <script id="snack-telegram">\n' + tg + '\n    </script>\n'
+if 'id="snack-telegram"' not in s:
+    s = s.replace('</head>', block + '</head>', 1)
+open(p, 'w', encoding='utf-8').write(s)
+PY
+
 # A separate filename bypasses stale index.html caches in installed iOS PWAs.
 cp build/site/index.html build/site/detail.html
 cp build/site/index.html build/site/detail-v20.html
