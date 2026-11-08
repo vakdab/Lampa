@@ -1714,7 +1714,7 @@
     }
     var io = window.IntersectionObserver ? new IntersectionObserver(function (es) {
       es.forEach(function (x) { if (x.isIntersecting) { loadImg(x.target); io.unobserve(x.target); } });
-    }, { rootMargin: '0px 100% 0px 100%' }) : null;
+    }, { rootMargin: '100% 100% 100% 100%' }) : null;
 
     function draw(focusEp) {
       if (titleEl) titleEl.innerHTML = esc(tr('season') + ' ' + current) + (seasons.length > 1 ? CHEV : '');
@@ -2160,7 +2160,7 @@
     if (!cardIO && window.IntersectionObserver) {
       cardIO = new IntersectionObserver(function (list) {
         list.forEach(function (x) { if (x.isIntersecting) { cardIO.unobserve(x.target); var i = watched.indexOf(x.target); if (i >= 0) watched.splice(i, 1); cardLogo(x.target); } });
-      }, { rootMargin: '50% 100% 50% 0px' });
+      }, { rootMargin: '100% 100% 100% 0px' });
     }
     if (cardIO) { cardIO.observe(el); watched.push(el); }
     else el.addEventListener('visible', function once() { el.removeEventListener('visible', once); cardLogo(el); });
