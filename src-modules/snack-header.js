@@ -50,7 +50,6 @@
       'body.stv[data-agnative-topnav-size="lg"]{--snack-hs:1.15}',
       'body.stv[data-agnative-topnav-size="xl"]{--snack-hs:1.3}',
       '#' + DOCK_ID + '{transform:scale(var(--snack-hs,1));transform-origin:top right}',
-      'body.stv .navigation-bar .navigation-bar__body{zoom:var(--snack-hs,1)}',
       'body.stv.true--mobile .head__menu-icon,body.stv .head__menu-icon{transform:scale(var(--snack-hs,1))!important;transform-origin:top left}',
       /* ONE ROW: burger | nav pill | clock + profile. The pill lives in the strip between the burger and the
          clock: centred there, it shrinks (smaller padding and text) to fit, so nothing overlaps. */
