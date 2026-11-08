@@ -4371,7 +4371,7 @@
     var s = document.createElement('style');
     s.id = CSS_ID;
     s.textContent = [
-      '#' + DOCK_ID + '{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 54px);z-index:20;display:flex;align-items:center;gap:0;height:32px;box-sizing:border-box;padding:0 4px 0 0;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}',
+      '#' + DOCK_ID + '{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 2em - 16px);z-index:20;display:flex;align-items:center;gap:0;height:32px;box-sizing:border-box;padding:0 4px 0 0;border-radius:999px;background:rgba(32,34,40,.72);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%)}',
       '#' + DOCK_ID + ' .snack-hbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;box-sizing:border-box;border-radius:999px;color:#fff;background:transparent;border:0;box-shadow:none;cursor:pointer;-webkit-tap-highlight-color:transparent}',
       '#' + CLOCK_ID + '{min-width:0;padding:0 8px 0 13px;font-size:14px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}',
       '#' + PROFILE_ID + '{width:28px;padding:0;overflow:hidden}',
@@ -4405,6 +4405,15 @@
       'body.stv[data-agnative-topnav-size="xl"]{--snack-hs:1.3}',
       '#' + DOCK_ID + '{transform:scale(var(--snack-hs,1));transform-origin:top right}',
       'body.stv.true--mobile .head__menu-icon,body.stv .head__menu-icon{transform:scale(var(--snack-hs,1))!important;transform-origin:top left}',
+      /* ONE ROW: burger | nav pill | clock + profile. The pill lives in the strip between the burger and the
+         clock: centred there, it shrinks (smaller padding and text) to fit, so nothing overlaps. */
+      'body.stv{--snack-hdr-l:calc(12px + 32px*var(--snack-hs,1) + 8px);--snack-hdr-r:calc(12px + var(--snack-dock-w,96px)*var(--snack-hs,1) + 8px)}',
+      'body.stv .navigation-bar{left:var(--snack-hdr-l)!important;right:var(--snack-hdr-r)!important;width:auto!important;top:calc(env(safe-area-inset-top,0px) + 2em)!important;height:0!important;display:flex!important;justify-content:center;align-items:center;overflow:visible}',
+      'body.stv .navigation-bar .navigation-bar__body{position:static!important;left:auto!important;top:auto!important;transform:none!important;max-width:100%;box-sizing:border-box;overflow:hidden;flex-shrink:1;min-width:0;margin:0}',
+      'body.stv .navigation-bar .navigation-bar__item{min-width:0;flex:0 1 auto;white-space:nowrap}',
+      'body.stv .navigation-bar .navigation-bar__label{overflow:hidden;text-overflow:ellipsis}',
+      '@media (max-width:430px){body.stv{--snack-hdr-l:calc(8px + 32px*var(--snack-hs,1) + 6px);--snack-hdr-r:calc(8px + var(--snack-dock-w,92px)*var(--snack-hs,1) + 6px)}body.stv .navigation-bar .navigation-bar__body{padding:3px!important}body.stv .navigation-bar .navigation-bar__item{padding:0 8px!important;margin:0!important;height:32px!important}body.stv .navigation-bar .navigation-bar__item[data-action=back],body.stv .navigation-bar .navigation-bar__item[data-action=search]{padding:0 6px!important}body.stv .navigation-bar .navigation-bar__label{font-size:13px!important;overflow:visible!important;text-overflow:clip!important}}',
+      '@media (max-width:380px){body.stv .navigation-bar .navigation-bar__item{padding:0 5px!important}body.stv .navigation-bar .navigation-bar__item[data-action=back],body.stv .navigation-bar .navigation-bar__item[data-action=search]{padding:0 4px!important}body.stv .navigation-bar .navigation-bar__label{font-size:12px!important}}',
       /* nothing from AgNative's own top bar may show next to Snack TV */
       'body.stv .agnative-topnav-shell,body.stv .agnative-topnav-rightdock,body.stv #agnative-topnav-clock,body.stv .agnative-control-panel,body.stv .agnative-hero{display:none!important}'
     ].join('\n');
@@ -4487,6 +4496,13 @@
       dock.appendChild(prof);
     }
     if (dock.parentNode !== head) head.appendChild(dock);
+    try {
+      var dw = Math.ceil(dock.offsetWidth || 0);
+      if (dw && document.body.getAttribute('data-snack-dw') !== String(dw)) {
+        document.body.setAttribute('data-snack-dw', String(dw));
+        document.body.style.setProperty('--snack-dock-w', dw + 'px');
+      }
+    } catch (e) {}
     var c = document.getElementById(CLOCK_ID);
     var t = time();
     if (c && c.textContent !== t) c.textContent = t;
