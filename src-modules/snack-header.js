@@ -50,12 +50,14 @@
       'body.stv[data-agnative-topnav-size="lg"]{--snack-hs:1.15}',
       'body.stv[data-agnative-topnav-size="xl"]{--snack-hs:1.3}',
       '#' + DOCK_ID + '{transform:scale(var(--snack-hs,1));transform-origin:top right}',
+      'body.stv .navigation-bar .navigation-bar__body{zoom:var(--snack-hs,1)}',
       'body.stv.true--mobile .head__menu-icon,body.stv .head__menu-icon{transform:scale(var(--snack-hs,1))!important;transform-origin:top left}',
       /* ONE ROW: burger | nav pill | clock + profile. The pill lives in the strip between the burger and the
          clock: centred there, it shrinks (smaller padding and text) to fit, so nothing overlaps. */
       'body.stv{--snack-hdr-l:calc(12px + 36px*var(--snack-hs,1) + 10px);--snack-hdr-r:calc(12px + var(--snack-dock-w,96px)*var(--snack-hs,1) + 10px)}',
       'body.stv .navigation-bar{left:var(--snack-hdr-l)!important;right:var(--snack-hdr-r)!important;width:auto!important;top:calc(env(safe-area-inset-top,0px) + 2em)!important;height:0!important;display:flex!important;justify-content:center;align-items:center;overflow:visible}',
-      'body.stv .navigation-bar .navigation-bar__body{height:36px;box-sizing:border-box;position:static!important;left:auto!important;top:auto!important;transform:none!important;max-width:100%;box-sizing:border-box;overflow:hidden;flex-shrink:1;min-width:0;margin:0}',
+      'body.stv .navigation-bar .navigation-bar__body{height:36px!important;min-height:36px!important;max-height:36px!important;padding:3px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;position:static!important;left:auto!important;top:auto!important;transform:none!important;max-width:100%;overflow:hidden;flex-shrink:1;min-width:0;margin:0}',
+      'body.stv .navigation-bar .navigation-bar__item{height:28px!important;margin:0 1px!important;box-sizing:border-box!important}',
       'body.stv .navigation-bar .navigation-bar__item{min-width:0;flex:0 1 auto;white-space:nowrap}',
       'body.stv .navigation-bar .navigation-bar__label{overflow:hidden;text-overflow:ellipsis}',
       '@media (max-width:430px){body.stv{--snack-hdr-l:calc(10px + 36px*var(--snack-hs,1) + 8px);--snack-hdr-r:calc(10px + var(--snack-dock-w,92px)*var(--snack-hs,1) + 8px)}body.stv .navigation-bar .navigation-bar__body{padding:3px!important;height:36px!important;box-sizing:border-box!important;align-items:center}body.stv .navigation-bar .navigation-bar__item{padding:0 8px!important;margin:0 1px!important;height:28px!important}body.stv .navigation-bar .navigation-bar__item[data-action=back],body.stv .navigation-bar .navigation-bar__item[data-action=search]{padding:0 7px!important}body.stv .navigation-bar .navigation-bar__label{font-size:13.5px!important;overflow:visible!important;text-overflow:clip!important}body.stv .navigation-bar .navigation-bar__icon{width:16px!important;height:16px!important}}',
