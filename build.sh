@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 OUT=dist/moon-interface.js
 python3 - <<'PY'
 order = ["lampa-mobile-apple","snack-defaults","snack-tv","snack-header","snack-leftdock",
-         "snack-settings-merge","snack-settings-hide","showy-online"]
+         "snack-settings-merge","snack-settings-hide","showy-online","auto-plugins"]
 css = """
   var st = document.createElement('style'); st.id = 'moon-source-contrast';
   st.textContent = [
