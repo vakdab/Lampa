@@ -8,6 +8,12 @@
 https://cdn.jsdelivr.net/gh/vakdab/Lampa@main/dist/moon-interface.js
 ```
 
+Свіжа версія без кешу гілки (за хешем коміту, оновлюй хеш після кожного push):
+
+```
+https://cdn.jsdelivr.net/gh/vakdab/Lampa@302763e/dist/moon-interface.js
+```
+
 Запасні:
 
 ```
