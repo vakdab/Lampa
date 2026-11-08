@@ -209,7 +209,9 @@
       new Lampa.Reguest().silent(url, ok, function () { if (fail) fail(); });
     } catch (e) { if (fail) fail(); }
   }
-  function img(path, size) { return path ? Lampa.TMDB.image('t/p/' + size + path) : ''; }
+  // TMDB keeps some logos as SVG (e.g. Dark Machine): an <img> of that is tiny or blank on iOS, and sizes do
+  // not apply to it. TMDB serves the same file rasterised when the extension is .png.
+  function img(path, size) { if (path && /\.svg$/i.test(path)) path = path.replace(/\.svg$/i, '.png'); return path ? Lampa.TMDB.image('t/p/' + size + path) : ''; }
   // the TMDB size for a picture shown cssW wide: its real pixels (× the screen's density: iPad, phones,
   // 4K TVs) and the setting (economy ¾, maximum 1½); the smallest size that is at least ~90% of that.
   // Beyond the largest size (backdrops): «original» (1920+ px files) for maximum, and for a dense

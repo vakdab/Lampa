@@ -6345,7 +6345,8 @@
     }
 
     function logoImgUrl(logoPath) {
-      return Lampa.TMDB.image('t/p/w300' + logoPath);
+      /* SVG logos (TMDB keeps some) do not draw as a sized <img>: ask for the PNG TMDB renders from them */
+      return Lampa.TMDB.image('t/p/w300' + String(logoPath || '').replace(/\.svg$/i, '.png'));
     }
 
     function fetchTitledBackdrop(id, type, callback) {
