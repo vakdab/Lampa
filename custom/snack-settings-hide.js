@@ -21,6 +21,20 @@
     (document.head || document.documentElement).appendChild(st);
   }
 
+  /* take the folders out of the page itself (a plain CSS rule can lose to the theme or a late re-render) */
+  function dropFolders() {
+    try {
+      FOLDERS.forEach(function (f) {
+        var list = document.querySelectorAll('.settings-folder[data-component="' + f + '"]');
+        for (var i = 0; i < list.length; i++) {
+          list[i].style.setProperty('display', 'none', 'important');
+          list[i].classList.remove('selector');
+          if (list[i].parentNode) list[i].parentNode.removeChild(list[i]);
+        }
+      });
+    } catch (e) {}
+  }
+
   /* the block's title is a plain div without a name: find it as the title right before the first hidden option */
   function hideTitles() {
     try {
@@ -51,12 +65,13 @@
   function start() {
     css();
     hideTitles();
+    dropFolders();
     var tries = 0;
     (function wait() { if (!patchApi() && tries++ < 200) setTimeout(wait, 100); })();
     if (window.MutationObserver && document.body) {
-      new MutationObserver(function () { hideTitles(); }).observe(document.body, { childList: true, subtree: true });
+      new MutationObserver(function () { hideTitles(); dropFolders(); }).observe(document.body, { childList: true, subtree: true });
     }
-    setInterval(hideTitles, 800);
+    setInterval(function () { hideTitles(); dropFolders(); }, 500);
   }
 
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
