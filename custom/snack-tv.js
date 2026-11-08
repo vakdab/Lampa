@@ -245,7 +245,10 @@
     var langs = logoLangs(), i, j;
     for (i = 0; i < langs.length; i++) for (j = 0; j < list.length; j++) if (list[j].iso_639_1 === langs[i]) return list[j].file_path;
     for (j = 0; j < list.length; j++) if (!list[j].iso_639_1) return list[j].file_path;
-    return '';
+    // anime: TMDB often has the logo only in Japanese, Chinese or Korean — better that than bare text
+    var best = null;
+    for (j = 0; j < list.length; j++) if (list[j].file_path && (!best || (list[j].vote_average || 0) > (best.vote_average || 0))) best = list[j];
+    return best ? best.file_path : '';
   }
   function kindOf(m) { return m.name || m.original_name || m.first_air_date || m.number_of_seasons || m.media_type === 'tv' ? 'tv' : 'movie'; }
   // a phone held upright: Apple uses the vertical key art there (a 16:9 frame leaves a thin slice)
@@ -265,19 +268,53 @@
   }
   function logoKey(m, langs) { return kindOf(m) + m.id + ':' + (langs || logoLangs())[0]; }
   var logoWait = {};
+  // a card from another source (Kodik, AnimeGO, JutSu…) has no TMDB id of its own: find the title in TMDB once
+  var idWait = {};
+  function tmdbIdOf(m, cb) {
+    if (m.source === 'tmdb' || m.source === 'cub') return cb(m.id, kindOf(m));
+    var names = [m.original_title, m.original_name, m.title, m.name].filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+    var key = 'q:' + (names[0] || '') + ':' + yearOf(m);
+    var have = logoCache().get(key);
+    if (have !== undefined) return cb(have ? have.id : 0, have ? have.kind : '');
+    if (idWait[key]) { idWait[key].push(cb); return; }
+    idWait[key] = [cb];
+    function done(r) {
+      logoCache().set(key, r || '');
+      var w = idWait[key]; delete idWait[key];
+      w.forEach(function (f) { f(r ? r.id : 0, r ? r.kind : ''); });
+    }
+    var kinds = kindOf(m) === 'tv' ? ['tv', 'movie'] : ['movie', 'tv'], ni = 0, ki = 0, y = yearOf(m);
+    (function next() {
+      if (ni >= names.length) return done(null);
+      var kind = kinds[ki];
+      tmdb('search/' + kind + '?query=' + encodeURIComponent(names[ni]) + '&include_adult=false', function (j) {
+        var list = (j && j.results) || [], hit = null, i;
+        for (i = 0; i < list.length && !hit; i++) {
+          var yr = String(list[i].first_air_date || list[i].release_date || '').slice(0, 4);
+          if (!y || !yr || Math.abs(parseInt(yr, 10) - parseInt(y, 10)) <= 1) hit = list[i];
+        }
+        if (hit) return done({ id: hit.id, kind: kind });
+        if (++ki >= kinds.length) { ki = 0; ni++; }
+        next();
+      }, function () { if (++ki >= kinds.length) { ki = 0; ni++; } next(); });
+    })();
+  }
   function getLogo(m, cb) {
-    if (!m || !m.id || (m.source && m.source !== 'tmdb' && m.source !== 'cub')) return cb('');
-    var langs = logoLangs(), key = logoKey(m, langs), have = logoCache().get(key);
+    if (!m) return cb('');
+    var own = m.id && (!m.source || m.source === 'tmdb' || m.source === 'cub');
+    if (!own && !(m.title || m.name || m.original_title || m.original_name)) return cb('');
+    var langs = logoLangs(), key = own ? logoKey(m, langs) : 'x:' + (m.original_title || m.original_name || m.title || m.name) + ':' + yearOf(m) + ':' + langs[0], have = logoCache().get(key);
     if (have !== undefined) return cb(have);
-    if (m.images && m.images.logos) { var p = pickLogo(m.images.logos); logoCache().set(key, p); return cb(p); }
+    if (own && m.images && m.images.logos) { var p = pickLogo(m.images.logos); logoCache().set(key, p); return cb(p); }
     if (logoWait[key]) { logoWait[key].push(cb); return; }
     logoWait[key] = [cb];
-    tmdb(kindOf(m) + '/' + m.id + '/images?include_image_language=' + langs.join(',') + ',null', function (j) {
-      var p = pickLogo(j && j.logos);
-      logoCache().set(key, p);
-      var w = logoWait[key]; delete logoWait[key];
-      w.forEach(function (f) { f(p); });
-    }, function () { var w = logoWait[key]; delete logoWait[key]; w.forEach(function (f) { f(''); }); });
+    function finish(p) { logoCache().set(key, p || ''); var w = logoWait[key]; delete logoWait[key]; w.forEach(function (f) { f(p || ''); }); }
+    function load(id, kind) {
+      if (!id) return finish('');
+      // 'ja' is asked too: anime logos often exist only in Japanese
+      tmdb(kind + '/' + id + '/images?include_image_language=' + langs.join(',') + ',ja,null', function (j) { finish(pickLogo(j && j.logos)); }, function () { finish(''); });
+    }
+    if (own) load(m.id, kindOf(m)); else tmdbIdOf(m, load);
   }
   // the text title's size class: long names (anime) get a smaller font, see the CSS of the card and the banner
   function titleLen(el, text) {

@@ -6307,6 +6307,7 @@
 
         var langs = [lang];
         if (lang !== 'en') langs.push('en');
+        langs.push('ja');   // anime often has its logo only in Japanese
         langs.push('null');
 
         var url = 'https://api.themoviedb.org/3/' + type + '/' + id +
@@ -6317,7 +6318,8 @@
           if (data.logos && data.logos.length) {
             var preferred = data.logos.filter(function (l) { return l.iso_639_1 === lang; });
             var english = data.logos.filter(function (l) { return l.iso_639_1 === 'en'; });
-            var picked = preferred[0] || english[0] || data.logos[0];
+            var unlang = data.logos.filter(function (l) { return !l.iso_639_1; });
+            var picked = preferred[0] || english[0] || unlang[0] || data.logos[0];
             if (picked && picked.file_path) {
               logo = {
                 path: picked.file_path,
