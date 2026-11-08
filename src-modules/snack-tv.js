@@ -1202,7 +1202,7 @@
       // a row in landscape too: Lampa stacks the phone's landscape bar in a column (stronger selector than NB's)
       // on the header's middle line: Lampa centres its menu button and circles in a header 0.5em + 3em +
       // 0.5em high (its middle 2em down); the pill is 36 + 2 × 4 high
-      var midTop = 2 * c.t.base - 36 / 2;
+      var midTop = 2 * c.t.base - 36 / 2;  // (snack-header.js re-centres it with the header scale)
       r.push(NB + ' .navigation-bar__body,' + B + '.orientation--landscape .navigation-bar .navigation-bar__body{position:absolute;top:' + px(midTop) + ';left:0;width:auto;height:auto;white-space:nowrap;transform:translateX(-50%);flex-direction:row;padding:' + px(3) + ';border-radius:' + px(40) + ';' + glass + '}');
       r.push(NB + ' .navigation-bar__item{display:flex;align-items:center;height:' + px(36) + ';padding:0 ' + px(16) + ';margin:0 ' + px(1) + ';border-radius:' + px(40) + ';color:rgba(235,235,245,.72);cursor:pointer}');
       r.push(NB + ' .navigation-bar__icon{width:' + px(18) + ';height:' + px(18) + ';margin:0}');
